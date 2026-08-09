@@ -1,0 +1,141 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+    provider = "prisma-client"
+    output   = "../src/generated/prisma"
+}
+
+generator json {
+    provider = "prisma-json-types-generator"
+}
+
+datasource db {
+    provider = "postgresql"
+}
+
+model User {
+    id           String         @id @default(uuid())
+    role         String         @db.VarChar(10)
+    username     String         @db.VarChar(150)
+    email        String         @unique @db.VarChar(150)
+    password     String
+    phone        String         @db.VarChar(20)
+    is_verified  Boolean        @default(true)
+    verified_at  DateTime       @default(now())
+    created_at   DateTime       @default(now())
+    user_address User_address[]
+}
+
+model User_address {
+    id           Int     @id @default(autoincrement())
+    label        String  @db.VarChar(30)
+    address_text String  @db.Text
+    latitude     Decimal @db.Decimal(10, 8)
+    longitude    Decimal @db.Decimal(11, 8)
+    is_primary   Boolean @default(false)
+    user_id      String
+    user         User    @relation(fields: [user_id], references: [id])
+}
+
+model Outlets {
+    id               Int     @id @default(autoincrement())
+    name             String
+    latitude         Decimal @db.Decimal(10, 8)
+    longitude        Decimal @db.Decimal(11, 8)
+    max_coverage_km  Decimal
+    min_order_amount Decimal
+}
+
+model Laundry_services {
+    id                       Int                  @id @default(autoincrement())
+    name                     String               @db.VarChar(30)
+    unit                     String               @db.VarChar(10)
+    price_per_unit           Decimal
+    estimated_duration_hours Int
+    is_active                Boolean
+    serviceOrderItems        Service_order_item[]
+}
+
+model Products {
+    id                Int                  @id @default(autoincrement())
+    name              String               @db.VarChar(30)
+    price             Decimal
+    size              String               @db.VarChar(10)
+    stock             Int
+    is_active         Boolean
+    productOrderItems Product_order_item[]
+}
+
+model Orders {
+    id                String               @id @default(uuid())
+    order_id          String               @unique
+    user_id           String
+    outlet_id         Int
+    user_address_id   Int
+    distance_km       Decimal
+    delivery_fee      Decimal
+    total_laundry     Decimal
+    total_product     Decimal
+    total_amount      Int
+    status            String               @db.VarChar(20)
+    created_at        DateTime             @default(now())
+    updated_at        DateTime             @default(now())
+    serviceOrderItems Service_order_item[]
+    productOrderItems Product_order_item[]
+}
+
+model Service_order_item {
+    id                 String           @id @default(uuid())
+    order_id           String
+    laundry_service_id Int
+    qty                Decimal
+    price_per_unit     Decimal
+    subtotal           Decimal
+    notes              String           @db.Text
+    service            Laundry_services @relation(fields: [laundry_service_id], references: [id])
+    order              Orders           @relation(fields: [order_id], references: [order_id])
+}
+
+model Product_order_item {
+    id         String   @id @default(uuid())
+    order_id   String
+    product_id Int
+    qty        Int
+    price      Int
+    subtotal   Int
+    product    Products @relation(fields: [product_id], references: [id])
+    order      Orders   @relation(fields: [order_id], references: [order_id])
+}
+
+model Payments {
+    id             String   @id @default(uuid())
+    order_id       String
+    transaction_id String
+    payment_type   String   @db.VarChar(20)
+    gross_amount   Decimal
+    status         String   @db.VarChar(30)
+    paid_at        DateTime @default(now())
+    raw_response   Json
+}
+
+model Order_trackings {
+    id                        String   @id @default(uuid())
+    order_id                  String
+    status                    String   @db.VarChar(20)
+    estimated_completion_time DateTime @default(now())
+    notes                     String   @db.Text
+    created_at                DateTime @default(now())
+}
+
+model Cash_flow {
+    id          Int      @id @default(autoincrement())
+    order_id    String
+    type        String   @db.VarChar(20)
+    category    String   @db.VarChar(40)
+    amount      Decimal
+    description String   @db.Text
+    created_at  DateTime @default(now())
+}

@@ -1,0 +1,5 @@
+# deps
+node_modules/
+
+/src/infrastructure/database/migrations
+.vscode
