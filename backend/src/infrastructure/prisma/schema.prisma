@@ -17,16 +17,38 @@ datasource db {
 }
 
 model User {
-    id           String         @id @default(uuid())
-    role         String         @db.VarChar(10)
-    username     String         @db.VarChar(150)
-    email        String         @unique @db.VarChar(150)
-    password     String
-    phone        String         @db.VarChar(20)
-    is_verified  Boolean        @default(true)
-    verified_at  DateTime       @default(now())
-    created_at   DateTime       @default(now())
-    user_address User_address[]
+    id              String         @id @default(uuid())
+    role            String         @db.VarChar(10)
+    username        String         @db.VarChar(150)
+    email           String         @unique @db.VarChar(150)
+    password        String
+    phone           String         @db.VarChar(20)
+    is_verified     Boolean        @default(true)
+    verified_at     DateTime       @default(now())
+    created_at      DateTime       @default(now())
+    user_address    User_address[]
+    refreshToken    Refresh_token? @relation(fields: [refresh_tokenId], references: [id])
+    refresh_tokenId String?
+    accessToken     Access_token?  @relation(fields: [access_tokenId], references: [id])
+    access_tokenId  String?
+}
+
+model Refresh_token {
+    id         String   @id @default(uuid())
+    user_id    String
+    token      String
+    expired_at DateTime
+    created_at DateTime @default(now())
+    user       User[]
+}
+
+model Access_token {
+    id      String @id @default(uuid())
+    user_id String
+    token   String
+    expired_at DateTime
+    created_at DateTime @default(now())
+    user    User[]
 }
 
 model User_address {
@@ -66,6 +88,7 @@ model Products {
     size              String               @db.VarChar(10)
     stock             Int
     is_active         Boolean
+    image             String
     productOrderItems Product_order_item[]
 }
 
@@ -85,6 +108,9 @@ model Orders {
     updated_at        DateTime             @default(now())
     serviceOrderItems Service_order_item[]
     productOrderItems Product_order_item[]
+    payments          Payments[]
+    orderTrackings    Order_trackings[]
+    cashFlows         Cash_flow[]
 }
 
 model Service_order_item {
@@ -92,7 +118,6 @@ model Service_order_item {
     order_id           String
     laundry_service_id Int
     qty                Decimal
-    price_per_unit     Decimal
     subtotal           Decimal
     notes              String           @db.Text
     service            Laundry_services @relation(fields: [laundry_service_id], references: [id])
@@ -104,7 +129,6 @@ model Product_order_item {
     order_id   String
     product_id Int
     qty        Int
-    price      Int
     subtotal   Int
     product    Products @relation(fields: [product_id], references: [id])
     order      Orders   @relation(fields: [order_id], references: [order_id])
@@ -119,6 +143,7 @@ model Payments {
     status         String   @db.VarChar(30)
     paid_at        DateTime @default(now())
     raw_response   Json
+    order          Orders   @relation(fields: [order_id], references: [order_id])
 }
 
 model Order_trackings {
@@ -128,14 +153,16 @@ model Order_trackings {
     estimated_completion_time DateTime @default(now())
     notes                     String   @db.Text
     created_at                DateTime @default(now())
+    order                     Orders   @relation(fields: [order_id], references: [order_id])
 }
 
 model Cash_flow {
     id          Int      @id @default(autoincrement())
-    order_id    String
+    order_id    String?
     type        String   @db.VarChar(20)
     category    String   @db.VarChar(40)
     amount      Decimal
     description String   @db.Text
     created_at  DateTime @default(now())
+    order       Orders?  @relation(fields: [order_id], references: [order_id])
 }
