@@ -199,7 +199,7 @@ export type Cash_flowGroupByArgs<ExtArgs extends runtime.Types.Extensions.Intern
 
 export type Cash_flowGroupByOutputType = {
   id: number
-  order_id: string
+  order_id: string | null
   type: string
   category: string
   amount: runtime.Decimal
@@ -232,22 +232,24 @@ export type Cash_flowWhereInput = {
   OR?: Prisma.Cash_flowWhereInput[]
   NOT?: Prisma.Cash_flowWhereInput | Prisma.Cash_flowWhereInput[]
   id?: Prisma.IntFilter<"Cash_flow"> | number
-  order_id?: Prisma.StringFilter<"Cash_flow"> | string
+  order_id?: Prisma.StringNullableFilter<"Cash_flow"> | string | null
   type?: Prisma.StringFilter<"Cash_flow"> | string
   category?: Prisma.StringFilter<"Cash_flow"> | string
   amount?: Prisma.DecimalFilter<"Cash_flow"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   description?: Prisma.StringFilter<"Cash_flow"> | string
   created_at?: Prisma.DateTimeFilter<"Cash_flow"> | Date | string
+  order?: Prisma.XOR<Prisma.OrdersNullableScalarRelationFilter, Prisma.OrdersWhereInput> | null
 }
 
 export type Cash_flowOrderByWithRelationInput = {
   id?: Prisma.SortOrder
-  order_id?: Prisma.SortOrder
+  order_id?: Prisma.SortOrderInput | Prisma.SortOrder
   type?: Prisma.SortOrder
   category?: Prisma.SortOrder
   amount?: Prisma.SortOrder
   description?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
+  order?: Prisma.OrdersOrderByWithRelationInput
 }
 
 export type Cash_flowWhereUniqueInput = Prisma.AtLeast<{
@@ -255,17 +257,18 @@ export type Cash_flowWhereUniqueInput = Prisma.AtLeast<{
   AND?: Prisma.Cash_flowWhereInput | Prisma.Cash_flowWhereInput[]
   OR?: Prisma.Cash_flowWhereInput[]
   NOT?: Prisma.Cash_flowWhereInput | Prisma.Cash_flowWhereInput[]
-  order_id?: Prisma.StringFilter<"Cash_flow"> | string
+  order_id?: Prisma.StringNullableFilter<"Cash_flow"> | string | null
   type?: Prisma.StringFilter<"Cash_flow"> | string
   category?: Prisma.StringFilter<"Cash_flow"> | string
   amount?: Prisma.DecimalFilter<"Cash_flow"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   description?: Prisma.StringFilter<"Cash_flow"> | string
   created_at?: Prisma.DateTimeFilter<"Cash_flow"> | Date | string
+  order?: Prisma.XOR<Prisma.OrdersNullableScalarRelationFilter, Prisma.OrdersWhereInput> | null
 }, "id">
 
 export type Cash_flowOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
-  order_id?: Prisma.SortOrder
+  order_id?: Prisma.SortOrderInput | Prisma.SortOrder
   type?: Prisma.SortOrder
   category?: Prisma.SortOrder
   amount?: Prisma.SortOrder
@@ -283,7 +286,7 @@ export type Cash_flowScalarWhereWithAggregatesInput = {
   OR?: Prisma.Cash_flowScalarWhereWithAggregatesInput[]
   NOT?: Prisma.Cash_flowScalarWhereWithAggregatesInput | Prisma.Cash_flowScalarWhereWithAggregatesInput[]
   id?: Prisma.IntWithAggregatesFilter<"Cash_flow"> | number
-  order_id?: Prisma.StringWithAggregatesFilter<"Cash_flow"> | string
+  order_id?: Prisma.StringNullableWithAggregatesFilter<"Cash_flow"> | string | null
   type?: Prisma.StringWithAggregatesFilter<"Cash_flow"> | string
   category?: Prisma.StringWithAggregatesFilter<"Cash_flow"> | string
   amount?: Prisma.DecimalWithAggregatesFilter<"Cash_flow"> | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -292,17 +295,17 @@ export type Cash_flowScalarWhereWithAggregatesInput = {
 }
 
 export type Cash_flowCreateInput = {
-  order_id: string
   type: string
   category: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
   description: string
   created_at?: Date | string
+  order?: Prisma.OrdersCreateNestedOneWithoutCashFlowsInput
 }
 
 export type Cash_flowUncheckedCreateInput = {
   id?: number
-  order_id: string
+  order_id?: string | null
   type: string
   category: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -311,17 +314,17 @@ export type Cash_flowUncheckedCreateInput = {
 }
 
 export type Cash_flowUpdateInput = {
-  order_id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  order?: Prisma.OrdersUpdateOneWithoutCashFlowsNestedInput
 }
 
 export type Cash_flowUncheckedUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
-  order_id?: Prisma.StringFieldUpdateOperationsInput | string
+  order_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -331,7 +334,7 @@ export type Cash_flowUncheckedUpdateInput = {
 
 export type Cash_flowCreateManyInput = {
   id?: number
-  order_id: string
+  order_id?: string | null
   type: string
   category: string
   amount: runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -340,7 +343,6 @@ export type Cash_flowCreateManyInput = {
 }
 
 export type Cash_flowUpdateManyMutationInput = {
-  order_id?: Prisma.StringFieldUpdateOperationsInput | string
   type?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
@@ -350,12 +352,22 @@ export type Cash_flowUpdateManyMutationInput = {
 
 export type Cash_flowUncheckedUpdateManyInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
-  order_id?: Prisma.StringFieldUpdateOperationsInput | string
+  order_id?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   type?: Prisma.StringFieldUpdateOperationsInput | string
   category?: Prisma.StringFieldUpdateOperationsInput | string
   amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   description?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type Cash_flowListRelationFilter = {
+  every?: Prisma.Cash_flowWhereInput
+  some?: Prisma.Cash_flowWhereInput
+  none?: Prisma.Cash_flowWhereInput
+}
+
+export type Cash_flowOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type Cash_flowCountOrderByAggregateInput = {
@@ -398,6 +410,139 @@ export type Cash_flowSumOrderByAggregateInput = {
   amount?: Prisma.SortOrder
 }
 
+export type Cash_flowCreateNestedManyWithoutOrderInput = {
+  create?: Prisma.XOR<Prisma.Cash_flowCreateWithoutOrderInput, Prisma.Cash_flowUncheckedCreateWithoutOrderInput> | Prisma.Cash_flowCreateWithoutOrderInput[] | Prisma.Cash_flowUncheckedCreateWithoutOrderInput[]
+  connectOrCreate?: Prisma.Cash_flowCreateOrConnectWithoutOrderInput | Prisma.Cash_flowCreateOrConnectWithoutOrderInput[]
+  createMany?: Prisma.Cash_flowCreateManyOrderInputEnvelope
+  connect?: Prisma.Cash_flowWhereUniqueInput | Prisma.Cash_flowWhereUniqueInput[]
+}
+
+export type Cash_flowUncheckedCreateNestedManyWithoutOrderInput = {
+  create?: Prisma.XOR<Prisma.Cash_flowCreateWithoutOrderInput, Prisma.Cash_flowUncheckedCreateWithoutOrderInput> | Prisma.Cash_flowCreateWithoutOrderInput[] | Prisma.Cash_flowUncheckedCreateWithoutOrderInput[]
+  connectOrCreate?: Prisma.Cash_flowCreateOrConnectWithoutOrderInput | Prisma.Cash_flowCreateOrConnectWithoutOrderInput[]
+  createMany?: Prisma.Cash_flowCreateManyOrderInputEnvelope
+  connect?: Prisma.Cash_flowWhereUniqueInput | Prisma.Cash_flowWhereUniqueInput[]
+}
+
+export type Cash_flowUpdateManyWithoutOrderNestedInput = {
+  create?: Prisma.XOR<Prisma.Cash_flowCreateWithoutOrderInput, Prisma.Cash_flowUncheckedCreateWithoutOrderInput> | Prisma.Cash_flowCreateWithoutOrderInput[] | Prisma.Cash_flowUncheckedCreateWithoutOrderInput[]
+  connectOrCreate?: Prisma.Cash_flowCreateOrConnectWithoutOrderInput | Prisma.Cash_flowCreateOrConnectWithoutOrderInput[]
+  upsert?: Prisma.Cash_flowUpsertWithWhereUniqueWithoutOrderInput | Prisma.Cash_flowUpsertWithWhereUniqueWithoutOrderInput[]
+  createMany?: Prisma.Cash_flowCreateManyOrderInputEnvelope
+  set?: Prisma.Cash_flowWhereUniqueInput | Prisma.Cash_flowWhereUniqueInput[]
+  disconnect?: Prisma.Cash_flowWhereUniqueInput | Prisma.Cash_flowWhereUniqueInput[]
+  delete?: Prisma.Cash_flowWhereUniqueInput | Prisma.Cash_flowWhereUniqueInput[]
+  connect?: Prisma.Cash_flowWhereUniqueInput | Prisma.Cash_flowWhereUniqueInput[]
+  update?: Prisma.Cash_flowUpdateWithWhereUniqueWithoutOrderInput | Prisma.Cash_flowUpdateWithWhereUniqueWithoutOrderInput[]
+  updateMany?: Prisma.Cash_flowUpdateManyWithWhereWithoutOrderInput | Prisma.Cash_flowUpdateManyWithWhereWithoutOrderInput[]
+  deleteMany?: Prisma.Cash_flowScalarWhereInput | Prisma.Cash_flowScalarWhereInput[]
+}
+
+export type Cash_flowUncheckedUpdateManyWithoutOrderNestedInput = {
+  create?: Prisma.XOR<Prisma.Cash_flowCreateWithoutOrderInput, Prisma.Cash_flowUncheckedCreateWithoutOrderInput> | Prisma.Cash_flowCreateWithoutOrderInput[] | Prisma.Cash_flowUncheckedCreateWithoutOrderInput[]
+  connectOrCreate?: Prisma.Cash_flowCreateOrConnectWithoutOrderInput | Prisma.Cash_flowCreateOrConnectWithoutOrderInput[]
+  upsert?: Prisma.Cash_flowUpsertWithWhereUniqueWithoutOrderInput | Prisma.Cash_flowUpsertWithWhereUniqueWithoutOrderInput[]
+  createMany?: Prisma.Cash_flowCreateManyOrderInputEnvelope
+  set?: Prisma.Cash_flowWhereUniqueInput | Prisma.Cash_flowWhereUniqueInput[]
+  disconnect?: Prisma.Cash_flowWhereUniqueInput | Prisma.Cash_flowWhereUniqueInput[]
+  delete?: Prisma.Cash_flowWhereUniqueInput | Prisma.Cash_flowWhereUniqueInput[]
+  connect?: Prisma.Cash_flowWhereUniqueInput | Prisma.Cash_flowWhereUniqueInput[]
+  update?: Prisma.Cash_flowUpdateWithWhereUniqueWithoutOrderInput | Prisma.Cash_flowUpdateWithWhereUniqueWithoutOrderInput[]
+  updateMany?: Prisma.Cash_flowUpdateManyWithWhereWithoutOrderInput | Prisma.Cash_flowUpdateManyWithWhereWithoutOrderInput[]
+  deleteMany?: Prisma.Cash_flowScalarWhereInput | Prisma.Cash_flowScalarWhereInput[]
+}
+
+export type Cash_flowCreateWithoutOrderInput = {
+  type: string
+  category: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  description: string
+  created_at?: Date | string
+}
+
+export type Cash_flowUncheckedCreateWithoutOrderInput = {
+  id?: number
+  type: string
+  category: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  description: string
+  created_at?: Date | string
+}
+
+export type Cash_flowCreateOrConnectWithoutOrderInput = {
+  where: Prisma.Cash_flowWhereUniqueInput
+  create: Prisma.XOR<Prisma.Cash_flowCreateWithoutOrderInput, Prisma.Cash_flowUncheckedCreateWithoutOrderInput>
+}
+
+export type Cash_flowCreateManyOrderInputEnvelope = {
+  data: Prisma.Cash_flowCreateManyOrderInput | Prisma.Cash_flowCreateManyOrderInput[]
+  skipDuplicates?: boolean
+}
+
+export type Cash_flowUpsertWithWhereUniqueWithoutOrderInput = {
+  where: Prisma.Cash_flowWhereUniqueInput
+  update: Prisma.XOR<Prisma.Cash_flowUpdateWithoutOrderInput, Prisma.Cash_flowUncheckedUpdateWithoutOrderInput>
+  create: Prisma.XOR<Prisma.Cash_flowCreateWithoutOrderInput, Prisma.Cash_flowUncheckedCreateWithoutOrderInput>
+}
+
+export type Cash_flowUpdateWithWhereUniqueWithoutOrderInput = {
+  where: Prisma.Cash_flowWhereUniqueInput
+  data: Prisma.XOR<Prisma.Cash_flowUpdateWithoutOrderInput, Prisma.Cash_flowUncheckedUpdateWithoutOrderInput>
+}
+
+export type Cash_flowUpdateManyWithWhereWithoutOrderInput = {
+  where: Prisma.Cash_flowScalarWhereInput
+  data: Prisma.XOR<Prisma.Cash_flowUpdateManyMutationInput, Prisma.Cash_flowUncheckedUpdateManyWithoutOrderInput>
+}
+
+export type Cash_flowScalarWhereInput = {
+  AND?: Prisma.Cash_flowScalarWhereInput | Prisma.Cash_flowScalarWhereInput[]
+  OR?: Prisma.Cash_flowScalarWhereInput[]
+  NOT?: Prisma.Cash_flowScalarWhereInput | Prisma.Cash_flowScalarWhereInput[]
+  id?: Prisma.IntFilter<"Cash_flow"> | number
+  order_id?: Prisma.StringNullableFilter<"Cash_flow"> | string | null
+  type?: Prisma.StringFilter<"Cash_flow"> | string
+  category?: Prisma.StringFilter<"Cash_flow"> | string
+  amount?: Prisma.DecimalFilter<"Cash_flow"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringFilter<"Cash_flow"> | string
+  created_at?: Prisma.DateTimeFilter<"Cash_flow"> | Date | string
+}
+
+export type Cash_flowCreateManyOrderInput = {
+  id?: number
+  type: string
+  category: string
+  amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  description: string
+  created_at?: Date | string
+}
+
+export type Cash_flowUpdateWithoutOrderInput = {
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type Cash_flowUncheckedUpdateWithoutOrderInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type Cash_flowUncheckedUpdateManyWithoutOrderInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  type?: Prisma.StringFieldUpdateOperationsInput | string
+  category?: Prisma.StringFieldUpdateOperationsInput | string
+  amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 
 
 export type Cash_flowSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -408,6 +553,7 @@ export type Cash_flowSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   amount?: boolean
   description?: boolean
   created_at?: boolean
+  order?: boolean | Prisma.Cash_flow$orderArgs<ExtArgs>
 }, ExtArgs["result"]["cash_flow"]>
 
 export type Cash_flowSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -418,6 +564,7 @@ export type Cash_flowSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   amount?: boolean
   description?: boolean
   created_at?: boolean
+  order?: boolean | Prisma.Cash_flow$orderArgs<ExtArgs>
 }, ExtArgs["result"]["cash_flow"]>
 
 export type Cash_flowSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -428,6 +575,7 @@ export type Cash_flowSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   amount?: boolean
   description?: boolean
   created_at?: boolean
+  order?: boolean | Prisma.Cash_flow$orderArgs<ExtArgs>
 }, ExtArgs["result"]["cash_flow"]>
 
 export type Cash_flowSelectScalar = {
@@ -441,13 +589,24 @@ export type Cash_flowSelectScalar = {
 }
 
 export type Cash_flowOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "order_id" | "type" | "category" | "amount" | "description" | "created_at", ExtArgs["result"]["cash_flow"]>
+export type Cash_flowInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  order?: boolean | Prisma.Cash_flow$orderArgs<ExtArgs>
+}
+export type Cash_flowIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  order?: boolean | Prisma.Cash_flow$orderArgs<ExtArgs>
+}
+export type Cash_flowIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  order?: boolean | Prisma.Cash_flow$orderArgs<ExtArgs>
+}
 
 export type $Cash_flowPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Cash_flow"
-  objects: {}
+  objects: {
+    order: Prisma.$OrdersPayload<ExtArgs> | null
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
-    order_id: string
+    order_id: string | null
     type: string
     category: string
     amount: runtime.Decimal
@@ -847,6 +1006,7 @@ readonly fields: Cash_flowFieldRefs;
  */
 export interface Prisma__Cash_flowClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  order<T extends Prisma.Cash_flow$orderArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Cash_flow$orderArgs<ExtArgs>>): Prisma.Prisma__OrdersClient<runtime.Types.Result.GetResult<Prisma.$OrdersPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -900,6 +1060,10 @@ export type Cash_flowFindUniqueArgs<ExtArgs extends runtime.Types.Extensions.Int
    */
   omit?: Prisma.Cash_flowOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Cash_flowInclude<ExtArgs> | null
+  /**
    * Filter, which Cash_flow to fetch.
    */
   where: Prisma.Cash_flowWhereUniqueInput
@@ -918,6 +1082,10 @@ export type Cash_flowFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.Extensi
    */
   omit?: Prisma.Cash_flowOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Cash_flowInclude<ExtArgs> | null
+  /**
    * Filter, which Cash_flow to fetch.
    */
   where: Prisma.Cash_flowWhereUniqueInput
@@ -935,6 +1103,10 @@ export type Cash_flowFindFirstArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * Omit specific fields from the Cash_flow
    */
   omit?: Prisma.Cash_flowOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Cash_flowInclude<ExtArgs> | null
   /**
    * Filter, which Cash_flow to fetch.
    */
@@ -984,6 +1156,10 @@ export type Cash_flowFindFirstOrThrowArgs<ExtArgs extends runtime.Types.Extensio
    */
   omit?: Prisma.Cash_flowOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Cash_flowInclude<ExtArgs> | null
+  /**
    * Filter, which Cash_flow to fetch.
    */
   where?: Prisma.Cash_flowWhereInput
@@ -1031,6 +1207,10 @@ export type Cash_flowFindManyArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Omit specific fields from the Cash_flow
    */
   omit?: Prisma.Cash_flowOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Cash_flowInclude<ExtArgs> | null
   /**
    * Filter, which Cash_flows to fetch.
    */
@@ -1080,6 +1260,10 @@ export type Cash_flowCreateArgs<ExtArgs extends runtime.Types.Extensions.Interna
    */
   omit?: Prisma.Cash_flowOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Cash_flowInclude<ExtArgs> | null
+  /**
    * The data needed to create a Cash_flow.
    */
   data: Prisma.XOR<Prisma.Cash_flowCreateInput, Prisma.Cash_flowUncheckedCreateInput>
@@ -1113,6 +1297,10 @@ export type Cash_flowCreateManyAndReturnArgs<ExtArgs extends runtime.Types.Exten
    */
   data: Prisma.Cash_flowCreateManyInput | Prisma.Cash_flowCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Cash_flowIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1127,6 +1315,10 @@ export type Cash_flowUpdateArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Omit specific fields from the Cash_flow
    */
   omit?: Prisma.Cash_flowOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Cash_flowInclude<ExtArgs> | null
   /**
    * The data needed to update a Cash_flow.
    */
@@ -1179,6 +1371,10 @@ export type Cash_flowUpdateManyAndReturnArgs<ExtArgs extends runtime.Types.Exten
    * Limit how many Cash_flows to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Cash_flowIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1193,6 +1389,10 @@ export type Cash_flowUpsertArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Omit specific fields from the Cash_flow
    */
   omit?: Prisma.Cash_flowOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Cash_flowInclude<ExtArgs> | null
   /**
    * The filter to search for the Cash_flow to update in case it exists.
    */
@@ -1220,6 +1420,10 @@ export type Cash_flowDeleteArgs<ExtArgs extends runtime.Types.Extensions.Interna
    */
   omit?: Prisma.Cash_flowOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Cash_flowInclude<ExtArgs> | null
+  /**
    * Filter which Cash_flow to delete.
    */
   where: Prisma.Cash_flowWhereUniqueInput
@@ -1240,6 +1444,25 @@ export type Cash_flowDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Int
 }
 
 /**
+ * Cash_flow.order
+ */
+export type Cash_flow$orderArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Orders
+   */
+  select?: Prisma.OrdersSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Orders
+   */
+  omit?: Prisma.OrdersOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OrdersInclude<ExtArgs> | null
+  where?: Prisma.OrdersWhereInput
+}
+
+/**
  * Cash_flow without action
  */
 export type Cash_flowDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1251,4 +1474,8 @@ export type Cash_flowDefaultArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * Omit specific fields from the Cash_flow
    */
   omit?: Prisma.Cash_flowOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Cash_flowInclude<ExtArgs> | null
 }

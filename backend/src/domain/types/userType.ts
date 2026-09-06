@@ -1,31 +1,41 @@
+export type userRole = "admin" | "user";
+
 export type registerType = {
-    username: String
-    email: String
-    password: String
-    phone: String
+    username: string
+    email: string
+    password: string
+    phone: string
 }
 
 export type loginType = {
-    email: String
-    password: String
+    email: string
+    password: string
 }
 
 export interface userType {
-    id: String
-    username: String
-    email: String
-    role : "admin" | "user"
-    phone : String
-    is_verified : Boolean
+    id: string
+    username: string
+    email: string
+    role: userRole
+    phone: string
+    is_verified: boolean
 }
 
+export interface userWithPassword extends userType {
+    password: string
+}
+
+export interface userAuthType {
+    user: userType
+    accessToken: string
+    refreshToken: string
+}
 
 export type addressType = {
-    label: String
-    address_text: String
-    latitude: Number
-    longtitude: Number 
-    is_primary: Boolean
-    user_id: String
+    label: string
+    address_text: string
+    latitude: number
+    longtitude: number
+    is_primary: boolean
+    user_id: string
 }
-

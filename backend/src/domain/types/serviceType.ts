@@ -1,24 +1,24 @@
 export type serviceCreateType = {
-    name: String
-    unit: String
-    price_per_unit: Number
-    estimation_duration_unit: Number
-    is_active: Boolean
+    name: string
+    unit: string
+    price_per_unit: number
+    estimation_duration_unit: number
+    is_active: boolean
 }
 
 export type serviceUpdateType = {
-    name: String
-    unit: String
-    price_per_unit: Number
-    estimation_duration_unit: Number
-    is_active: Boolean
+    name: string
+    unit: string
+    price_per_unit: number
+    estimation_duration_unit: number
+    is_active: boolean
 }
 
 export interface serviceType {
-    id: String
-    name: String
-    unit: String
-    price_per_unit: Number
-    estimation_duration_unit: Number
-    is_active: Boolean
+    id: string
+    name: string
+    unit: string
+    price_per_unit: number
+    estimation_duration_unit: number
+    is_active: boolean
 }

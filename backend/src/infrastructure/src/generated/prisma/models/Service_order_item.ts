@@ -31,14 +31,12 @@ export type AggregateService_order_item = {
 export type Service_order_itemAvgAggregateOutputType = {
   laundry_service_id: number | null
   qty: runtime.Decimal | null
-  price_per_unit: runtime.Decimal | null
   subtotal: runtime.Decimal | null
 }
 
 export type Service_order_itemSumAggregateOutputType = {
   laundry_service_id: number | null
   qty: runtime.Decimal | null
-  price_per_unit: runtime.Decimal | null
   subtotal: runtime.Decimal | null
 }
 
@@ -47,7 +45,6 @@ export type Service_order_itemMinAggregateOutputType = {
   order_id: string | null
   laundry_service_id: number | null
   qty: runtime.Decimal | null
-  price_per_unit: runtime.Decimal | null
   subtotal: runtime.Decimal | null
   notes: string | null
 }
@@ -57,7 +54,6 @@ export type Service_order_itemMaxAggregateOutputType = {
   order_id: string | null
   laundry_service_id: number | null
   qty: runtime.Decimal | null
-  price_per_unit: runtime.Decimal | null
   subtotal: runtime.Decimal | null
   notes: string | null
 }
@@ -67,7 +63,6 @@ export type Service_order_itemCountAggregateOutputType = {
   order_id: number
   laundry_service_id: number
   qty: number
-  price_per_unit: number
   subtotal: number
   notes: number
   _all: number
@@ -77,14 +72,12 @@ export type Service_order_itemCountAggregateOutputType = {
 export type Service_order_itemAvgAggregateInputType = {
   laundry_service_id?: true
   qty?: true
-  price_per_unit?: true
   subtotal?: true
 }
 
 export type Service_order_itemSumAggregateInputType = {
   laundry_service_id?: true
   qty?: true
-  price_per_unit?: true
   subtotal?: true
 }
 
@@ -93,7 +86,6 @@ export type Service_order_itemMinAggregateInputType = {
   order_id?: true
   laundry_service_id?: true
   qty?: true
-  price_per_unit?: true
   subtotal?: true
   notes?: true
 }
@@ -103,7 +95,6 @@ export type Service_order_itemMaxAggregateInputType = {
   order_id?: true
   laundry_service_id?: true
   qty?: true
-  price_per_unit?: true
   subtotal?: true
   notes?: true
 }
@@ -113,7 +104,6 @@ export type Service_order_itemCountAggregateInputType = {
   order_id?: true
   laundry_service_id?: true
   qty?: true
-  price_per_unit?: true
   subtotal?: true
   notes?: true
   _all?: true
@@ -210,7 +200,6 @@ export type Service_order_itemGroupByOutputType = {
   order_id: string
   laundry_service_id: number
   qty: runtime.Decimal
-  price_per_unit: runtime.Decimal
   subtotal: runtime.Decimal
   notes: string
   _count: Service_order_itemCountAggregateOutputType | null
@@ -243,7 +232,6 @@ export type Service_order_itemWhereInput = {
   order_id?: Prisma.StringFilter<"Service_order_item"> | string
   laundry_service_id?: Prisma.IntFilter<"Service_order_item"> | number
   qty?: Prisma.DecimalFilter<"Service_order_item"> | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFilter<"Service_order_item"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFilter<"Service_order_item"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFilter<"Service_order_item"> | string
   service?: Prisma.XOR<Prisma.Laundry_servicesScalarRelationFilter, Prisma.Laundry_servicesWhereInput>
@@ -255,7 +243,6 @@ export type Service_order_itemOrderByWithRelationInput = {
   order_id?: Prisma.SortOrder
   laundry_service_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price_per_unit?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   service?: Prisma.Laundry_servicesOrderByWithRelationInput
@@ -270,7 +257,6 @@ export type Service_order_itemWhereUniqueInput = Prisma.AtLeast<{
   order_id?: Prisma.StringFilter<"Service_order_item"> | string
   laundry_service_id?: Prisma.IntFilter<"Service_order_item"> | number
   qty?: Prisma.DecimalFilter<"Service_order_item"> | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFilter<"Service_order_item"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFilter<"Service_order_item"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFilter<"Service_order_item"> | string
   service?: Prisma.XOR<Prisma.Laundry_servicesScalarRelationFilter, Prisma.Laundry_servicesWhereInput>
@@ -282,7 +268,6 @@ export type Service_order_itemOrderByWithAggregationInput = {
   order_id?: Prisma.SortOrder
   laundry_service_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price_per_unit?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   _count?: Prisma.Service_order_itemCountOrderByAggregateInput
@@ -300,7 +285,6 @@ export type Service_order_itemScalarWhereWithAggregatesInput = {
   order_id?: Prisma.StringWithAggregatesFilter<"Service_order_item"> | string
   laundry_service_id?: Prisma.IntWithAggregatesFilter<"Service_order_item"> | number
   qty?: Prisma.DecimalWithAggregatesFilter<"Service_order_item"> | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalWithAggregatesFilter<"Service_order_item"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalWithAggregatesFilter<"Service_order_item"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringWithAggregatesFilter<"Service_order_item"> | string
 }
@@ -308,7 +292,6 @@ export type Service_order_itemScalarWhereWithAggregatesInput = {
 export type Service_order_itemCreateInput = {
   id?: string
   qty: runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
   notes: string
   service: Prisma.Laundry_servicesCreateNestedOneWithoutServiceOrderItemsInput
@@ -320,7 +303,6 @@ export type Service_order_itemUncheckedCreateInput = {
   order_id: string
   laundry_service_id: number
   qty: runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
   notes: string
 }
@@ -328,7 +310,6 @@ export type Service_order_itemUncheckedCreateInput = {
 export type Service_order_itemUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   qty?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
   service?: Prisma.Laundry_servicesUpdateOneRequiredWithoutServiceOrderItemsNestedInput
@@ -340,7 +321,6 @@ export type Service_order_itemUncheckedUpdateInput = {
   order_id?: Prisma.StringFieldUpdateOperationsInput | string
   laundry_service_id?: Prisma.IntFieldUpdateOperationsInput | number
   qty?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
 }
@@ -350,7 +330,6 @@ export type Service_order_itemCreateManyInput = {
   order_id: string
   laundry_service_id: number
   qty: runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
   notes: string
 }
@@ -358,7 +337,6 @@ export type Service_order_itemCreateManyInput = {
 export type Service_order_itemUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   qty?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
 }
@@ -368,7 +346,6 @@ export type Service_order_itemUncheckedUpdateManyInput = {
   order_id?: Prisma.StringFieldUpdateOperationsInput | string
   laundry_service_id?: Prisma.IntFieldUpdateOperationsInput | number
   qty?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
 }
@@ -388,7 +365,6 @@ export type Service_order_itemCountOrderByAggregateInput = {
   order_id?: Prisma.SortOrder
   laundry_service_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price_per_unit?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   notes?: Prisma.SortOrder
 }
@@ -396,7 +372,6 @@ export type Service_order_itemCountOrderByAggregateInput = {
 export type Service_order_itemAvgOrderByAggregateInput = {
   laundry_service_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price_per_unit?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
 }
 
@@ -405,7 +380,6 @@ export type Service_order_itemMaxOrderByAggregateInput = {
   order_id?: Prisma.SortOrder
   laundry_service_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price_per_unit?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   notes?: Prisma.SortOrder
 }
@@ -415,7 +389,6 @@ export type Service_order_itemMinOrderByAggregateInput = {
   order_id?: Prisma.SortOrder
   laundry_service_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price_per_unit?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   notes?: Prisma.SortOrder
 }
@@ -423,7 +396,6 @@ export type Service_order_itemMinOrderByAggregateInput = {
 export type Service_order_itemSumOrderByAggregateInput = {
   laundry_service_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price_per_unit?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
 }
 
@@ -514,7 +486,6 @@ export type Service_order_itemUncheckedUpdateManyWithoutOrderNestedInput = {
 export type Service_order_itemCreateWithoutServiceInput = {
   id?: string
   qty: runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
   notes: string
   order: Prisma.OrdersCreateNestedOneWithoutServiceOrderItemsInput
@@ -524,7 +495,6 @@ export type Service_order_itemUncheckedCreateWithoutServiceInput = {
   id?: string
   order_id: string
   qty: runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
   notes: string
 }
@@ -563,7 +533,6 @@ export type Service_order_itemScalarWhereInput = {
   order_id?: Prisma.StringFilter<"Service_order_item"> | string
   laundry_service_id?: Prisma.IntFilter<"Service_order_item"> | number
   qty?: Prisma.DecimalFilter<"Service_order_item"> | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFilter<"Service_order_item"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFilter<"Service_order_item"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFilter<"Service_order_item"> | string
 }
@@ -571,7 +540,6 @@ export type Service_order_itemScalarWhereInput = {
 export type Service_order_itemCreateWithoutOrderInput = {
   id?: string
   qty: runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
   notes: string
   service: Prisma.Laundry_servicesCreateNestedOneWithoutServiceOrderItemsInput
@@ -581,7 +549,6 @@ export type Service_order_itemUncheckedCreateWithoutOrderInput = {
   id?: string
   laundry_service_id: number
   qty: runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
   notes: string
 }
@@ -616,7 +583,6 @@ export type Service_order_itemCreateManyServiceInput = {
   id?: string
   order_id: string
   qty: runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
   notes: string
 }
@@ -624,7 +590,6 @@ export type Service_order_itemCreateManyServiceInput = {
 export type Service_order_itemUpdateWithoutServiceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   qty?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
   order?: Prisma.OrdersUpdateOneRequiredWithoutServiceOrderItemsNestedInput
@@ -634,7 +599,6 @@ export type Service_order_itemUncheckedUpdateWithoutServiceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   order_id?: Prisma.StringFieldUpdateOperationsInput | string
   qty?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
 }
@@ -643,7 +607,6 @@ export type Service_order_itemUncheckedUpdateManyWithoutServiceInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   order_id?: Prisma.StringFieldUpdateOperationsInput | string
   qty?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
 }
@@ -652,7 +615,6 @@ export type Service_order_itemCreateManyOrderInput = {
   id?: string
   laundry_service_id: number
   qty: runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal: runtime.Decimal | runtime.DecimalJsLike | number | string
   notes: string
 }
@@ -660,7 +622,6 @@ export type Service_order_itemCreateManyOrderInput = {
 export type Service_order_itemUpdateWithoutOrderInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   qty?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
   service?: Prisma.Laundry_servicesUpdateOneRequiredWithoutServiceOrderItemsNestedInput
@@ -670,7 +631,6 @@ export type Service_order_itemUncheckedUpdateWithoutOrderInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   laundry_service_id?: Prisma.IntFieldUpdateOperationsInput | number
   qty?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
 }
@@ -679,7 +639,6 @@ export type Service_order_itemUncheckedUpdateManyWithoutOrderInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   laundry_service_id?: Prisma.IntFieldUpdateOperationsInput | number
   qty?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
-  price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   subtotal?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
 }
@@ -691,7 +650,6 @@ export type Service_order_itemSelect<ExtArgs extends runtime.Types.Extensions.In
   order_id?: boolean
   laundry_service_id?: boolean
   qty?: boolean
-  price_per_unit?: boolean
   subtotal?: boolean
   notes?: boolean
   service?: boolean | Prisma.Laundry_servicesDefaultArgs<ExtArgs>
@@ -703,7 +661,6 @@ export type Service_order_itemSelectCreateManyAndReturn<ExtArgs extends runtime.
   order_id?: boolean
   laundry_service_id?: boolean
   qty?: boolean
-  price_per_unit?: boolean
   subtotal?: boolean
   notes?: boolean
   service?: boolean | Prisma.Laundry_servicesDefaultArgs<ExtArgs>
@@ -715,7 +672,6 @@ export type Service_order_itemSelectUpdateManyAndReturn<ExtArgs extends runtime.
   order_id?: boolean
   laundry_service_id?: boolean
   qty?: boolean
-  price_per_unit?: boolean
   subtotal?: boolean
   notes?: boolean
   service?: boolean | Prisma.Laundry_servicesDefaultArgs<ExtArgs>
@@ -727,12 +683,11 @@ export type Service_order_itemSelectScalar = {
   order_id?: boolean
   laundry_service_id?: boolean
   qty?: boolean
-  price_per_unit?: boolean
   subtotal?: boolean
   notes?: boolean
 }
 
-export type Service_order_itemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "order_id" | "laundry_service_id" | "qty" | "price_per_unit" | "subtotal" | "notes", ExtArgs["result"]["service_order_item"]>
+export type Service_order_itemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "order_id" | "laundry_service_id" | "qty" | "subtotal" | "notes", ExtArgs["result"]["service_order_item"]>
 export type Service_order_itemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   service?: boolean | Prisma.Laundry_servicesDefaultArgs<ExtArgs>
   order?: boolean | Prisma.OrdersDefaultArgs<ExtArgs>
@@ -757,7 +712,6 @@ export type $Service_order_itemPayload<ExtArgs extends runtime.Types.Extensions.
     order_id: string
     laundry_service_id: number
     qty: runtime.Decimal
-    price_per_unit: runtime.Decimal
     subtotal: runtime.Decimal
     notes: string
   }, ExtArgs["result"]["service_order_item"]>
@@ -1189,7 +1143,6 @@ export interface Service_order_itemFieldRefs {
   readonly order_id: Prisma.FieldRef<"Service_order_item", 'String'>
   readonly laundry_service_id: Prisma.FieldRef<"Service_order_item", 'Int'>
   readonly qty: Prisma.FieldRef<"Service_order_item", 'Decimal'>
-  readonly price_per_unit: Prisma.FieldRef<"Service_order_item", 'Decimal'>
   readonly subtotal: Prisma.FieldRef<"Service_order_item", 'Decimal'>
   readonly notes: Prisma.FieldRef<"Service_order_item", 'String'>
 }

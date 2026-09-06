@@ -47,6 +47,16 @@ export { Prisma }
  */
 export type User = Prisma.UserModel
 /**
+ * Model Refresh_token
+ * 
+ */
+export type Refresh_token = Prisma.Refresh_tokenModel
+/**
+ * Model Access_token
+ * 
+ */
+export type Access_token = Prisma.Access_tokenModel
+/**
  * Model User_address
  * 
  */

@@ -1,24 +1,24 @@
 export type produckCreateType = {
-    name: String
-    unit: String
-    price_per_unit: Number
-    estimation_duration_unit: Number
-    is_active: Boolean
+    name: string
+    unit: string
+    price_per_unit: number
+    estimation_duration_unit: number
+    is_active: boolean
 }
 
 export type produckUpdateType = {
-    name: String
-    unit: String
-    price_per_unit: Number
-    estimation_duration_unit: Number
-    isa_ctive: Boolean
+    name: string
+    unit: string
+    price_per_unit: number
+    estimation_duration_unit: number
+    isa_ctive: boolean
 }
 
 export interface serviceType {
-    id: String
-    name: String
-    unit: String
-    price_per_unit: Number
-    estimation_duration_unit: Number
-    isa_ctive: Boolean
+    id: string
+    name: string
+    unit: string
+    price_per_unit: number
+    estimation_duration_unit: number
+    isa_ctive: boolean
 }

@@ -398,6 +398,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   User: 'User',
+  Refresh_token: 'Refresh_token',
+  Access_token: 'Access_token',
   User_address: 'User_address',
   Outlets: 'Outlets',
   Laundry_services: 'Laundry_services',
@@ -423,7 +425,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "user_address" | "outlets" | "laundry_services" | "products" | "orders" | "service_order_item" | "product_order_item" | "payments" | "order_trackings" | "cash_flow"
+    modelProps: "user" | "refresh_token" | "access_token" | "user_address" | "outlets" | "laundry_services" | "products" | "orders" | "service_order_item" | "product_order_item" | "payments" | "order_trackings" | "cash_flow"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -498,6 +500,154 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         count: {
           args: Prisma.UserCountArgs<ExtArgs>
           result: runtime.Types.Utils.Optional<Prisma.UserCountAggregateOutputType> | number
+        }
+      }
+    }
+    Refresh_token: {
+      payload: Prisma.$Refresh_tokenPayload<ExtArgs>
+      fields: Prisma.Refresh_tokenFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.Refresh_tokenFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Refresh_tokenPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.Refresh_tokenFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Refresh_tokenPayload>
+        }
+        findFirst: {
+          args: Prisma.Refresh_tokenFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Refresh_tokenPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.Refresh_tokenFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Refresh_tokenPayload>
+        }
+        findMany: {
+          args: Prisma.Refresh_tokenFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Refresh_tokenPayload>[]
+        }
+        create: {
+          args: Prisma.Refresh_tokenCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Refresh_tokenPayload>
+        }
+        createMany: {
+          args: Prisma.Refresh_tokenCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.Refresh_tokenCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Refresh_tokenPayload>[]
+        }
+        delete: {
+          args: Prisma.Refresh_tokenDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Refresh_tokenPayload>
+        }
+        update: {
+          args: Prisma.Refresh_tokenUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Refresh_tokenPayload>
+        }
+        deleteMany: {
+          args: Prisma.Refresh_tokenDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.Refresh_tokenUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.Refresh_tokenUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Refresh_tokenPayload>[]
+        }
+        upsert: {
+          args: Prisma.Refresh_tokenUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Refresh_tokenPayload>
+        }
+        aggregate: {
+          args: Prisma.Refresh_tokenAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateRefresh_token>
+        }
+        groupBy: {
+          args: Prisma.Refresh_tokenGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Refresh_tokenGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.Refresh_tokenCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Refresh_tokenCountAggregateOutputType> | number
+        }
+      }
+    }
+    Access_token: {
+      payload: Prisma.$Access_tokenPayload<ExtArgs>
+      fields: Prisma.Access_tokenFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.Access_tokenFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Access_tokenPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.Access_tokenFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Access_tokenPayload>
+        }
+        findFirst: {
+          args: Prisma.Access_tokenFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Access_tokenPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.Access_tokenFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Access_tokenPayload>
+        }
+        findMany: {
+          args: Prisma.Access_tokenFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Access_tokenPayload>[]
+        }
+        create: {
+          args: Prisma.Access_tokenCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Access_tokenPayload>
+        }
+        createMany: {
+          args: Prisma.Access_tokenCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.Access_tokenCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Access_tokenPayload>[]
+        }
+        delete: {
+          args: Prisma.Access_tokenDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Access_tokenPayload>
+        }
+        update: {
+          args: Prisma.Access_tokenUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Access_tokenPayload>
+        }
+        deleteMany: {
+          args: Prisma.Access_tokenDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.Access_tokenUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.Access_tokenUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Access_tokenPayload>[]
+        }
+        upsert: {
+          args: Prisma.Access_tokenUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$Access_tokenPayload>
+        }
+        aggregate: {
+          args: Prisma.Access_tokenAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateAccess_token>
+        }
+        groupBy: {
+          args: Prisma.Access_tokenGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Access_tokenGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.Access_tokenCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.Access_tokenCountAggregateOutputType> | number
         }
       }
     }
@@ -1289,10 +1439,34 @@ export const UserScalarFieldEnum = {
   phone: 'phone',
   is_verified: 'is_verified',
   verified_at: 'verified_at',
-  created_at: 'created_at'
+  created_at: 'created_at',
+  refresh_tokenId: 'refresh_tokenId',
+  access_tokenId: 'access_tokenId'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const Refresh_tokenScalarFieldEnum = {
+  id: 'id',
+  user_id: 'user_id',
+  token: 'token',
+  expired_at: 'expired_at',
+  created_at: 'created_at'
+} as const
+
+export type Refresh_tokenScalarFieldEnum = (typeof Refresh_tokenScalarFieldEnum)[keyof typeof Refresh_tokenScalarFieldEnum]
+
+
+export const Access_tokenScalarFieldEnum = {
+  id: 'id',
+  user_id: 'user_id',
+  token: 'token',
+  expired_at: 'expired_at',
+  created_at: 'created_at'
+} as const
+
+export type Access_tokenScalarFieldEnum = (typeof Access_tokenScalarFieldEnum)[keyof typeof Access_tokenScalarFieldEnum]
 
 
 export const User_addressScalarFieldEnum = {
@@ -1338,7 +1512,8 @@ export const ProductsScalarFieldEnum = {
   price: 'price',
   size: 'size',
   stock: 'stock',
-  is_active: 'is_active'
+  is_active: 'is_active',
+  image: 'image'
 } as const
 
 export type ProductsScalarFieldEnum = (typeof ProductsScalarFieldEnum)[keyof typeof ProductsScalarFieldEnum]
@@ -1368,7 +1543,6 @@ export const Service_order_itemScalarFieldEnum = {
   order_id: 'order_id',
   laundry_service_id: 'laundry_service_id',
   qty: 'qty',
-  price_per_unit: 'price_per_unit',
   subtotal: 'subtotal',
   notes: 'notes'
 } as const
@@ -1381,7 +1555,6 @@ export const Product_order_itemScalarFieldEnum = {
   order_id: 'order_id',
   product_id: 'product_id',
   qty: 'qty',
-  price: 'price',
   subtotal: 'subtotal'
 } as const
 
@@ -1448,6 +1621,14 @@ export const QueryMode = {
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
 export const JsonNullValueFilter = {
@@ -1707,6 +1888,8 @@ export interface PrismaClientOptionsWithAdapter extends PrismaClientBaseOptions 
 export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaClientOptionsWithAdapter
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
+  refresh_token?: Prisma.Refresh_tokenOmit
+  access_token?: Prisma.Access_tokenOmit
   user_address?: Prisma.User_addressOmit
   outlets?: Prisma.OutletsOmit
   laundry_services?: Prisma.Laundry_servicesOmit

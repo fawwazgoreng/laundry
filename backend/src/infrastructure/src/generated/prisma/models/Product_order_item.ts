@@ -31,14 +31,12 @@ export type AggregateProduct_order_item = {
 export type Product_order_itemAvgAggregateOutputType = {
   product_id: number | null
   qty: number | null
-  price: number | null
   subtotal: number | null
 }
 
 export type Product_order_itemSumAggregateOutputType = {
   product_id: number | null
   qty: number | null
-  price: number | null
   subtotal: number | null
 }
 
@@ -47,7 +45,6 @@ export type Product_order_itemMinAggregateOutputType = {
   order_id: string | null
   product_id: number | null
   qty: number | null
-  price: number | null
   subtotal: number | null
 }
 
@@ -56,7 +53,6 @@ export type Product_order_itemMaxAggregateOutputType = {
   order_id: string | null
   product_id: number | null
   qty: number | null
-  price: number | null
   subtotal: number | null
 }
 
@@ -65,7 +61,6 @@ export type Product_order_itemCountAggregateOutputType = {
   order_id: number
   product_id: number
   qty: number
-  price: number
   subtotal: number
   _all: number
 }
@@ -74,14 +69,12 @@ export type Product_order_itemCountAggregateOutputType = {
 export type Product_order_itemAvgAggregateInputType = {
   product_id?: true
   qty?: true
-  price?: true
   subtotal?: true
 }
 
 export type Product_order_itemSumAggregateInputType = {
   product_id?: true
   qty?: true
-  price?: true
   subtotal?: true
 }
 
@@ -90,7 +83,6 @@ export type Product_order_itemMinAggregateInputType = {
   order_id?: true
   product_id?: true
   qty?: true
-  price?: true
   subtotal?: true
 }
 
@@ -99,7 +91,6 @@ export type Product_order_itemMaxAggregateInputType = {
   order_id?: true
   product_id?: true
   qty?: true
-  price?: true
   subtotal?: true
 }
 
@@ -108,7 +99,6 @@ export type Product_order_itemCountAggregateInputType = {
   order_id?: true
   product_id?: true
   qty?: true
-  price?: true
   subtotal?: true
   _all?: true
 }
@@ -204,7 +194,6 @@ export type Product_order_itemGroupByOutputType = {
   order_id: string
   product_id: number
   qty: number
-  price: number
   subtotal: number
   _count: Product_order_itemCountAggregateOutputType | null
   _avg: Product_order_itemAvgAggregateOutputType | null
@@ -236,7 +225,6 @@ export type Product_order_itemWhereInput = {
   order_id?: Prisma.StringFilter<"Product_order_item"> | string
   product_id?: Prisma.IntFilter<"Product_order_item"> | number
   qty?: Prisma.IntFilter<"Product_order_item"> | number
-  price?: Prisma.IntFilter<"Product_order_item"> | number
   subtotal?: Prisma.IntFilter<"Product_order_item"> | number
   product?: Prisma.XOR<Prisma.ProductsScalarRelationFilter, Prisma.ProductsWhereInput>
   order?: Prisma.XOR<Prisma.OrdersScalarRelationFilter, Prisma.OrdersWhereInput>
@@ -247,7 +235,6 @@ export type Product_order_itemOrderByWithRelationInput = {
   order_id?: Prisma.SortOrder
   product_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   product?: Prisma.ProductsOrderByWithRelationInput
   order?: Prisma.OrdersOrderByWithRelationInput
@@ -261,7 +248,6 @@ export type Product_order_itemWhereUniqueInput = Prisma.AtLeast<{
   order_id?: Prisma.StringFilter<"Product_order_item"> | string
   product_id?: Prisma.IntFilter<"Product_order_item"> | number
   qty?: Prisma.IntFilter<"Product_order_item"> | number
-  price?: Prisma.IntFilter<"Product_order_item"> | number
   subtotal?: Prisma.IntFilter<"Product_order_item"> | number
   product?: Prisma.XOR<Prisma.ProductsScalarRelationFilter, Prisma.ProductsWhereInput>
   order?: Prisma.XOR<Prisma.OrdersScalarRelationFilter, Prisma.OrdersWhereInput>
@@ -272,7 +258,6 @@ export type Product_order_itemOrderByWithAggregationInput = {
   order_id?: Prisma.SortOrder
   product_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
   _count?: Prisma.Product_order_itemCountOrderByAggregateInput
   _avg?: Prisma.Product_order_itemAvgOrderByAggregateInput
@@ -289,14 +274,12 @@ export type Product_order_itemScalarWhereWithAggregatesInput = {
   order_id?: Prisma.StringWithAggregatesFilter<"Product_order_item"> | string
   product_id?: Prisma.IntWithAggregatesFilter<"Product_order_item"> | number
   qty?: Prisma.IntWithAggregatesFilter<"Product_order_item"> | number
-  price?: Prisma.IntWithAggregatesFilter<"Product_order_item"> | number
   subtotal?: Prisma.IntWithAggregatesFilter<"Product_order_item"> | number
 }
 
 export type Product_order_itemCreateInput = {
   id?: string
   qty: number
-  price: number
   subtotal: number
   product: Prisma.ProductsCreateNestedOneWithoutProductOrderItemsInput
   order: Prisma.OrdersCreateNestedOneWithoutProductOrderItemsInput
@@ -307,14 +290,12 @@ export type Product_order_itemUncheckedCreateInput = {
   order_id: string
   product_id: number
   qty: number
-  price: number
   subtotal: number
 }
 
 export type Product_order_itemUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   qty?: Prisma.IntFieldUpdateOperationsInput | number
-  price?: Prisma.IntFieldUpdateOperationsInput | number
   subtotal?: Prisma.IntFieldUpdateOperationsInput | number
   product?: Prisma.ProductsUpdateOneRequiredWithoutProductOrderItemsNestedInput
   order?: Prisma.OrdersUpdateOneRequiredWithoutProductOrderItemsNestedInput
@@ -325,7 +306,6 @@ export type Product_order_itemUncheckedUpdateInput = {
   order_id?: Prisma.StringFieldUpdateOperationsInput | string
   product_id?: Prisma.IntFieldUpdateOperationsInput | number
   qty?: Prisma.IntFieldUpdateOperationsInput | number
-  price?: Prisma.IntFieldUpdateOperationsInput | number
   subtotal?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
@@ -334,14 +314,12 @@ export type Product_order_itemCreateManyInput = {
   order_id: string
   product_id: number
   qty: number
-  price: number
   subtotal: number
 }
 
 export type Product_order_itemUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   qty?: Prisma.IntFieldUpdateOperationsInput | number
-  price?: Prisma.IntFieldUpdateOperationsInput | number
   subtotal?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
@@ -350,7 +328,6 @@ export type Product_order_itemUncheckedUpdateManyInput = {
   order_id?: Prisma.StringFieldUpdateOperationsInput | string
   product_id?: Prisma.IntFieldUpdateOperationsInput | number
   qty?: Prisma.IntFieldUpdateOperationsInput | number
-  price?: Prisma.IntFieldUpdateOperationsInput | number
   subtotal?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
@@ -369,14 +346,12 @@ export type Product_order_itemCountOrderByAggregateInput = {
   order_id?: Prisma.SortOrder
   product_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
 }
 
 export type Product_order_itemAvgOrderByAggregateInput = {
   product_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
 }
 
@@ -385,7 +360,6 @@ export type Product_order_itemMaxOrderByAggregateInput = {
   order_id?: Prisma.SortOrder
   product_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
 }
 
@@ -394,14 +368,12 @@ export type Product_order_itemMinOrderByAggregateInput = {
   order_id?: Prisma.SortOrder
   product_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
 }
 
 export type Product_order_itemSumOrderByAggregateInput = {
   product_id?: Prisma.SortOrder
   qty?: Prisma.SortOrder
-  price?: Prisma.SortOrder
   subtotal?: Prisma.SortOrder
 }
 
@@ -492,7 +464,6 @@ export type Product_order_itemUncheckedUpdateManyWithoutOrderNestedInput = {
 export type Product_order_itemCreateWithoutProductInput = {
   id?: string
   qty: number
-  price: number
   subtotal: number
   order: Prisma.OrdersCreateNestedOneWithoutProductOrderItemsInput
 }
@@ -501,7 +472,6 @@ export type Product_order_itemUncheckedCreateWithoutProductInput = {
   id?: string
   order_id: string
   qty: number
-  price: number
   subtotal: number
 }
 
@@ -539,14 +509,12 @@ export type Product_order_itemScalarWhereInput = {
   order_id?: Prisma.StringFilter<"Product_order_item"> | string
   product_id?: Prisma.IntFilter<"Product_order_item"> | number
   qty?: Prisma.IntFilter<"Product_order_item"> | number
-  price?: Prisma.IntFilter<"Product_order_item"> | number
   subtotal?: Prisma.IntFilter<"Product_order_item"> | number
 }
 
 export type Product_order_itemCreateWithoutOrderInput = {
   id?: string
   qty: number
-  price: number
   subtotal: number
   product: Prisma.ProductsCreateNestedOneWithoutProductOrderItemsInput
 }
@@ -555,7 +523,6 @@ export type Product_order_itemUncheckedCreateWithoutOrderInput = {
   id?: string
   product_id: number
   qty: number
-  price: number
   subtotal: number
 }
 
@@ -589,14 +556,12 @@ export type Product_order_itemCreateManyProductInput = {
   id?: string
   order_id: string
   qty: number
-  price: number
   subtotal: number
 }
 
 export type Product_order_itemUpdateWithoutProductInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   qty?: Prisma.IntFieldUpdateOperationsInput | number
-  price?: Prisma.IntFieldUpdateOperationsInput | number
   subtotal?: Prisma.IntFieldUpdateOperationsInput | number
   order?: Prisma.OrdersUpdateOneRequiredWithoutProductOrderItemsNestedInput
 }
@@ -605,7 +570,6 @@ export type Product_order_itemUncheckedUpdateWithoutProductInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   order_id?: Prisma.StringFieldUpdateOperationsInput | string
   qty?: Prisma.IntFieldUpdateOperationsInput | number
-  price?: Prisma.IntFieldUpdateOperationsInput | number
   subtotal?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
@@ -613,7 +577,6 @@ export type Product_order_itemUncheckedUpdateManyWithoutProductInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   order_id?: Prisma.StringFieldUpdateOperationsInput | string
   qty?: Prisma.IntFieldUpdateOperationsInput | number
-  price?: Prisma.IntFieldUpdateOperationsInput | number
   subtotal?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
@@ -621,14 +584,12 @@ export type Product_order_itemCreateManyOrderInput = {
   id?: string
   product_id: number
   qty: number
-  price: number
   subtotal: number
 }
 
 export type Product_order_itemUpdateWithoutOrderInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   qty?: Prisma.IntFieldUpdateOperationsInput | number
-  price?: Prisma.IntFieldUpdateOperationsInput | number
   subtotal?: Prisma.IntFieldUpdateOperationsInput | number
   product?: Prisma.ProductsUpdateOneRequiredWithoutProductOrderItemsNestedInput
 }
@@ -637,7 +598,6 @@ export type Product_order_itemUncheckedUpdateWithoutOrderInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   product_id?: Prisma.IntFieldUpdateOperationsInput | number
   qty?: Prisma.IntFieldUpdateOperationsInput | number
-  price?: Prisma.IntFieldUpdateOperationsInput | number
   subtotal?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
@@ -645,7 +605,6 @@ export type Product_order_itemUncheckedUpdateManyWithoutOrderInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   product_id?: Prisma.IntFieldUpdateOperationsInput | number
   qty?: Prisma.IntFieldUpdateOperationsInput | number
-  price?: Prisma.IntFieldUpdateOperationsInput | number
   subtotal?: Prisma.IntFieldUpdateOperationsInput | number
 }
 
@@ -656,7 +615,6 @@ export type Product_order_itemSelect<ExtArgs extends runtime.Types.Extensions.In
   order_id?: boolean
   product_id?: boolean
   qty?: boolean
-  price?: boolean
   subtotal?: boolean
   product?: boolean | Prisma.ProductsDefaultArgs<ExtArgs>
   order?: boolean | Prisma.OrdersDefaultArgs<ExtArgs>
@@ -667,7 +625,6 @@ export type Product_order_itemSelectCreateManyAndReturn<ExtArgs extends runtime.
   order_id?: boolean
   product_id?: boolean
   qty?: boolean
-  price?: boolean
   subtotal?: boolean
   product?: boolean | Prisma.ProductsDefaultArgs<ExtArgs>
   order?: boolean | Prisma.OrdersDefaultArgs<ExtArgs>
@@ -678,7 +635,6 @@ export type Product_order_itemSelectUpdateManyAndReturn<ExtArgs extends runtime.
   order_id?: boolean
   product_id?: boolean
   qty?: boolean
-  price?: boolean
   subtotal?: boolean
   product?: boolean | Prisma.ProductsDefaultArgs<ExtArgs>
   order?: boolean | Prisma.OrdersDefaultArgs<ExtArgs>
@@ -689,11 +645,10 @@ export type Product_order_itemSelectScalar = {
   order_id?: boolean
   product_id?: boolean
   qty?: boolean
-  price?: boolean
   subtotal?: boolean
 }
 
-export type Product_order_itemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "order_id" | "product_id" | "qty" | "price" | "subtotal", ExtArgs["result"]["product_order_item"]>
+export type Product_order_itemOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "order_id" | "product_id" | "qty" | "subtotal", ExtArgs["result"]["product_order_item"]>
 export type Product_order_itemInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   product?: boolean | Prisma.ProductsDefaultArgs<ExtArgs>
   order?: boolean | Prisma.OrdersDefaultArgs<ExtArgs>
@@ -718,7 +673,6 @@ export type $Product_order_itemPayload<ExtArgs extends runtime.Types.Extensions.
     order_id: string
     product_id: number
     qty: number
-    price: number
     subtotal: number
   }, ExtArgs["result"]["product_order_item"]>
   composites: {}
@@ -1149,7 +1103,6 @@ export interface Product_order_itemFieldRefs {
   readonly order_id: Prisma.FieldRef<"Product_order_item", 'String'>
   readonly product_id: Prisma.FieldRef<"Product_order_item", 'Int'>
   readonly qty: Prisma.FieldRef<"Product_order_item", 'Int'>
-  readonly price: Prisma.FieldRef<"Product_order_item", 'Int'>
   readonly subtotal: Prisma.FieldRef<"Product_order_item", 'Int'>
 }
     

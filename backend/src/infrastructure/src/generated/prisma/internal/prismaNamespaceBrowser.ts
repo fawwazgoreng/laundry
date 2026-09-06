@@ -52,6 +52,8 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
+  Refresh_token: 'Refresh_token',
+  Access_token: 'Access_token',
   User_address: 'User_address',
   Outlets: 'Outlets',
   Laundry_services: 'Laundry_services',
@@ -89,10 +91,34 @@ export const UserScalarFieldEnum = {
   phone: 'phone',
   is_verified: 'is_verified',
   verified_at: 'verified_at',
-  created_at: 'created_at'
+  created_at: 'created_at',
+  refresh_tokenId: 'refresh_tokenId',
+  access_tokenId: 'access_tokenId'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const Refresh_tokenScalarFieldEnum = {
+  id: 'id',
+  user_id: 'user_id',
+  token: 'token',
+  expired_at: 'expired_at',
+  created_at: 'created_at'
+} as const
+
+export type Refresh_tokenScalarFieldEnum = (typeof Refresh_tokenScalarFieldEnum)[keyof typeof Refresh_tokenScalarFieldEnum]
+
+
+export const Access_tokenScalarFieldEnum = {
+  id: 'id',
+  user_id: 'user_id',
+  token: 'token',
+  expired_at: 'expired_at',
+  created_at: 'created_at'
+} as const
+
+export type Access_tokenScalarFieldEnum = (typeof Access_tokenScalarFieldEnum)[keyof typeof Access_tokenScalarFieldEnum]
 
 
 export const User_addressScalarFieldEnum = {
@@ -138,7 +164,8 @@ export const ProductsScalarFieldEnum = {
   price: 'price',
   size: 'size',
   stock: 'stock',
-  is_active: 'is_active'
+  is_active: 'is_active',
+  image: 'image'
 } as const
 
 export type ProductsScalarFieldEnum = (typeof ProductsScalarFieldEnum)[keyof typeof ProductsScalarFieldEnum]
@@ -168,7 +195,6 @@ export const Service_order_itemScalarFieldEnum = {
   order_id: 'order_id',
   laundry_service_id: 'laundry_service_id',
   qty: 'qty',
-  price_per_unit: 'price_per_unit',
   subtotal: 'subtotal',
   notes: 'notes'
 } as const
@@ -181,7 +207,6 @@ export const Product_order_itemScalarFieldEnum = {
   order_id: 'order_id',
   product_id: 'product_id',
   qty: 'qty',
-  price: 'price',
   subtotal: 'subtotal'
 } as const
 
@@ -248,6 +273,14 @@ export const QueryMode = {
 } as const
 
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
+
+
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
 
 
 export const JsonNullValueFilter = {

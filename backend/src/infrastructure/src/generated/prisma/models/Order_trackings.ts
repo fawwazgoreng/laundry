@@ -192,6 +192,7 @@ export type Order_trackingsWhereInput = {
   estimated_completion_time?: Prisma.DateTimeFilter<"Order_trackings"> | Date | string
   notes?: Prisma.StringFilter<"Order_trackings"> | string
   created_at?: Prisma.DateTimeFilter<"Order_trackings"> | Date | string
+  order?: Prisma.XOR<Prisma.OrdersScalarRelationFilter, Prisma.OrdersWhereInput>
 }
 
 export type Order_trackingsOrderByWithRelationInput = {
@@ -201,6 +202,7 @@ export type Order_trackingsOrderByWithRelationInput = {
   estimated_completion_time?: Prisma.SortOrder
   notes?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
+  order?: Prisma.OrdersOrderByWithRelationInput
 }
 
 export type Order_trackingsWhereUniqueInput = Prisma.AtLeast<{
@@ -213,6 +215,7 @@ export type Order_trackingsWhereUniqueInput = Prisma.AtLeast<{
   estimated_completion_time?: Prisma.DateTimeFilter<"Order_trackings"> | Date | string
   notes?: Prisma.StringFilter<"Order_trackings"> | string
   created_at?: Prisma.DateTimeFilter<"Order_trackings"> | Date | string
+  order?: Prisma.XOR<Prisma.OrdersScalarRelationFilter, Prisma.OrdersWhereInput>
 }, "id">
 
 export type Order_trackingsOrderByWithAggregationInput = {
@@ -241,11 +244,11 @@ export type Order_trackingsScalarWhereWithAggregatesInput = {
 
 export type Order_trackingsCreateInput = {
   id?: string
-  order_id: string
   status: string
   estimated_completion_time?: Date | string
   notes: string
   created_at?: Date | string
+  order: Prisma.OrdersCreateNestedOneWithoutOrderTrackingsInput
 }
 
 export type Order_trackingsUncheckedCreateInput = {
@@ -259,11 +262,11 @@ export type Order_trackingsUncheckedCreateInput = {
 
 export type Order_trackingsUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  order_id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   estimated_completion_time?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  order?: Prisma.OrdersUpdateOneRequiredWithoutOrderTrackingsNestedInput
 }
 
 export type Order_trackingsUncheckedUpdateInput = {
@@ -286,7 +289,6 @@ export type Order_trackingsCreateManyInput = {
 
 export type Order_trackingsUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
-  order_id?: Prisma.StringFieldUpdateOperationsInput | string
   status?: Prisma.StringFieldUpdateOperationsInput | string
   estimated_completion_time?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
@@ -300,6 +302,16 @@ export type Order_trackingsUncheckedUpdateManyInput = {
   estimated_completion_time?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   notes?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type Order_trackingsListRelationFilter = {
+  every?: Prisma.Order_trackingsWhereInput
+  some?: Prisma.Order_trackingsWhereInput
+  none?: Prisma.Order_trackingsWhereInput
+}
+
+export type Order_trackingsOrderByRelationAggregateInput = {
+  _count?: Prisma.SortOrder
 }
 
 export type Order_trackingsCountOrderByAggregateInput = {
@@ -329,6 +341,134 @@ export type Order_trackingsMinOrderByAggregateInput = {
   created_at?: Prisma.SortOrder
 }
 
+export type Order_trackingsCreateNestedManyWithoutOrderInput = {
+  create?: Prisma.XOR<Prisma.Order_trackingsCreateWithoutOrderInput, Prisma.Order_trackingsUncheckedCreateWithoutOrderInput> | Prisma.Order_trackingsCreateWithoutOrderInput[] | Prisma.Order_trackingsUncheckedCreateWithoutOrderInput[]
+  connectOrCreate?: Prisma.Order_trackingsCreateOrConnectWithoutOrderInput | Prisma.Order_trackingsCreateOrConnectWithoutOrderInput[]
+  createMany?: Prisma.Order_trackingsCreateManyOrderInputEnvelope
+  connect?: Prisma.Order_trackingsWhereUniqueInput | Prisma.Order_trackingsWhereUniqueInput[]
+}
+
+export type Order_trackingsUncheckedCreateNestedManyWithoutOrderInput = {
+  create?: Prisma.XOR<Prisma.Order_trackingsCreateWithoutOrderInput, Prisma.Order_trackingsUncheckedCreateWithoutOrderInput> | Prisma.Order_trackingsCreateWithoutOrderInput[] | Prisma.Order_trackingsUncheckedCreateWithoutOrderInput[]
+  connectOrCreate?: Prisma.Order_trackingsCreateOrConnectWithoutOrderInput | Prisma.Order_trackingsCreateOrConnectWithoutOrderInput[]
+  createMany?: Prisma.Order_trackingsCreateManyOrderInputEnvelope
+  connect?: Prisma.Order_trackingsWhereUniqueInput | Prisma.Order_trackingsWhereUniqueInput[]
+}
+
+export type Order_trackingsUpdateManyWithoutOrderNestedInput = {
+  create?: Prisma.XOR<Prisma.Order_trackingsCreateWithoutOrderInput, Prisma.Order_trackingsUncheckedCreateWithoutOrderInput> | Prisma.Order_trackingsCreateWithoutOrderInput[] | Prisma.Order_trackingsUncheckedCreateWithoutOrderInput[]
+  connectOrCreate?: Prisma.Order_trackingsCreateOrConnectWithoutOrderInput | Prisma.Order_trackingsCreateOrConnectWithoutOrderInput[]
+  upsert?: Prisma.Order_trackingsUpsertWithWhereUniqueWithoutOrderInput | Prisma.Order_trackingsUpsertWithWhereUniqueWithoutOrderInput[]
+  createMany?: Prisma.Order_trackingsCreateManyOrderInputEnvelope
+  set?: Prisma.Order_trackingsWhereUniqueInput | Prisma.Order_trackingsWhereUniqueInput[]
+  disconnect?: Prisma.Order_trackingsWhereUniqueInput | Prisma.Order_trackingsWhereUniqueInput[]
+  delete?: Prisma.Order_trackingsWhereUniqueInput | Prisma.Order_trackingsWhereUniqueInput[]
+  connect?: Prisma.Order_trackingsWhereUniqueInput | Prisma.Order_trackingsWhereUniqueInput[]
+  update?: Prisma.Order_trackingsUpdateWithWhereUniqueWithoutOrderInput | Prisma.Order_trackingsUpdateWithWhereUniqueWithoutOrderInput[]
+  updateMany?: Prisma.Order_trackingsUpdateManyWithWhereWithoutOrderInput | Prisma.Order_trackingsUpdateManyWithWhereWithoutOrderInput[]
+  deleteMany?: Prisma.Order_trackingsScalarWhereInput | Prisma.Order_trackingsScalarWhereInput[]
+}
+
+export type Order_trackingsUncheckedUpdateManyWithoutOrderNestedInput = {
+  create?: Prisma.XOR<Prisma.Order_trackingsCreateWithoutOrderInput, Prisma.Order_trackingsUncheckedCreateWithoutOrderInput> | Prisma.Order_trackingsCreateWithoutOrderInput[] | Prisma.Order_trackingsUncheckedCreateWithoutOrderInput[]
+  connectOrCreate?: Prisma.Order_trackingsCreateOrConnectWithoutOrderInput | Prisma.Order_trackingsCreateOrConnectWithoutOrderInput[]
+  upsert?: Prisma.Order_trackingsUpsertWithWhereUniqueWithoutOrderInput | Prisma.Order_trackingsUpsertWithWhereUniqueWithoutOrderInput[]
+  createMany?: Prisma.Order_trackingsCreateManyOrderInputEnvelope
+  set?: Prisma.Order_trackingsWhereUniqueInput | Prisma.Order_trackingsWhereUniqueInput[]
+  disconnect?: Prisma.Order_trackingsWhereUniqueInput | Prisma.Order_trackingsWhereUniqueInput[]
+  delete?: Prisma.Order_trackingsWhereUniqueInput | Prisma.Order_trackingsWhereUniqueInput[]
+  connect?: Prisma.Order_trackingsWhereUniqueInput | Prisma.Order_trackingsWhereUniqueInput[]
+  update?: Prisma.Order_trackingsUpdateWithWhereUniqueWithoutOrderInput | Prisma.Order_trackingsUpdateWithWhereUniqueWithoutOrderInput[]
+  updateMany?: Prisma.Order_trackingsUpdateManyWithWhereWithoutOrderInput | Prisma.Order_trackingsUpdateManyWithWhereWithoutOrderInput[]
+  deleteMany?: Prisma.Order_trackingsScalarWhereInput | Prisma.Order_trackingsScalarWhereInput[]
+}
+
+export type Order_trackingsCreateWithoutOrderInput = {
+  id?: string
+  status: string
+  estimated_completion_time?: Date | string
+  notes: string
+  created_at?: Date | string
+}
+
+export type Order_trackingsUncheckedCreateWithoutOrderInput = {
+  id?: string
+  status: string
+  estimated_completion_time?: Date | string
+  notes: string
+  created_at?: Date | string
+}
+
+export type Order_trackingsCreateOrConnectWithoutOrderInput = {
+  where: Prisma.Order_trackingsWhereUniqueInput
+  create: Prisma.XOR<Prisma.Order_trackingsCreateWithoutOrderInput, Prisma.Order_trackingsUncheckedCreateWithoutOrderInput>
+}
+
+export type Order_trackingsCreateManyOrderInputEnvelope = {
+  data: Prisma.Order_trackingsCreateManyOrderInput | Prisma.Order_trackingsCreateManyOrderInput[]
+  skipDuplicates?: boolean
+}
+
+export type Order_trackingsUpsertWithWhereUniqueWithoutOrderInput = {
+  where: Prisma.Order_trackingsWhereUniqueInput
+  update: Prisma.XOR<Prisma.Order_trackingsUpdateWithoutOrderInput, Prisma.Order_trackingsUncheckedUpdateWithoutOrderInput>
+  create: Prisma.XOR<Prisma.Order_trackingsCreateWithoutOrderInput, Prisma.Order_trackingsUncheckedCreateWithoutOrderInput>
+}
+
+export type Order_trackingsUpdateWithWhereUniqueWithoutOrderInput = {
+  where: Prisma.Order_trackingsWhereUniqueInput
+  data: Prisma.XOR<Prisma.Order_trackingsUpdateWithoutOrderInput, Prisma.Order_trackingsUncheckedUpdateWithoutOrderInput>
+}
+
+export type Order_trackingsUpdateManyWithWhereWithoutOrderInput = {
+  where: Prisma.Order_trackingsScalarWhereInput
+  data: Prisma.XOR<Prisma.Order_trackingsUpdateManyMutationInput, Prisma.Order_trackingsUncheckedUpdateManyWithoutOrderInput>
+}
+
+export type Order_trackingsScalarWhereInput = {
+  AND?: Prisma.Order_trackingsScalarWhereInput | Prisma.Order_trackingsScalarWhereInput[]
+  OR?: Prisma.Order_trackingsScalarWhereInput[]
+  NOT?: Prisma.Order_trackingsScalarWhereInput | Prisma.Order_trackingsScalarWhereInput[]
+  id?: Prisma.StringFilter<"Order_trackings"> | string
+  order_id?: Prisma.StringFilter<"Order_trackings"> | string
+  status?: Prisma.StringFilter<"Order_trackings"> | string
+  estimated_completion_time?: Prisma.DateTimeFilter<"Order_trackings"> | Date | string
+  notes?: Prisma.StringFilter<"Order_trackings"> | string
+  created_at?: Prisma.DateTimeFilter<"Order_trackings"> | Date | string
+}
+
+export type Order_trackingsCreateManyOrderInput = {
+  id?: string
+  status: string
+  estimated_completion_time?: Date | string
+  notes: string
+  created_at?: Date | string
+}
+
+export type Order_trackingsUpdateWithoutOrderInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  estimated_completion_time?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notes?: Prisma.StringFieldUpdateOperationsInput | string
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type Order_trackingsUncheckedUpdateWithoutOrderInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  estimated_completion_time?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notes?: Prisma.StringFieldUpdateOperationsInput | string
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type Order_trackingsUncheckedUpdateManyWithoutOrderInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  status?: Prisma.StringFieldUpdateOperationsInput | string
+  estimated_completion_time?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  notes?: Prisma.StringFieldUpdateOperationsInput | string
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
 
 
 export type Order_trackingsSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -338,6 +478,7 @@ export type Order_trackingsSelect<ExtArgs extends runtime.Types.Extensions.Inter
   estimated_completion_time?: boolean
   notes?: boolean
   created_at?: boolean
+  order?: boolean | Prisma.OrdersDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["order_trackings"]>
 
 export type Order_trackingsSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -347,6 +488,7 @@ export type Order_trackingsSelectCreateManyAndReturn<ExtArgs extends runtime.Typ
   estimated_completion_time?: boolean
   notes?: boolean
   created_at?: boolean
+  order?: boolean | Prisma.OrdersDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["order_trackings"]>
 
 export type Order_trackingsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -356,6 +498,7 @@ export type Order_trackingsSelectUpdateManyAndReturn<ExtArgs extends runtime.Typ
   estimated_completion_time?: boolean
   notes?: boolean
   created_at?: boolean
+  order?: boolean | Prisma.OrdersDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["order_trackings"]>
 
 export type Order_trackingsSelectScalar = {
@@ -368,10 +511,21 @@ export type Order_trackingsSelectScalar = {
 }
 
 export type Order_trackingsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "order_id" | "status" | "estimated_completion_time" | "notes" | "created_at", ExtArgs["result"]["order_trackings"]>
+export type Order_trackingsInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  order?: boolean | Prisma.OrdersDefaultArgs<ExtArgs>
+}
+export type Order_trackingsIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  order?: boolean | Prisma.OrdersDefaultArgs<ExtArgs>
+}
+export type Order_trackingsIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  order?: boolean | Prisma.OrdersDefaultArgs<ExtArgs>
+}
 
 export type $Order_trackingsPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Order_trackings"
-  objects: {}
+  objects: {
+    order: Prisma.$OrdersPayload<ExtArgs>
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
     order_id: string
@@ -773,6 +927,7 @@ readonly fields: Order_trackingsFieldRefs;
  */
 export interface Prisma__Order_trackingsClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  order<T extends Prisma.OrdersDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.OrdersDefaultArgs<ExtArgs>>): Prisma.Prisma__OrdersClient<runtime.Types.Result.GetResult<Prisma.$OrdersPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -825,6 +980,10 @@ export type Order_trackingsFindUniqueArgs<ExtArgs extends runtime.Types.Extensio
    */
   omit?: Prisma.Order_trackingsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Order_trackingsInclude<ExtArgs> | null
+  /**
    * Filter, which Order_trackings to fetch.
    */
   where: Prisma.Order_trackingsWhereUniqueInput
@@ -843,6 +1002,10 @@ export type Order_trackingsFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.E
    */
   omit?: Prisma.Order_trackingsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Order_trackingsInclude<ExtArgs> | null
+  /**
    * Filter, which Order_trackings to fetch.
    */
   where: Prisma.Order_trackingsWhereUniqueInput
@@ -860,6 +1023,10 @@ export type Order_trackingsFindFirstArgs<ExtArgs extends runtime.Types.Extension
    * Omit specific fields from the Order_trackings
    */
   omit?: Prisma.Order_trackingsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Order_trackingsInclude<ExtArgs> | null
   /**
    * Filter, which Order_trackings to fetch.
    */
@@ -909,6 +1076,10 @@ export type Order_trackingsFindFirstOrThrowArgs<ExtArgs extends runtime.Types.Ex
    */
   omit?: Prisma.Order_trackingsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Order_trackingsInclude<ExtArgs> | null
+  /**
    * Filter, which Order_trackings to fetch.
    */
   where?: Prisma.Order_trackingsWhereInput
@@ -956,6 +1127,10 @@ export type Order_trackingsFindManyArgs<ExtArgs extends runtime.Types.Extensions
    * Omit specific fields from the Order_trackings
    */
   omit?: Prisma.Order_trackingsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Order_trackingsInclude<ExtArgs> | null
   /**
    * Filter, which Order_trackings to fetch.
    */
@@ -1005,6 +1180,10 @@ export type Order_trackingsCreateArgs<ExtArgs extends runtime.Types.Extensions.I
    */
   omit?: Prisma.Order_trackingsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Order_trackingsInclude<ExtArgs> | null
+  /**
    * The data needed to create a Order_trackings.
    */
   data: Prisma.XOR<Prisma.Order_trackingsCreateInput, Prisma.Order_trackingsUncheckedCreateInput>
@@ -1038,6 +1217,10 @@ export type Order_trackingsCreateManyAndReturnArgs<ExtArgs extends runtime.Types
    */
   data: Prisma.Order_trackingsCreateManyInput | Prisma.Order_trackingsCreateManyInput[]
   skipDuplicates?: boolean
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Order_trackingsIncludeCreateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1052,6 +1235,10 @@ export type Order_trackingsUpdateArgs<ExtArgs extends runtime.Types.Extensions.I
    * Omit specific fields from the Order_trackings
    */
   omit?: Prisma.Order_trackingsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Order_trackingsInclude<ExtArgs> | null
   /**
    * The data needed to update a Order_trackings.
    */
@@ -1104,6 +1291,10 @@ export type Order_trackingsUpdateManyAndReturnArgs<ExtArgs extends runtime.Types
    * Limit how many Order_trackings to update.
    */
   limit?: number
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Order_trackingsIncludeUpdateManyAndReturn<ExtArgs> | null
 }
 
 /**
@@ -1118,6 +1309,10 @@ export type Order_trackingsUpsertArgs<ExtArgs extends runtime.Types.Extensions.I
    * Omit specific fields from the Order_trackings
    */
   omit?: Prisma.Order_trackingsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Order_trackingsInclude<ExtArgs> | null
   /**
    * The filter to search for the Order_trackings to update in case it exists.
    */
@@ -1144,6 +1339,10 @@ export type Order_trackingsDeleteArgs<ExtArgs extends runtime.Types.Extensions.I
    * Omit specific fields from the Order_trackings
    */
   omit?: Prisma.Order_trackingsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Order_trackingsInclude<ExtArgs> | null
   /**
    * Filter which Order_trackings to delete.
    */
@@ -1176,4 +1375,8 @@ export type Order_trackingsDefaultArgs<ExtArgs extends runtime.Types.Extensions.
    * Omit specific fields from the Order_trackings
    */
   omit?: Prisma.Order_trackingsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.Order_trackingsInclude<ExtArgs> | null
 }

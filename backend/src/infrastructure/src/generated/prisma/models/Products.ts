@@ -47,6 +47,7 @@ export type ProductsMinAggregateOutputType = {
   size: string | null
   stock: number | null
   is_active: boolean | null
+  image: string | null
 }
 
 export type ProductsMaxAggregateOutputType = {
@@ -56,6 +57,7 @@ export type ProductsMaxAggregateOutputType = {
   size: string | null
   stock: number | null
   is_active: boolean | null
+  image: string | null
 }
 
 export type ProductsCountAggregateOutputType = {
@@ -65,6 +67,7 @@ export type ProductsCountAggregateOutputType = {
   size: number
   stock: number
   is_active: number
+  image: number
   _all: number
 }
 
@@ -88,6 +91,7 @@ export type ProductsMinAggregateInputType = {
   size?: true
   stock?: true
   is_active?: true
+  image?: true
 }
 
 export type ProductsMaxAggregateInputType = {
@@ -97,6 +101,7 @@ export type ProductsMaxAggregateInputType = {
   size?: true
   stock?: true
   is_active?: true
+  image?: true
 }
 
 export type ProductsCountAggregateInputType = {
@@ -106,6 +111,7 @@ export type ProductsCountAggregateInputType = {
   size?: true
   stock?: true
   is_active?: true
+  image?: true
   _all?: true
 }
 
@@ -202,6 +208,7 @@ export type ProductsGroupByOutputType = {
   size: string
   stock: number
   is_active: boolean
+  image: string
   _count: ProductsCountAggregateOutputType | null
   _avg: ProductsAvgAggregateOutputType | null
   _sum: ProductsSumAggregateOutputType | null
@@ -234,6 +241,7 @@ export type ProductsWhereInput = {
   size?: Prisma.StringFilter<"Products"> | string
   stock?: Prisma.IntFilter<"Products"> | number
   is_active?: Prisma.BoolFilter<"Products"> | boolean
+  image?: Prisma.StringFilter<"Products"> | string
   productOrderItems?: Prisma.Product_order_itemListRelationFilter
 }
 
@@ -244,6 +252,7 @@ export type ProductsOrderByWithRelationInput = {
   size?: Prisma.SortOrder
   stock?: Prisma.SortOrder
   is_active?: Prisma.SortOrder
+  image?: Prisma.SortOrder
   productOrderItems?: Prisma.Product_order_itemOrderByRelationAggregateInput
 }
 
@@ -257,6 +266,7 @@ export type ProductsWhereUniqueInput = Prisma.AtLeast<{
   size?: Prisma.StringFilter<"Products"> | string
   stock?: Prisma.IntFilter<"Products"> | number
   is_active?: Prisma.BoolFilter<"Products"> | boolean
+  image?: Prisma.StringFilter<"Products"> | string
   productOrderItems?: Prisma.Product_order_itemListRelationFilter
 }, "id">
 
@@ -267,6 +277,7 @@ export type ProductsOrderByWithAggregationInput = {
   size?: Prisma.SortOrder
   stock?: Prisma.SortOrder
   is_active?: Prisma.SortOrder
+  image?: Prisma.SortOrder
   _count?: Prisma.ProductsCountOrderByAggregateInput
   _avg?: Prisma.ProductsAvgOrderByAggregateInput
   _max?: Prisma.ProductsMaxOrderByAggregateInput
@@ -284,6 +295,7 @@ export type ProductsScalarWhereWithAggregatesInput = {
   size?: Prisma.StringWithAggregatesFilter<"Products"> | string
   stock?: Prisma.IntWithAggregatesFilter<"Products"> | number
   is_active?: Prisma.BoolWithAggregatesFilter<"Products"> | boolean
+  image?: Prisma.StringWithAggregatesFilter<"Products"> | string
 }
 
 export type ProductsCreateInput = {
@@ -292,6 +304,7 @@ export type ProductsCreateInput = {
   size: string
   stock: number
   is_active: boolean
+  image: string
   productOrderItems?: Prisma.Product_order_itemCreateNestedManyWithoutProductInput
 }
 
@@ -302,6 +315,7 @@ export type ProductsUncheckedCreateInput = {
   size: string
   stock: number
   is_active: boolean
+  image: string
   productOrderItems?: Prisma.Product_order_itemUncheckedCreateNestedManyWithoutProductInput
 }
 
@@ -311,6 +325,7 @@ export type ProductsUpdateInput = {
   size?: Prisma.StringFieldUpdateOperationsInput | string
   stock?: Prisma.IntFieldUpdateOperationsInput | number
   is_active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.StringFieldUpdateOperationsInput | string
   productOrderItems?: Prisma.Product_order_itemUpdateManyWithoutProductNestedInput
 }
 
@@ -321,6 +336,7 @@ export type ProductsUncheckedUpdateInput = {
   size?: Prisma.StringFieldUpdateOperationsInput | string
   stock?: Prisma.IntFieldUpdateOperationsInput | number
   is_active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.StringFieldUpdateOperationsInput | string
   productOrderItems?: Prisma.Product_order_itemUncheckedUpdateManyWithoutProductNestedInput
 }
 
@@ -331,6 +347,7 @@ export type ProductsCreateManyInput = {
   size: string
   stock: number
   is_active: boolean
+  image: string
 }
 
 export type ProductsUpdateManyMutationInput = {
@@ -339,6 +356,7 @@ export type ProductsUpdateManyMutationInput = {
   size?: Prisma.StringFieldUpdateOperationsInput | string
   stock?: Prisma.IntFieldUpdateOperationsInput | number
   is_active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type ProductsUncheckedUpdateManyInput = {
@@ -348,6 +366,7 @@ export type ProductsUncheckedUpdateManyInput = {
   size?: Prisma.StringFieldUpdateOperationsInput | string
   stock?: Prisma.IntFieldUpdateOperationsInput | number
   is_active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type ProductsCountOrderByAggregateInput = {
@@ -357,6 +376,7 @@ export type ProductsCountOrderByAggregateInput = {
   size?: Prisma.SortOrder
   stock?: Prisma.SortOrder
   is_active?: Prisma.SortOrder
+  image?: Prisma.SortOrder
 }
 
 export type ProductsAvgOrderByAggregateInput = {
@@ -372,6 +392,7 @@ export type ProductsMaxOrderByAggregateInput = {
   size?: Prisma.SortOrder
   stock?: Prisma.SortOrder
   is_active?: Prisma.SortOrder
+  image?: Prisma.SortOrder
 }
 
 export type ProductsMinOrderByAggregateInput = {
@@ -381,6 +402,7 @@ export type ProductsMinOrderByAggregateInput = {
   size?: Prisma.SortOrder
   stock?: Prisma.SortOrder
   is_active?: Prisma.SortOrder
+  image?: Prisma.SortOrder
 }
 
 export type ProductsSumOrderByAggregateInput = {
@@ -414,6 +436,7 @@ export type ProductsCreateWithoutProductOrderItemsInput = {
   size: string
   stock: number
   is_active: boolean
+  image: string
 }
 
 export type ProductsUncheckedCreateWithoutProductOrderItemsInput = {
@@ -423,6 +446,7 @@ export type ProductsUncheckedCreateWithoutProductOrderItemsInput = {
   size: string
   stock: number
   is_active: boolean
+  image: string
 }
 
 export type ProductsCreateOrConnectWithoutProductOrderItemsInput = {
@@ -447,6 +471,7 @@ export type ProductsUpdateWithoutProductOrderItemsInput = {
   size?: Prisma.StringFieldUpdateOperationsInput | string
   stock?: Prisma.IntFieldUpdateOperationsInput | number
   is_active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type ProductsUncheckedUpdateWithoutProductOrderItemsInput = {
@@ -456,6 +481,7 @@ export type ProductsUncheckedUpdateWithoutProductOrderItemsInput = {
   size?: Prisma.StringFieldUpdateOperationsInput | string
   stock?: Prisma.IntFieldUpdateOperationsInput | number
   is_active?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  image?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 
@@ -496,6 +522,7 @@ export type ProductsSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs
   size?: boolean
   stock?: boolean
   is_active?: boolean
+  image?: boolean
   productOrderItems?: boolean | Prisma.Products$productOrderItemsArgs<ExtArgs>
   _count?: boolean | Prisma.ProductsCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["products"]>
@@ -507,6 +534,7 @@ export type ProductsSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Exte
   size?: boolean
   stock?: boolean
   is_active?: boolean
+  image?: boolean
 }, ExtArgs["result"]["products"]>
 
 export type ProductsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -516,6 +544,7 @@ export type ProductsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Exte
   size?: boolean
   stock?: boolean
   is_active?: boolean
+  image?: boolean
 }, ExtArgs["result"]["products"]>
 
 export type ProductsSelectScalar = {
@@ -525,9 +554,10 @@ export type ProductsSelectScalar = {
   size?: boolean
   stock?: boolean
   is_active?: boolean
+  image?: boolean
 }
 
-export type ProductsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "price" | "size" | "stock" | "is_active", ExtArgs["result"]["products"]>
+export type ProductsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "price" | "size" | "stock" | "is_active" | "image", ExtArgs["result"]["products"]>
 export type ProductsInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   productOrderItems?: boolean | Prisma.Products$productOrderItemsArgs<ExtArgs>
   _count?: boolean | Prisma.ProductsCountOutputTypeDefaultArgs<ExtArgs>
@@ -547,6 +577,7 @@ export type $ProductsPayload<ExtArgs extends runtime.Types.Extensions.InternalAr
     size: string
     stock: number
     is_active: boolean
+    image: string
   }, ExtArgs["result"]["products"]>
   composites: {}
 }
@@ -977,6 +1008,7 @@ export interface ProductsFieldRefs {
   readonly size: Prisma.FieldRef<"Products", 'String'>
   readonly stock: Prisma.FieldRef<"Products", 'Int'>
   readonly is_active: Prisma.FieldRef<"Products", 'Boolean'>
+  readonly image: Prisma.FieldRef<"Products", 'String'>
 }
     
 
