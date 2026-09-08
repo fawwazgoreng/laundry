@@ -243,6 +243,7 @@ export type User_addressWhereInput = {
   is_primary?: Prisma.BoolFilter<"User_address"> | boolean
   user_id?: Prisma.StringFilter<"User_address"> | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  orders?: Prisma.OrdersListRelationFilter
 }
 
 export type User_addressOrderByWithRelationInput = {
@@ -254,6 +255,7 @@ export type User_addressOrderByWithRelationInput = {
   is_primary?: Prisma.SortOrder
   user_id?: Prisma.SortOrder
   user?: Prisma.UserOrderByWithRelationInput
+  orders?: Prisma.OrdersOrderByRelationAggregateInput
 }
 
 export type User_addressWhereUniqueInput = Prisma.AtLeast<{
@@ -268,6 +270,7 @@ export type User_addressWhereUniqueInput = Prisma.AtLeast<{
   is_primary?: Prisma.BoolFilter<"User_address"> | boolean
   user_id?: Prisma.StringFilter<"User_address"> | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.UserWhereInput>
+  orders?: Prisma.OrdersListRelationFilter
 }, "id">
 
 export type User_addressOrderByWithAggregationInput = {
@@ -305,6 +308,7 @@ export type User_addressCreateInput = {
   longitude: runtime.Decimal | runtime.DecimalJsLike | number | string
   is_primary?: boolean
   user: Prisma.UserCreateNestedOneWithoutUser_addressInput
+  orders?: Prisma.OrdersCreateNestedManyWithoutAddressInput
 }
 
 export type User_addressUncheckedCreateInput = {
@@ -315,6 +319,7 @@ export type User_addressUncheckedCreateInput = {
   longitude: runtime.Decimal | runtime.DecimalJsLike | number | string
   is_primary?: boolean
   user_id: string
+  orders?: Prisma.OrdersUncheckedCreateNestedManyWithoutAddressInput
 }
 
 export type User_addressUpdateInput = {
@@ -324,6 +329,7 @@ export type User_addressUpdateInput = {
   longitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   is_primary?: Prisma.BoolFieldUpdateOperationsInput | boolean
   user?: Prisma.UserUpdateOneRequiredWithoutUser_addressNestedInput
+  orders?: Prisma.OrdersUpdateManyWithoutAddressNestedInput
 }
 
 export type User_addressUncheckedUpdateInput = {
@@ -334,6 +340,7 @@ export type User_addressUncheckedUpdateInput = {
   longitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   is_primary?: Prisma.BoolFieldUpdateOperationsInput | boolean
   user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  orders?: Prisma.OrdersUncheckedUpdateManyWithoutAddressNestedInput
 }
 
 export type User_addressCreateManyInput = {
@@ -416,6 +423,11 @@ export type User_addressSumOrderByAggregateInput = {
   longitude?: Prisma.SortOrder
 }
 
+export type User_addressScalarRelationFilter = {
+  is?: Prisma.User_addressWhereInput
+  isNot?: Prisma.User_addressWhereInput
+}
+
 export type User_addressCreateNestedManyWithoutUserInput = {
   create?: Prisma.XOR<Prisma.User_addressCreateWithoutUserInput, Prisma.User_addressUncheckedCreateWithoutUserInput> | Prisma.User_addressCreateWithoutUserInput[] | Prisma.User_addressUncheckedCreateWithoutUserInput[]
   connectOrCreate?: Prisma.User_addressCreateOrConnectWithoutUserInput | Prisma.User_addressCreateOrConnectWithoutUserInput[]
@@ -474,12 +486,27 @@ export type IntFieldUpdateOperationsInput = {
   divide?: number
 }
 
+export type User_addressCreateNestedOneWithoutOrdersInput = {
+  create?: Prisma.XOR<Prisma.User_addressCreateWithoutOrdersInput, Prisma.User_addressUncheckedCreateWithoutOrdersInput>
+  connectOrCreate?: Prisma.User_addressCreateOrConnectWithoutOrdersInput
+  connect?: Prisma.User_addressWhereUniqueInput
+}
+
+export type User_addressUpdateOneRequiredWithoutOrdersNestedInput = {
+  create?: Prisma.XOR<Prisma.User_addressCreateWithoutOrdersInput, Prisma.User_addressUncheckedCreateWithoutOrdersInput>
+  connectOrCreate?: Prisma.User_addressCreateOrConnectWithoutOrdersInput
+  upsert?: Prisma.User_addressUpsertWithoutOrdersInput
+  connect?: Prisma.User_addressWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.User_addressUpdateToOneWithWhereWithoutOrdersInput, Prisma.User_addressUpdateWithoutOrdersInput>, Prisma.User_addressUncheckedUpdateWithoutOrdersInput>
+}
+
 export type User_addressCreateWithoutUserInput = {
   label: string
   address_text: string
   latitude: runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude: runtime.Decimal | runtime.DecimalJsLike | number | string
   is_primary?: boolean
+  orders?: Prisma.OrdersCreateNestedManyWithoutAddressInput
 }
 
 export type User_addressUncheckedCreateWithoutUserInput = {
@@ -489,6 +516,7 @@ export type User_addressUncheckedCreateWithoutUserInput = {
   latitude: runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude: runtime.Decimal | runtime.DecimalJsLike | number | string
   is_primary?: boolean
+  orders?: Prisma.OrdersUncheckedCreateNestedManyWithoutAddressInput
 }
 
 export type User_addressCreateOrConnectWithoutUserInput = {
@@ -530,6 +558,60 @@ export type User_addressScalarWhereInput = {
   user_id?: Prisma.StringFilter<"User_address"> | string
 }
 
+export type User_addressCreateWithoutOrdersInput = {
+  label: string
+  address_text: string
+  latitude: runtime.Decimal | runtime.DecimalJsLike | number | string
+  longitude: runtime.Decimal | runtime.DecimalJsLike | number | string
+  is_primary?: boolean
+  user: Prisma.UserCreateNestedOneWithoutUser_addressInput
+}
+
+export type User_addressUncheckedCreateWithoutOrdersInput = {
+  id?: number
+  label: string
+  address_text: string
+  latitude: runtime.Decimal | runtime.DecimalJsLike | number | string
+  longitude: runtime.Decimal | runtime.DecimalJsLike | number | string
+  is_primary?: boolean
+  user_id: string
+}
+
+export type User_addressCreateOrConnectWithoutOrdersInput = {
+  where: Prisma.User_addressWhereUniqueInput
+  create: Prisma.XOR<Prisma.User_addressCreateWithoutOrdersInput, Prisma.User_addressUncheckedCreateWithoutOrdersInput>
+}
+
+export type User_addressUpsertWithoutOrdersInput = {
+  update: Prisma.XOR<Prisma.User_addressUpdateWithoutOrdersInput, Prisma.User_addressUncheckedUpdateWithoutOrdersInput>
+  create: Prisma.XOR<Prisma.User_addressCreateWithoutOrdersInput, Prisma.User_addressUncheckedCreateWithoutOrdersInput>
+  where?: Prisma.User_addressWhereInput
+}
+
+export type User_addressUpdateToOneWithWhereWithoutOrdersInput = {
+  where?: Prisma.User_addressWhereInput
+  data: Prisma.XOR<Prisma.User_addressUpdateWithoutOrdersInput, Prisma.User_addressUncheckedUpdateWithoutOrdersInput>
+}
+
+export type User_addressUpdateWithoutOrdersInput = {
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  address_text?: Prisma.StringFieldUpdateOperationsInput | string
+  latitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  longitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  is_primary?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  user?: Prisma.UserUpdateOneRequiredWithoutUser_addressNestedInput
+}
+
+export type User_addressUncheckedUpdateWithoutOrdersInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  label?: Prisma.StringFieldUpdateOperationsInput | string
+  address_text?: Prisma.StringFieldUpdateOperationsInput | string
+  latitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  longitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  is_primary?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  user_id?: Prisma.StringFieldUpdateOperationsInput | string
+}
+
 export type User_addressCreateManyUserInput = {
   id?: number
   label: string
@@ -545,6 +627,7 @@ export type User_addressUpdateWithoutUserInput = {
   latitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   is_primary?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orders?: Prisma.OrdersUpdateManyWithoutAddressNestedInput
 }
 
 export type User_addressUncheckedUpdateWithoutUserInput = {
@@ -554,6 +637,7 @@ export type User_addressUncheckedUpdateWithoutUserInput = {
   latitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   is_primary?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  orders?: Prisma.OrdersUncheckedUpdateManyWithoutAddressNestedInput
 }
 
 export type User_addressUncheckedUpdateManyWithoutUserInput = {
@@ -566,6 +650,35 @@ export type User_addressUncheckedUpdateManyWithoutUserInput = {
 }
 
 
+/**
+ * Count Type User_addressCountOutputType
+ */
+
+export type User_addressCountOutputType = {
+  orders: number
+}
+
+export type User_addressCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  orders?: boolean | User_addressCountOutputTypeCountOrdersArgs
+}
+
+/**
+ * User_addressCountOutputType without action
+ */
+export type User_addressCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the User_addressCountOutputType
+   */
+  select?: Prisma.User_addressCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * User_addressCountOutputType without action
+ */
+export type User_addressCountOutputTypeCountOrdersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.OrdersWhereInput
+}
+
 
 export type User_addressSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -576,6 +689,8 @@ export type User_addressSelect<ExtArgs extends runtime.Types.Extensions.Internal
   is_primary?: boolean
   user_id?: boolean
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  orders?: boolean | Prisma.User_address$ordersArgs<ExtArgs>
+  _count?: boolean | Prisma.User_addressCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user_address"]>
 
 export type User_addressSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -613,6 +728,8 @@ export type User_addressSelectScalar = {
 export type User_addressOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "label" | "address_text" | "latitude" | "longitude" | "is_primary" | "user_id", ExtArgs["result"]["user_address"]>
 export type User_addressInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
+  orders?: boolean | Prisma.User_address$ordersArgs<ExtArgs>
+  _count?: boolean | Prisma.User_addressCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type User_addressIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user?: boolean | Prisma.UserDefaultArgs<ExtArgs>
@@ -625,6 +742,7 @@ export type $User_addressPayload<ExtArgs extends runtime.Types.Extensions.Intern
   name: "User_address"
   objects: {
     user: Prisma.$UserPayload<ExtArgs>
+    orders: Prisma.$OrdersPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
@@ -1029,6 +1147,7 @@ readonly fields: User_addressFieldRefs;
 export interface Prisma__User_addressClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
   user<T extends Prisma.UserDefaultArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.UserDefaultArgs<ExtArgs>>): Prisma.Prisma__UserClient<runtime.Types.Result.GetResult<Prisma.$UserPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | Null, Null, ExtArgs, GlobalOmitOptions>
+  orders<T extends Prisma.User_address$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User_address$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrdersPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1463,6 +1582,30 @@ export type User_addressDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.
    * Limit how many User_addresses to delete.
    */
   limit?: number
+}
+
+/**
+ * User_address.orders
+ */
+export type User_address$ordersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Orders
+   */
+  select?: Prisma.OrdersSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Orders
+   */
+  omit?: Prisma.OrdersOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OrdersInclude<ExtArgs> | null
+  where?: Prisma.OrdersWhereInput
+  orderBy?: Prisma.OrdersOrderByWithRelationInput | Prisma.OrdersOrderByWithRelationInput[]
+  cursor?: Prisma.OrdersWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.OrdersScalarFieldEnum | Prisma.OrdersScalarFieldEnum[]
 }
 
 /**

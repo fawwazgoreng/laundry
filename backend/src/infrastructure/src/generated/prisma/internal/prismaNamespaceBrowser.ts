@@ -137,10 +137,15 @@ export type User_addressScalarFieldEnum = (typeof User_addressScalarFieldEnum)[k
 export const OutletsScalarFieldEnum = {
   id: 'id',
   name: 'name',
+  phone: 'phone',
+  address_text: 'address_text',
   latitude: 'latitude',
   longitude: 'longitude',
   max_coverage_km: 'max_coverage_km',
-  min_order_amount: 'min_order_amount'
+  min_order_amount: 'min_order_amount',
+  open_hours: 'open_hours',
+  slot_date: 'slot_date',
+  weekly_hours: 'weekly_hours'
 } as const
 
 export type OutletsScalarFieldEnum = (typeof OutletsScalarFieldEnum)[keyof typeof OutletsScalarFieldEnum]
@@ -151,6 +156,7 @@ export const Laundry_servicesScalarFieldEnum = {
   name: 'name',
   unit: 'unit',
   price_per_unit: 'price_per_unit',
+  description: 'description',
   estimated_duration_hours: 'estimated_duration_hours',
   is_active: 'is_active'
 } as const
@@ -161,6 +167,7 @@ export type Laundry_servicesScalarFieldEnum = (typeof Laundry_servicesScalarFiel
 export const ProductsScalarFieldEnum = {
   id: 'id',
   name: 'name',
+  category: 'category',
   price: 'price',
   size: 'size',
   stock: 'stock',
@@ -183,6 +190,12 @@ export const OrdersScalarFieldEnum = {
   total_product: 'total_product',
   total_amount: 'total_amount',
   status: 'status',
+  payment_method: 'payment_method',
+  discount_member: 'discount_member',
+  discount_voucher: 'discount_voucher',
+  pickup_schedule: 'pickup_schedule',
+  estimated_delivery: 'estimated_delivery',
+  notes: 'notes',
   created_at: 'created_at',
   updated_at: 'updated_at'
 } as const
@@ -221,7 +234,8 @@ export const PaymentsScalarFieldEnum = {
   gross_amount: 'gross_amount',
   status: 'status',
   paid_at: 'paid_at',
-  raw_response: 'raw_response'
+  raw_response: 'raw_response',
+  created_at: 'created_at'
 } as const
 
 export type PaymentsScalarFieldEnum = (typeof PaymentsScalarFieldEnum)[keyof typeof PaymentsScalarFieldEnum]
@@ -260,11 +274,12 @@ export const SortOrder = {
 export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
 
 
-export const JsonNullValueInput = {
+export const NullableJsonNullValueInput = {
+  DbNull: DbNull,
   JsonNull: JsonNull
 } as const
 
-export type JsonNullValueInput = (typeof JsonNullValueInput)[keyof typeof JsonNullValueInput]
+export type NullableJsonNullValueInput = (typeof NullableJsonNullValueInput)[keyof typeof NullableJsonNullValueInput]
 
 
 export const QueryMode = {

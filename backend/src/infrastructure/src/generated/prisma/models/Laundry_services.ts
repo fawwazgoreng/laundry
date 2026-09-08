@@ -45,6 +45,7 @@ export type Laundry_servicesMinAggregateOutputType = {
   name: string | null
   unit: string | null
   price_per_unit: runtime.Decimal | null
+  description: string | null
   estimated_duration_hours: number | null
   is_active: boolean | null
 }
@@ -54,6 +55,7 @@ export type Laundry_servicesMaxAggregateOutputType = {
   name: string | null
   unit: string | null
   price_per_unit: runtime.Decimal | null
+  description: string | null
   estimated_duration_hours: number | null
   is_active: boolean | null
 }
@@ -63,6 +65,7 @@ export type Laundry_servicesCountAggregateOutputType = {
   name: number
   unit: number
   price_per_unit: number
+  description: number
   estimated_duration_hours: number
   is_active: number
   _all: number
@@ -86,6 +89,7 @@ export type Laundry_servicesMinAggregateInputType = {
   name?: true
   unit?: true
   price_per_unit?: true
+  description?: true
   estimated_duration_hours?: true
   is_active?: true
 }
@@ -95,6 +99,7 @@ export type Laundry_servicesMaxAggregateInputType = {
   name?: true
   unit?: true
   price_per_unit?: true
+  description?: true
   estimated_duration_hours?: true
   is_active?: true
 }
@@ -104,6 +109,7 @@ export type Laundry_servicesCountAggregateInputType = {
   name?: true
   unit?: true
   price_per_unit?: true
+  description?: true
   estimated_duration_hours?: true
   is_active?: true
   _all?: true
@@ -200,6 +206,7 @@ export type Laundry_servicesGroupByOutputType = {
   name: string
   unit: string
   price_per_unit: runtime.Decimal
+  description: string
   estimated_duration_hours: number
   is_active: boolean
   _count: Laundry_servicesCountAggregateOutputType | null
@@ -232,6 +239,7 @@ export type Laundry_servicesWhereInput = {
   name?: Prisma.StringFilter<"Laundry_services"> | string
   unit?: Prisma.StringFilter<"Laundry_services"> | string
   price_per_unit?: Prisma.DecimalFilter<"Laundry_services"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringFilter<"Laundry_services"> | string
   estimated_duration_hours?: Prisma.IntFilter<"Laundry_services"> | number
   is_active?: Prisma.BoolFilter<"Laundry_services"> | boolean
   serviceOrderItems?: Prisma.Service_order_itemListRelationFilter
@@ -242,6 +250,7 @@ export type Laundry_servicesOrderByWithRelationInput = {
   name?: Prisma.SortOrder
   unit?: Prisma.SortOrder
   price_per_unit?: Prisma.SortOrder
+  description?: Prisma.SortOrder
   estimated_duration_hours?: Prisma.SortOrder
   is_active?: Prisma.SortOrder
   serviceOrderItems?: Prisma.Service_order_itemOrderByRelationAggregateInput
@@ -255,6 +264,7 @@ export type Laundry_servicesWhereUniqueInput = Prisma.AtLeast<{
   name?: Prisma.StringFilter<"Laundry_services"> | string
   unit?: Prisma.StringFilter<"Laundry_services"> | string
   price_per_unit?: Prisma.DecimalFilter<"Laundry_services"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringFilter<"Laundry_services"> | string
   estimated_duration_hours?: Prisma.IntFilter<"Laundry_services"> | number
   is_active?: Prisma.BoolFilter<"Laundry_services"> | boolean
   serviceOrderItems?: Prisma.Service_order_itemListRelationFilter
@@ -265,6 +275,7 @@ export type Laundry_servicesOrderByWithAggregationInput = {
   name?: Prisma.SortOrder
   unit?: Prisma.SortOrder
   price_per_unit?: Prisma.SortOrder
+  description?: Prisma.SortOrder
   estimated_duration_hours?: Prisma.SortOrder
   is_active?: Prisma.SortOrder
   _count?: Prisma.Laundry_servicesCountOrderByAggregateInput
@@ -282,6 +293,7 @@ export type Laundry_servicesScalarWhereWithAggregatesInput = {
   name?: Prisma.StringWithAggregatesFilter<"Laundry_services"> | string
   unit?: Prisma.StringWithAggregatesFilter<"Laundry_services"> | string
   price_per_unit?: Prisma.DecimalWithAggregatesFilter<"Laundry_services"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringWithAggregatesFilter<"Laundry_services"> | string
   estimated_duration_hours?: Prisma.IntWithAggregatesFilter<"Laundry_services"> | number
   is_active?: Prisma.BoolWithAggregatesFilter<"Laundry_services"> | boolean
 }
@@ -290,6 +302,7 @@ export type Laundry_servicesCreateInput = {
   name: string
   unit: string
   price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
+  description: string
   estimated_duration_hours: number
   is_active: boolean
   serviceOrderItems?: Prisma.Service_order_itemCreateNestedManyWithoutServiceInput
@@ -300,6 +313,7 @@ export type Laundry_servicesUncheckedCreateInput = {
   name: string
   unit: string
   price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
+  description: string
   estimated_duration_hours: number
   is_active: boolean
   serviceOrderItems?: Prisma.Service_order_itemUncheckedCreateNestedManyWithoutServiceInput
@@ -309,6 +323,7 @@ export type Laundry_servicesUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   unit?: Prisma.StringFieldUpdateOperationsInput | string
   price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
   estimated_duration_hours?: Prisma.IntFieldUpdateOperationsInput | number
   is_active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   serviceOrderItems?: Prisma.Service_order_itemUpdateManyWithoutServiceNestedInput
@@ -319,6 +334,7 @@ export type Laundry_servicesUncheckedUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   unit?: Prisma.StringFieldUpdateOperationsInput | string
   price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
   estimated_duration_hours?: Prisma.IntFieldUpdateOperationsInput | number
   is_active?: Prisma.BoolFieldUpdateOperationsInput | boolean
   serviceOrderItems?: Prisma.Service_order_itemUncheckedUpdateManyWithoutServiceNestedInput
@@ -329,6 +345,7 @@ export type Laundry_servicesCreateManyInput = {
   name: string
   unit: string
   price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
+  description: string
   estimated_duration_hours: number
   is_active: boolean
 }
@@ -337,6 +354,7 @@ export type Laundry_servicesUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   unit?: Prisma.StringFieldUpdateOperationsInput | string
   price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
   estimated_duration_hours?: Prisma.IntFieldUpdateOperationsInput | number
   is_active?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
@@ -346,6 +364,7 @@ export type Laundry_servicesUncheckedUpdateManyInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   unit?: Prisma.StringFieldUpdateOperationsInput | string
   price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
   estimated_duration_hours?: Prisma.IntFieldUpdateOperationsInput | number
   is_active?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
@@ -355,6 +374,7 @@ export type Laundry_servicesCountOrderByAggregateInput = {
   name?: Prisma.SortOrder
   unit?: Prisma.SortOrder
   price_per_unit?: Prisma.SortOrder
+  description?: Prisma.SortOrder
   estimated_duration_hours?: Prisma.SortOrder
   is_active?: Prisma.SortOrder
 }
@@ -370,6 +390,7 @@ export type Laundry_servicesMaxOrderByAggregateInput = {
   name?: Prisma.SortOrder
   unit?: Prisma.SortOrder
   price_per_unit?: Prisma.SortOrder
+  description?: Prisma.SortOrder
   estimated_duration_hours?: Prisma.SortOrder
   is_active?: Prisma.SortOrder
 }
@@ -379,6 +400,7 @@ export type Laundry_servicesMinOrderByAggregateInput = {
   name?: Prisma.SortOrder
   unit?: Prisma.SortOrder
   price_per_unit?: Prisma.SortOrder
+  description?: Prisma.SortOrder
   estimated_duration_hours?: Prisma.SortOrder
   is_active?: Prisma.SortOrder
 }
@@ -412,6 +434,7 @@ export type Laundry_servicesCreateWithoutServiceOrderItemsInput = {
   name: string
   unit: string
   price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
+  description: string
   estimated_duration_hours: number
   is_active: boolean
 }
@@ -421,6 +444,7 @@ export type Laundry_servicesUncheckedCreateWithoutServiceOrderItemsInput = {
   name: string
   unit: string
   price_per_unit: runtime.Decimal | runtime.DecimalJsLike | number | string
+  description: string
   estimated_duration_hours: number
   is_active: boolean
 }
@@ -445,6 +469,7 @@ export type Laundry_servicesUpdateWithoutServiceOrderItemsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   unit?: Prisma.StringFieldUpdateOperationsInput | string
   price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
   estimated_duration_hours?: Prisma.IntFieldUpdateOperationsInput | number
   is_active?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
@@ -454,6 +479,7 @@ export type Laundry_servicesUncheckedUpdateWithoutServiceOrderItemsInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
   unit?: Prisma.StringFieldUpdateOperationsInput | string
   price_per_unit?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  description?: Prisma.StringFieldUpdateOperationsInput | string
   estimated_duration_hours?: Prisma.IntFieldUpdateOperationsInput | number
   is_active?: Prisma.BoolFieldUpdateOperationsInput | boolean
 }
@@ -494,6 +520,7 @@ export type Laundry_servicesSelect<ExtArgs extends runtime.Types.Extensions.Inte
   name?: boolean
   unit?: boolean
   price_per_unit?: boolean
+  description?: boolean
   estimated_duration_hours?: boolean
   is_active?: boolean
   serviceOrderItems?: boolean | Prisma.Laundry_services$serviceOrderItemsArgs<ExtArgs>
@@ -505,6 +532,7 @@ export type Laundry_servicesSelectCreateManyAndReturn<ExtArgs extends runtime.Ty
   name?: boolean
   unit?: boolean
   price_per_unit?: boolean
+  description?: boolean
   estimated_duration_hours?: boolean
   is_active?: boolean
 }, ExtArgs["result"]["laundry_services"]>
@@ -514,6 +542,7 @@ export type Laundry_servicesSelectUpdateManyAndReturn<ExtArgs extends runtime.Ty
   name?: boolean
   unit?: boolean
   price_per_unit?: boolean
+  description?: boolean
   estimated_duration_hours?: boolean
   is_active?: boolean
 }, ExtArgs["result"]["laundry_services"]>
@@ -523,11 +552,12 @@ export type Laundry_servicesSelectScalar = {
   name?: boolean
   unit?: boolean
   price_per_unit?: boolean
+  description?: boolean
   estimated_duration_hours?: boolean
   is_active?: boolean
 }
 
-export type Laundry_servicesOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "unit" | "price_per_unit" | "estimated_duration_hours" | "is_active", ExtArgs["result"]["laundry_services"]>
+export type Laundry_servicesOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "unit" | "price_per_unit" | "description" | "estimated_duration_hours" | "is_active", ExtArgs["result"]["laundry_services"]>
 export type Laundry_servicesInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   serviceOrderItems?: boolean | Prisma.Laundry_services$serviceOrderItemsArgs<ExtArgs>
   _count?: boolean | Prisma.Laundry_servicesCountOutputTypeDefaultArgs<ExtArgs>
@@ -545,6 +575,7 @@ export type $Laundry_servicesPayload<ExtArgs extends runtime.Types.Extensions.In
     name: string
     unit: string
     price_per_unit: runtime.Decimal
+    description: string
     estimated_duration_hours: number
     is_active: boolean
   }, ExtArgs["result"]["laundry_services"]>
@@ -975,6 +1006,7 @@ export interface Laundry_servicesFieldRefs {
   readonly name: Prisma.FieldRef<"Laundry_services", 'String'>
   readonly unit: Prisma.FieldRef<"Laundry_services", 'String'>
   readonly price_per_unit: Prisma.FieldRef<"Laundry_services", 'Decimal'>
+  readonly description: Prisma.FieldRef<"Laundry_services", 'String'>
   readonly estimated_duration_hours: Prisma.FieldRef<"Laundry_services", 'Int'>
   readonly is_active: Prisma.FieldRef<"Laundry_services", 'Boolean'>
 }

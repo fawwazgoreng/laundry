@@ -31,6 +31,7 @@ model User {
     refresh_tokenId String?
     accessToken     Access_token?  @relation(fields: [access_tokenId], references: [id])
     access_tokenId  String?
+    orders          Orders[]
 }
 
 model Refresh_token {
@@ -60,15 +61,22 @@ model User_address {
     is_primary   Boolean @default(false)
     user_id      String
     user         User    @relation(fields: [user_id], references: [id])
+    orders       Orders[]
 }
 
 model Outlets {
     id               Int     @id @default(autoincrement())
     name             String
+    phone            String? @db.VarChar(20)
+    address_text     String? @db.Text
     latitude         Decimal @db.Decimal(10, 8)
     longitude        Decimal @db.Decimal(11, 8)
     max_coverage_km  Decimal
     min_order_amount Decimal
+    open_hours       String? @db.Text
+    slot_date        String? @db.Text
+    weekly_hours     String? @db.Text
+    orders           Orders[]
 }
 
 model Laundry_services {
@@ -76,6 +84,7 @@ model Laundry_services {
     name                     String               @db.VarChar(30)
     unit                     String               @db.VarChar(10)
     price_per_unit           Decimal
+    description              String
     estimated_duration_hours Int
     is_active                Boolean
     serviceOrderItems        Service_order_item[]
@@ -84,6 +93,7 @@ model Laundry_services {
 model Products {
     id                Int                  @id @default(autoincrement())
     name              String               @db.VarChar(30)
+    category          String               @db.VarChar(30)
     price             Decimal
     size              String               @db.VarChar(10)
     stock             Int
@@ -104,8 +114,17 @@ model Orders {
     total_product     Decimal
     total_amount      Int
     status            String               @db.VarChar(20)
+    payment_method    String               @db.VarChar(20)
+    discount_member   Decimal              @default(0)
+    discount_voucher  Decimal              @default(0)
+    pickup_schedule   DateTime?
+    estimated_delivery DateTime?
+    notes             String?              @db.Text
     created_at        DateTime             @default(now())
-    updated_at        DateTime             @default(now())
+    updated_at        DateTime             @default(now()) @updatedAt
+    user              User                 @relation(fields: [user_id], references: [id])
+    outlet            Outlets              @relation(fields: [outlet_id], references: [id])
+    address           User_address         @relation(fields: [user_address_id], references: [id])
     serviceOrderItems Service_order_item[]
     productOrderItems Product_order_item[]
     payments          Payments[]
@@ -141,8 +160,9 @@ model Payments {
     payment_type   String   @db.VarChar(20)
     gross_amount   Decimal
     status         String   @db.VarChar(30)
-    paid_at        DateTime @default(now())
-    raw_response   Json
+    paid_at        DateTime?
+    raw_response   Json?
+    created_at     DateTime @default(now())
     order          Orders   @relation(fields: [order_id], references: [order_id])
 }
 

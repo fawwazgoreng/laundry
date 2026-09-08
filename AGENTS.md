@@ -6,11 +6,28 @@ Single git repo, **two independent apps** — there is NO monorepo/workspace wir
 `package.json`, `bun.lock`, and `node_modules`. Always run commands from inside the app's directory
 (`backend/` or `frontend/`), never from the repo root.
 
-- `frontend/` — React 19 + Vite app (entry `src/main.tsx`). Uses the React Compiler via `@rolldown/plugin-babel`.
+- `frontend/` — React 19 + Vite app (entry `src/main.tsx`). React Compiler via `@rolldown/plugin-babel`,
+  **Tailwind CSS** with a crimson palette. `design/` holds the PNG UI mockups that are the source of
+  truth for page/component structure; OCR the PNGs with `tesseract -l ind+eng` when you need their text.
 - `backend/` — Hono API on Bun. Entry `src/index.ts`, listens on port 3000.
+- `docs/` — API + architecture documentation (keep in sync with code).
 
 Bun is the package manager and (for the backend) the runtime. Frontend lockfiles are also `bun.lock`
 even though its scripts look npm-ish.
+
+## Frontend conventions
+
+- Styling is **Tailwind CSS** (@tailwindcss/vite plugin), palette tokens (crimson `#DC2626` primary,
+  `#f3f4f6` surface, `#374151` text, `#111827` dark text). Do NOT add other CSS frameworks.
+- Routing via `react-router-dom`. Layouts in `src/layouts/` (Guest / Customer / Admin), each with its own
+  sidebar; pages in `src/pages/{public,customer,admin}/`; shared UI in `src/components/`.
+- API client is a thin `fetch` wrapper in `src/services/` returning the backend envelope
+  `{ success, status, message, data, meta? }`, with automatic access-token refresh. Auth state via
+  `AuthContext` (`useAuth`); role-gate routes with the `ProtectedRoute` component.
+- Order status flow used everywhere (as in the mockups):
+  `BARU → DITERIMA → DIPROSES → SIAP_ANTAR → SELESAI` (+ `DIBATALKAN`).
+- Brand: **Fadarosi**. Order IDs look like `CLN-YYYYMMDD-NNN`. Payment methods:
+  `fadarosipay`, `transfer_bank` (VA), `cod`.
 
 ## Backend
 
@@ -35,14 +52,21 @@ config/        env.ts — zod-validates process.env (DATABASE_URL, JWT_SECRET, .
 ```
 
 - Repositories are injected: controllers/what tests construct use cases with an interface from
-  `domain/repositories`; route wiring (`presentation/routes/userRoute.ts`) instantiates concrete
-  `pg*Repository` classes.
+  `domain/repositories`; route wiring (`presentation/routes/*Route.ts`) instantiates concrete
+  `pg*Repository` classes. Shared DI singletons (auth middleware, admin middleware, repos, token
+  issuer) live in `presentation/routes/container.ts` — import from there rather than re-instantiating.
+- Every module = `domain/{entities|repositories|types}` + `useCase/*` + `presentation/{controller|route}`
+  + `infrastructure/repository`. Use cases do the work and log via `logger` (structured JSON); they must
+  not import infrastructure.
 - Security/error conventions in place: JWT access+refresh tokens via `hono/jwt` (NO extra jwt lib),
   tokens persisted in the `Access_token`/`Refresh_token` tables and rotated/revoked on
   login/refresh/logout, `Bun.password.hash` (argon2id) for passwords, zod validation in domain
   entities, per-route rate limiting, and a global `app.onError` that maps thrown `AppError`
   (also Prisma/Zod errors) to a consistent JSON envelope via `helper/errorHandling`.
-- API is mounted under `/api/v1/users`; the health check is `/health`.
+- Admin-only endpoints go behind `adminMiddleware` (from `container.ts`). It composes the bearer
+  auth middleware and rejects non-`admin` roles with `AppError.forbidden`.
+- API routes: `/api/v1/users`, `/api/v1/addresses`, `/api/v1/outlets`, `/api/v1/services`,
+  `/api/v1/products`, `/api/v1/orders`, `/api/v1/payments`, `/api/v1/admin`; health check `/health`.
 
 ### Prisma (important quirks)
 
@@ -66,5 +90,8 @@ config/        env.ts — zod-validates process.env (DATABASE_URL, JWT_SECRET, .
 - `.env` files and `*.skills-lock.json` are gitignored at the root. Copy `backend/.env.example` to
   `backend/.env` and set `DATABASE_URL` + a long random `JWT_SECRET` (env.ts fails fast on missing
   values — the server refuses to boot without them).
-- Several backend source files are currently uncommitted work-in-progress (error handling, user
-  registration/auth flow) — be aware the `main` branch's tracked code may lag the working tree.
+- Local PostgreSQL in this environment: a user-owned cluster may be started without sudo via
+  `/usr/lib/postgresql/17/bin/pg_ctl -D /tmp/opencode/pgdata -o "-p 5432 -k /tmp/opencode" start`
+  (DATABASE_URL points to `postgresql://postgres:postgres@localhost:5432/laundry`). Seed data
+  (admin user, outlet, laundry services, products) is created by
+  `bun run src/infrastructure/seed/seed.ts`.

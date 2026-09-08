@@ -4,6 +4,7 @@ import { LoginUserUseCase } from "../../useCase/user/loginUserUseCase";
 import { LogoutUserUseCase } from "../../useCase/user/logoutUserUseCase";
 import { RefreshTokenUseCase } from "../../useCase/user/refreshTokenUseCase";
 import { RegisterUserUseCase } from "../../useCase/user/registerUserUseCase";
+import { UpdateProfileUseCase } from "../../useCase/user/updateProfileUseCase";
 import type { AppVariables } from "../types";
 
 type AuthContext = Context<{ Variables: AppVariables }>;
@@ -14,6 +15,7 @@ export class userController {
         private readonly loginUseCase: LoginUserUseCase,
         private readonly refreshTokenUseCase: RefreshTokenUseCase,
         private readonly logoutUseCase: LogoutUserUseCase,
+        private readonly updateProfileUseCase: UpdateProfileUseCase,
     ) {}
 
     async register(c: Context): Promise<Response> {
@@ -38,5 +40,10 @@ export class userController {
 
     async me(c: AuthContext): Promise<Response> {
         return ok(c, c.get("user"), "Profile");
+    }
+
+    async updateProfile(c: AuthContext): Promise<Response> {
+        const data = await this.updateProfileUseCase.execute(c.get("userId"), await c.req.json());
+        return ok(c, data, "Profil diperbarui");
     }
 }

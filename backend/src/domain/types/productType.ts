@@ -1,24 +1,29 @@
-export type produckCreateType = {
+export type productCategory =
+    | "Detergen"
+    | "Softener"
+    | "Pewangi"
+    | "Pemutih"
+    | "Minyak Goreng"
+    | "Paket Hemat";
+
+export type productCreateType = {
     name: string
-    unit: string
-    price_per_unit: number
-    estimation_duration_unit: number
+    category: productCategory
+    price: number
+    size: string
+    stock: number
     is_active: boolean
 }
 
-export type produckUpdateType = {
-    name: string
-    unit: string
-    price_per_unit: number
-    estimation_duration_unit: number
-    isa_ctive: boolean
-}
+export type productUpdateType = Partial<Omit<productCreateType, "name">> & { name?: string }
 
-export interface serviceType {
-    id: string
+export interface productType {
+    id: number
     name: string
-    unit: string
-    price_per_unit: number
-    estimation_duration_unit: number
-    isa_ctive: boolean
+    category: productCategory
+    price: number
+    size: string
+    stock: number
+    is_active: boolean
+    image: string
 }

@@ -235,6 +235,7 @@ export type UserWhereInput = {
   user_address?: Prisma.User_addressListRelationFilter
   refreshToken?: Prisma.XOR<Prisma.Refresh_tokenNullableScalarRelationFilter, Prisma.Refresh_tokenWhereInput> | null
   accessToken?: Prisma.XOR<Prisma.Access_tokenNullableScalarRelationFilter, Prisma.Access_tokenWhereInput> | null
+  orders?: Prisma.OrdersListRelationFilter
 }
 
 export type UserOrderByWithRelationInput = {
@@ -252,6 +253,7 @@ export type UserOrderByWithRelationInput = {
   user_address?: Prisma.User_addressOrderByRelationAggregateInput
   refreshToken?: Prisma.Refresh_tokenOrderByWithRelationInput
   accessToken?: Prisma.Access_tokenOrderByWithRelationInput
+  orders?: Prisma.OrdersOrderByRelationAggregateInput
 }
 
 export type UserWhereUniqueInput = Prisma.AtLeast<{
@@ -272,6 +274,7 @@ export type UserWhereUniqueInput = Prisma.AtLeast<{
   user_address?: Prisma.User_addressListRelationFilter
   refreshToken?: Prisma.XOR<Prisma.Refresh_tokenNullableScalarRelationFilter, Prisma.Refresh_tokenWhereInput> | null
   accessToken?: Prisma.XOR<Prisma.Access_tokenNullableScalarRelationFilter, Prisma.Access_tokenWhereInput> | null
+  orders?: Prisma.OrdersListRelationFilter
 }, "id" | "email">
 
 export type UserOrderByWithAggregationInput = {
@@ -321,6 +324,7 @@ export type UserCreateInput = {
   user_address?: Prisma.User_addressCreateNestedManyWithoutUserInput
   refreshToken?: Prisma.Refresh_tokenCreateNestedOneWithoutUserInput
   accessToken?: Prisma.Access_tokenCreateNestedOneWithoutUserInput
+  orders?: Prisma.OrdersCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateInput = {
@@ -336,6 +340,7 @@ export type UserUncheckedCreateInput = {
   refresh_tokenId?: string | null
   access_tokenId?: string | null
   user_address?: Prisma.User_addressUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrdersUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserUpdateInput = {
@@ -351,6 +356,7 @@ export type UserUpdateInput = {
   user_address?: Prisma.User_addressUpdateManyWithoutUserNestedInput
   refreshToken?: Prisma.Refresh_tokenUpdateOneWithoutUserNestedInput
   accessToken?: Prisma.Access_tokenUpdateOneWithoutUserNestedInput
+  orders?: Prisma.OrdersUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateInput = {
@@ -366,6 +372,7 @@ export type UserUncheckedUpdateInput = {
   refresh_tokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   access_tokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user_address?: Prisma.User_addressUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrdersUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyInput = {
@@ -579,6 +586,20 @@ export type UserUpdateOneRequiredWithoutUser_addressNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutUser_addressInput, Prisma.UserUpdateWithoutUser_addressInput>, Prisma.UserUncheckedUpdateWithoutUser_addressInput>
 }
 
+export type UserCreateNestedOneWithoutOrdersInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutOrdersInput, Prisma.UserUncheckedCreateWithoutOrdersInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutOrdersInput
+  connect?: Prisma.UserWhereUniqueInput
+}
+
+export type UserUpdateOneRequiredWithoutOrdersNestedInput = {
+  create?: Prisma.XOR<Prisma.UserCreateWithoutOrdersInput, Prisma.UserUncheckedCreateWithoutOrdersInput>
+  connectOrCreate?: Prisma.UserCreateOrConnectWithoutOrdersInput
+  upsert?: Prisma.UserUpsertWithoutOrdersInput
+  connect?: Prisma.UserWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.UserUpdateToOneWithWhereWithoutOrdersInput, Prisma.UserUpdateWithoutOrdersInput>, Prisma.UserUncheckedUpdateWithoutOrdersInput>
+}
+
 export type UserCreateWithoutRefreshTokenInput = {
   id?: string
   role: string
@@ -591,6 +612,7 @@ export type UserCreateWithoutRefreshTokenInput = {
   created_at?: Date | string
   user_address?: Prisma.User_addressCreateNestedManyWithoutUserInput
   accessToken?: Prisma.Access_tokenCreateNestedOneWithoutUserInput
+  orders?: Prisma.OrdersCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutRefreshTokenInput = {
@@ -605,6 +627,7 @@ export type UserUncheckedCreateWithoutRefreshTokenInput = {
   created_at?: Date | string
   access_tokenId?: string | null
   user_address?: Prisma.User_addressUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrdersUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutRefreshTokenInput = {
@@ -662,6 +685,7 @@ export type UserCreateWithoutAccessTokenInput = {
   created_at?: Date | string
   user_address?: Prisma.User_addressCreateNestedManyWithoutUserInput
   refreshToken?: Prisma.Refresh_tokenCreateNestedOneWithoutUserInput
+  orders?: Prisma.OrdersCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutAccessTokenInput = {
@@ -676,6 +700,7 @@ export type UserUncheckedCreateWithoutAccessTokenInput = {
   created_at?: Date | string
   refresh_tokenId?: string | null
   user_address?: Prisma.User_addressUncheckedCreateNestedManyWithoutUserInput
+  orders?: Prisma.OrdersUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutAccessTokenInput = {
@@ -716,6 +741,7 @@ export type UserCreateWithoutUser_addressInput = {
   created_at?: Date | string
   refreshToken?: Prisma.Refresh_tokenCreateNestedOneWithoutUserInput
   accessToken?: Prisma.Access_tokenCreateNestedOneWithoutUserInput
+  orders?: Prisma.OrdersCreateNestedManyWithoutUserInput
 }
 
 export type UserUncheckedCreateWithoutUser_addressInput = {
@@ -730,6 +756,7 @@ export type UserUncheckedCreateWithoutUser_addressInput = {
   created_at?: Date | string
   refresh_tokenId?: string | null
   access_tokenId?: string | null
+  orders?: Prisma.OrdersUncheckedCreateNestedManyWithoutUserInput
 }
 
 export type UserCreateOrConnectWithoutUser_addressInput = {
@@ -760,6 +787,7 @@ export type UserUpdateWithoutUser_addressInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   refreshToken?: Prisma.Refresh_tokenUpdateOneWithoutUserNestedInput
   accessToken?: Prisma.Access_tokenUpdateOneWithoutUserNestedInput
+  orders?: Prisma.OrdersUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutUser_addressInput = {
@@ -774,6 +802,83 @@ export type UserUncheckedUpdateWithoutUser_addressInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   refresh_tokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   access_tokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  orders?: Prisma.OrdersUncheckedUpdateManyWithoutUserNestedInput
+}
+
+export type UserCreateWithoutOrdersInput = {
+  id?: string
+  role: string
+  username: string
+  email: string
+  password: string
+  phone: string
+  is_verified?: boolean
+  verified_at?: Date | string
+  created_at?: Date | string
+  user_address?: Prisma.User_addressCreateNestedManyWithoutUserInput
+  refreshToken?: Prisma.Refresh_tokenCreateNestedOneWithoutUserInput
+  accessToken?: Prisma.Access_tokenCreateNestedOneWithoutUserInput
+}
+
+export type UserUncheckedCreateWithoutOrdersInput = {
+  id?: string
+  role: string
+  username: string
+  email: string
+  password: string
+  phone: string
+  is_verified?: boolean
+  verified_at?: Date | string
+  created_at?: Date | string
+  refresh_tokenId?: string | null
+  access_tokenId?: string | null
+  user_address?: Prisma.User_addressUncheckedCreateNestedManyWithoutUserInput
+}
+
+export type UserCreateOrConnectWithoutOrdersInput = {
+  where: Prisma.UserWhereUniqueInput
+  create: Prisma.XOR<Prisma.UserCreateWithoutOrdersInput, Prisma.UserUncheckedCreateWithoutOrdersInput>
+}
+
+export type UserUpsertWithoutOrdersInput = {
+  update: Prisma.XOR<Prisma.UserUpdateWithoutOrdersInput, Prisma.UserUncheckedUpdateWithoutOrdersInput>
+  create: Prisma.XOR<Prisma.UserCreateWithoutOrdersInput, Prisma.UserUncheckedCreateWithoutOrdersInput>
+  where?: Prisma.UserWhereInput
+}
+
+export type UserUpdateToOneWithWhereWithoutOrdersInput = {
+  where?: Prisma.UserWhereInput
+  data: Prisma.XOR<Prisma.UserUpdateWithoutOrdersInput, Prisma.UserUncheckedUpdateWithoutOrdersInput>
+}
+
+export type UserUpdateWithoutOrdersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  is_verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  verified_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  user_address?: Prisma.User_addressUpdateManyWithoutUserNestedInput
+  refreshToken?: Prisma.Refresh_tokenUpdateOneWithoutUserNestedInput
+  accessToken?: Prisma.Access_tokenUpdateOneWithoutUserNestedInput
+}
+
+export type UserUncheckedUpdateWithoutOrdersInput = {
+  id?: Prisma.StringFieldUpdateOperationsInput | string
+  role?: Prisma.StringFieldUpdateOperationsInput | string
+  username?: Prisma.StringFieldUpdateOperationsInput | string
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  password?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.StringFieldUpdateOperationsInput | string
+  is_verified?: Prisma.BoolFieldUpdateOperationsInput | boolean
+  verified_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  refresh_tokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  access_tokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  user_address?: Prisma.User_addressUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserCreateManyRefreshTokenInput = {
@@ -801,6 +906,7 @@ export type UserUpdateWithoutRefreshTokenInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user_address?: Prisma.User_addressUpdateManyWithoutUserNestedInput
   accessToken?: Prisma.Access_tokenUpdateOneWithoutUserNestedInput
+  orders?: Prisma.OrdersUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutRefreshTokenInput = {
@@ -815,6 +921,7 @@ export type UserUncheckedUpdateWithoutRefreshTokenInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   access_tokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user_address?: Prisma.User_addressUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrdersUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateManyWithoutRefreshTokenInput = {
@@ -855,6 +962,7 @@ export type UserUpdateWithoutAccessTokenInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user_address?: Prisma.User_addressUpdateManyWithoutUserNestedInput
   refreshToken?: Prisma.Refresh_tokenUpdateOneWithoutUserNestedInput
+  orders?: Prisma.OrdersUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateWithoutAccessTokenInput = {
@@ -869,6 +977,7 @@ export type UserUncheckedUpdateWithoutAccessTokenInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   refresh_tokenId?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   user_address?: Prisma.User_addressUncheckedUpdateManyWithoutUserNestedInput
+  orders?: Prisma.OrdersUncheckedUpdateManyWithoutUserNestedInput
 }
 
 export type UserUncheckedUpdateManyWithoutAccessTokenInput = {
@@ -891,10 +1000,12 @@ export type UserUncheckedUpdateManyWithoutAccessTokenInput = {
 
 export type UserCountOutputType = {
   user_address: number
+  orders: number
 }
 
 export type UserCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   user_address?: boolean | UserCountOutputTypeCountUser_addressArgs
+  orders?: boolean | UserCountOutputTypeCountOrdersArgs
 }
 
 /**
@@ -914,6 +1025,13 @@ export type UserCountOutputTypeCountUser_addressArgs<ExtArgs extends runtime.Typ
   where?: Prisma.User_addressWhereInput
 }
 
+/**
+ * UserCountOutputType without action
+ */
+export type UserCountOutputTypeCountOrdersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.OrdersWhereInput
+}
+
 
 export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
@@ -930,6 +1048,7 @@ export type UserSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   user_address?: boolean | Prisma.User$user_addressArgs<ExtArgs>
   refreshToken?: boolean | Prisma.User$refreshTokenArgs<ExtArgs>
   accessToken?: boolean | Prisma.User$accessTokenArgs<ExtArgs>
+  orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["user"]>
 
@@ -984,6 +1103,7 @@ export type UserInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
   user_address?: boolean | Prisma.User$user_addressArgs<ExtArgs>
   refreshToken?: boolean | Prisma.User$refreshTokenArgs<ExtArgs>
   accessToken?: boolean | Prisma.User$accessTokenArgs<ExtArgs>
+  orders?: boolean | Prisma.User$ordersArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
 }
 export type UserIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1001,6 +1121,7 @@ export type $UserPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     user_address: Prisma.$User_addressPayload<ExtArgs>[]
     refreshToken: Prisma.$Refresh_tokenPayload<ExtArgs> | null
     accessToken: Prisma.$Access_tokenPayload<ExtArgs> | null
+    orders: Prisma.$OrdersPayload<ExtArgs>[]
   }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: string
@@ -1411,6 +1532,7 @@ export interface Prisma__UserClient<T, Null = never, ExtArgs extends runtime.Typ
   user_address<T extends Prisma.User$user_addressArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$user_addressArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$User_addressPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   refreshToken<T extends Prisma.User$refreshTokenArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$refreshTokenArgs<ExtArgs>>): Prisma.Prisma__Refresh_tokenClient<runtime.Types.Result.GetResult<Prisma.$Refresh_tokenPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
   accessToken<T extends Prisma.User$accessTokenArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$accessTokenArgs<ExtArgs>>): Prisma.Prisma__Access_tokenClient<runtime.Types.Result.GetResult<Prisma.$Access_tokenPayload<ExtArgs>, T, "findUniqueOrThrow", GlobalOmitOptions> | null, null, ExtArgs, GlobalOmitOptions>
+  orders<T extends Prisma.User$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.User$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrdersPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -1911,6 +2033,30 @@ export type User$accessTokenArgs<ExtArgs extends runtime.Types.Extensions.Intern
    */
   include?: Prisma.Access_tokenInclude<ExtArgs> | null
   where?: Prisma.Access_tokenWhereInput
+}
+
+/**
+ * User.orders
+ */
+export type User$ordersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Orders
+   */
+  select?: Prisma.OrdersSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Orders
+   */
+  omit?: Prisma.OrdersOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OrdersInclude<ExtArgs> | null
+  where?: Prisma.OrdersWhereInput
+  orderBy?: Prisma.OrdersOrderByWithRelationInput | Prisma.OrdersOrderByWithRelationInput[]
+  cursor?: Prisma.OrdersWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.OrdersScalarFieldEnum | Prisma.OrdersScalarFieldEnum[]
 }
 
 /**

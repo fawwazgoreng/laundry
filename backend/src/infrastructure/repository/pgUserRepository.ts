@@ -91,4 +91,25 @@ export class pgUserRepository implements userRepository {
         });
         return toUserType(user);
     }
+
+    async updateProfile(id: string, data: { username?: string; phone?: string }): Promise<userType | null> {
+        const existing = await prisma.user.findUnique({ where: { id } });
+        if (!existing) return null;
+        const user = await prisma.user.update({
+            where: { id },
+            data: {
+                ...(data.username !== undefined ? { username: data.username } : {}),
+                ...(data.phone !== undefined ? { phone: data.phone } : {}),
+            },
+            select: {
+                id: true,
+                username: true,
+                email: true,
+                role: true,
+                phone: true,
+                is_verified: true,
+            },
+        });
+        return toUserType(user);
+    }
 }

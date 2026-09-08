@@ -47,28 +47,43 @@ export type OutletsSumAggregateOutputType = {
 export type OutletsMinAggregateOutputType = {
   id: number | null
   name: string | null
+  phone: string | null
+  address_text: string | null
   latitude: runtime.Decimal | null
   longitude: runtime.Decimal | null
   max_coverage_km: runtime.Decimal | null
   min_order_amount: runtime.Decimal | null
+  open_hours: string | null
+  slot_date: string | null
+  weekly_hours: string | null
 }
 
 export type OutletsMaxAggregateOutputType = {
   id: number | null
   name: string | null
+  phone: string | null
+  address_text: string | null
   latitude: runtime.Decimal | null
   longitude: runtime.Decimal | null
   max_coverage_km: runtime.Decimal | null
   min_order_amount: runtime.Decimal | null
+  open_hours: string | null
+  slot_date: string | null
+  weekly_hours: string | null
 }
 
 export type OutletsCountAggregateOutputType = {
   id: number
   name: number
+  phone: number
+  address_text: number
   latitude: number
   longitude: number
   max_coverage_km: number
   min_order_amount: number
+  open_hours: number
+  slot_date: number
+  weekly_hours: number
   _all: number
 }
 
@@ -92,28 +107,43 @@ export type OutletsSumAggregateInputType = {
 export type OutletsMinAggregateInputType = {
   id?: true
   name?: true
+  phone?: true
+  address_text?: true
   latitude?: true
   longitude?: true
   max_coverage_km?: true
   min_order_amount?: true
+  open_hours?: true
+  slot_date?: true
+  weekly_hours?: true
 }
 
 export type OutletsMaxAggregateInputType = {
   id?: true
   name?: true
+  phone?: true
+  address_text?: true
   latitude?: true
   longitude?: true
   max_coverage_km?: true
   min_order_amount?: true
+  open_hours?: true
+  slot_date?: true
+  weekly_hours?: true
 }
 
 export type OutletsCountAggregateInputType = {
   id?: true
   name?: true
+  phone?: true
+  address_text?: true
   latitude?: true
   longitude?: true
   max_coverage_km?: true
   min_order_amount?: true
+  open_hours?: true
+  slot_date?: true
+  weekly_hours?: true
   _all?: true
 }
 
@@ -206,10 +236,15 @@ export type OutletsGroupByArgs<ExtArgs extends runtime.Types.Extensions.Internal
 export type OutletsGroupByOutputType = {
   id: number
   name: string
+  phone: string | null
+  address_text: string | null
   latitude: runtime.Decimal
   longitude: runtime.Decimal
   max_coverage_km: runtime.Decimal
   min_order_amount: runtime.Decimal
+  open_hours: string | null
+  slot_date: string | null
+  weekly_hours: string | null
   _count: OutletsCountAggregateOutputType | null
   _avg: OutletsAvgAggregateOutputType | null
   _sum: OutletsSumAggregateOutputType | null
@@ -238,19 +273,31 @@ export type OutletsWhereInput = {
   NOT?: Prisma.OutletsWhereInput | Prisma.OutletsWhereInput[]
   id?: Prisma.IntFilter<"Outlets"> | number
   name?: Prisma.StringFilter<"Outlets"> | string
+  phone?: Prisma.StringNullableFilter<"Outlets"> | string | null
+  address_text?: Prisma.StringNullableFilter<"Outlets"> | string | null
   latitude?: Prisma.DecimalFilter<"Outlets"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude?: Prisma.DecimalFilter<"Outlets"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   max_coverage_km?: Prisma.DecimalFilter<"Outlets"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   min_order_amount?: Prisma.DecimalFilter<"Outlets"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: Prisma.StringNullableFilter<"Outlets"> | string | null
+  slot_date?: Prisma.StringNullableFilter<"Outlets"> | string | null
+  weekly_hours?: Prisma.StringNullableFilter<"Outlets"> | string | null
+  orders?: Prisma.OrdersListRelationFilter
 }
 
 export type OutletsOrderByWithRelationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  phone?: Prisma.SortOrderInput | Prisma.SortOrder
+  address_text?: Prisma.SortOrderInput | Prisma.SortOrder
   latitude?: Prisma.SortOrder
   longitude?: Prisma.SortOrder
   max_coverage_km?: Prisma.SortOrder
   min_order_amount?: Prisma.SortOrder
+  open_hours?: Prisma.SortOrderInput | Prisma.SortOrder
+  slot_date?: Prisma.SortOrderInput | Prisma.SortOrder
+  weekly_hours?: Prisma.SortOrderInput | Prisma.SortOrder
+  orders?: Prisma.OrdersOrderByRelationAggregateInput
 }
 
 export type OutletsWhereUniqueInput = Prisma.AtLeast<{
@@ -259,19 +306,30 @@ export type OutletsWhereUniqueInput = Prisma.AtLeast<{
   OR?: Prisma.OutletsWhereInput[]
   NOT?: Prisma.OutletsWhereInput | Prisma.OutletsWhereInput[]
   name?: Prisma.StringFilter<"Outlets"> | string
+  phone?: Prisma.StringNullableFilter<"Outlets"> | string | null
+  address_text?: Prisma.StringNullableFilter<"Outlets"> | string | null
   latitude?: Prisma.DecimalFilter<"Outlets"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude?: Prisma.DecimalFilter<"Outlets"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   max_coverage_km?: Prisma.DecimalFilter<"Outlets"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   min_order_amount?: Prisma.DecimalFilter<"Outlets"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: Prisma.StringNullableFilter<"Outlets"> | string | null
+  slot_date?: Prisma.StringNullableFilter<"Outlets"> | string | null
+  weekly_hours?: Prisma.StringNullableFilter<"Outlets"> | string | null
+  orders?: Prisma.OrdersListRelationFilter
 }, "id">
 
 export type OutletsOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  phone?: Prisma.SortOrderInput | Prisma.SortOrder
+  address_text?: Prisma.SortOrderInput | Prisma.SortOrder
   latitude?: Prisma.SortOrder
   longitude?: Prisma.SortOrder
   max_coverage_km?: Prisma.SortOrder
   min_order_amount?: Prisma.SortOrder
+  open_hours?: Prisma.SortOrderInput | Prisma.SortOrder
+  slot_date?: Prisma.SortOrderInput | Prisma.SortOrder
+  weekly_hours?: Prisma.SortOrderInput | Prisma.SortOrder
   _count?: Prisma.OutletsCountOrderByAggregateInput
   _avg?: Prisma.OutletsAvgOrderByAggregateInput
   _max?: Prisma.OutletsMaxOrderByAggregateInput
@@ -285,79 +343,128 @@ export type OutletsScalarWhereWithAggregatesInput = {
   NOT?: Prisma.OutletsScalarWhereWithAggregatesInput | Prisma.OutletsScalarWhereWithAggregatesInput[]
   id?: Prisma.IntWithAggregatesFilter<"Outlets"> | number
   name?: Prisma.StringWithAggregatesFilter<"Outlets"> | string
+  phone?: Prisma.StringNullableWithAggregatesFilter<"Outlets"> | string | null
+  address_text?: Prisma.StringNullableWithAggregatesFilter<"Outlets"> | string | null
   latitude?: Prisma.DecimalWithAggregatesFilter<"Outlets"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude?: Prisma.DecimalWithAggregatesFilter<"Outlets"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   max_coverage_km?: Prisma.DecimalWithAggregatesFilter<"Outlets"> | runtime.Decimal | runtime.DecimalJsLike | number | string
   min_order_amount?: Prisma.DecimalWithAggregatesFilter<"Outlets"> | runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: Prisma.StringNullableWithAggregatesFilter<"Outlets"> | string | null
+  slot_date?: Prisma.StringNullableWithAggregatesFilter<"Outlets"> | string | null
+  weekly_hours?: Prisma.StringNullableWithAggregatesFilter<"Outlets"> | string | null
 }
 
 export type OutletsCreateInput = {
   name: string
+  phone?: string | null
+  address_text?: string | null
   latitude: runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude: runtime.Decimal | runtime.DecimalJsLike | number | string
   max_coverage_km: runtime.Decimal | runtime.DecimalJsLike | number | string
   min_order_amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: string | null
+  slot_date?: string | null
+  weekly_hours?: string | null
+  orders?: Prisma.OrdersCreateNestedManyWithoutOutletInput
 }
 
 export type OutletsUncheckedCreateInput = {
   id?: number
   name: string
+  phone?: string | null
+  address_text?: string | null
   latitude: runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude: runtime.Decimal | runtime.DecimalJsLike | number | string
   max_coverage_km: runtime.Decimal | runtime.DecimalJsLike | number | string
   min_order_amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: string | null
+  slot_date?: string | null
+  weekly_hours?: string | null
+  orders?: Prisma.OrdersUncheckedCreateNestedManyWithoutOutletInput
 }
 
 export type OutletsUpdateInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address_text?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   latitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   max_coverage_km?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   min_order_amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  slot_date?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  weekly_hours?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  orders?: Prisma.OrdersUpdateManyWithoutOutletNestedInput
 }
 
 export type OutletsUncheckedUpdateInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address_text?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   latitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   max_coverage_km?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   min_order_amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  slot_date?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  weekly_hours?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  orders?: Prisma.OrdersUncheckedUpdateManyWithoutOutletNestedInput
 }
 
 export type OutletsCreateManyInput = {
   id?: number
   name: string
+  phone?: string | null
+  address_text?: string | null
   latitude: runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude: runtime.Decimal | runtime.DecimalJsLike | number | string
   max_coverage_km: runtime.Decimal | runtime.DecimalJsLike | number | string
   min_order_amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: string | null
+  slot_date?: string | null
+  weekly_hours?: string | null
 }
 
 export type OutletsUpdateManyMutationInput = {
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address_text?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   latitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   max_coverage_km?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   min_order_amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  slot_date?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  weekly_hours?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type OutletsUncheckedUpdateManyInput = {
   id?: Prisma.IntFieldUpdateOperationsInput | number
   name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address_text?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   latitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   longitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   max_coverage_km?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
   min_order_amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  slot_date?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  weekly_hours?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
 }
 
 export type OutletsCountOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  phone?: Prisma.SortOrder
+  address_text?: Prisma.SortOrder
   latitude?: Prisma.SortOrder
   longitude?: Prisma.SortOrder
   max_coverage_km?: Prisma.SortOrder
   min_order_amount?: Prisma.SortOrder
+  open_hours?: Prisma.SortOrder
+  slot_date?: Prisma.SortOrder
+  weekly_hours?: Prisma.SortOrder
 }
 
 export type OutletsAvgOrderByAggregateInput = {
@@ -371,19 +478,29 @@ export type OutletsAvgOrderByAggregateInput = {
 export type OutletsMaxOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  phone?: Prisma.SortOrder
+  address_text?: Prisma.SortOrder
   latitude?: Prisma.SortOrder
   longitude?: Prisma.SortOrder
   max_coverage_km?: Prisma.SortOrder
   min_order_amount?: Prisma.SortOrder
+  open_hours?: Prisma.SortOrder
+  slot_date?: Prisma.SortOrder
+  weekly_hours?: Prisma.SortOrder
 }
 
 export type OutletsMinOrderByAggregateInput = {
   id?: Prisma.SortOrder
   name?: Prisma.SortOrder
+  phone?: Prisma.SortOrder
+  address_text?: Prisma.SortOrder
   latitude?: Prisma.SortOrder
   longitude?: Prisma.SortOrder
   max_coverage_km?: Prisma.SortOrder
   min_order_amount?: Prisma.SortOrder
+  open_hours?: Prisma.SortOrder
+  slot_date?: Prisma.SortOrder
+  weekly_hours?: Prisma.SortOrder
 }
 
 export type OutletsSumOrderByAggregateInput = {
@@ -394,56 +511,209 @@ export type OutletsSumOrderByAggregateInput = {
   min_order_amount?: Prisma.SortOrder
 }
 
+export type OutletsScalarRelationFilter = {
+  is?: Prisma.OutletsWhereInput
+  isNot?: Prisma.OutletsWhereInput
+}
+
+export type OutletsCreateNestedOneWithoutOrdersInput = {
+  create?: Prisma.XOR<Prisma.OutletsCreateWithoutOrdersInput, Prisma.OutletsUncheckedCreateWithoutOrdersInput>
+  connectOrCreate?: Prisma.OutletsCreateOrConnectWithoutOrdersInput
+  connect?: Prisma.OutletsWhereUniqueInput
+}
+
+export type OutletsUpdateOneRequiredWithoutOrdersNestedInput = {
+  create?: Prisma.XOR<Prisma.OutletsCreateWithoutOrdersInput, Prisma.OutletsUncheckedCreateWithoutOrdersInput>
+  connectOrCreate?: Prisma.OutletsCreateOrConnectWithoutOrdersInput
+  upsert?: Prisma.OutletsUpsertWithoutOrdersInput
+  connect?: Prisma.OutletsWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.OutletsUpdateToOneWithWhereWithoutOrdersInput, Prisma.OutletsUpdateWithoutOrdersInput>, Prisma.OutletsUncheckedUpdateWithoutOrdersInput>
+}
+
+export type OutletsCreateWithoutOrdersInput = {
+  name: string
+  phone?: string | null
+  address_text?: string | null
+  latitude: runtime.Decimal | runtime.DecimalJsLike | number | string
+  longitude: runtime.Decimal | runtime.DecimalJsLike | number | string
+  max_coverage_km: runtime.Decimal | runtime.DecimalJsLike | number | string
+  min_order_amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: string | null
+  slot_date?: string | null
+  weekly_hours?: string | null
+}
+
+export type OutletsUncheckedCreateWithoutOrdersInput = {
+  id?: number
+  name: string
+  phone?: string | null
+  address_text?: string | null
+  latitude: runtime.Decimal | runtime.DecimalJsLike | number | string
+  longitude: runtime.Decimal | runtime.DecimalJsLike | number | string
+  max_coverage_km: runtime.Decimal | runtime.DecimalJsLike | number | string
+  min_order_amount: runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: string | null
+  slot_date?: string | null
+  weekly_hours?: string | null
+}
+
+export type OutletsCreateOrConnectWithoutOrdersInput = {
+  where: Prisma.OutletsWhereUniqueInput
+  create: Prisma.XOR<Prisma.OutletsCreateWithoutOrdersInput, Prisma.OutletsUncheckedCreateWithoutOrdersInput>
+}
+
+export type OutletsUpsertWithoutOrdersInput = {
+  update: Prisma.XOR<Prisma.OutletsUpdateWithoutOrdersInput, Prisma.OutletsUncheckedUpdateWithoutOrdersInput>
+  create: Prisma.XOR<Prisma.OutletsCreateWithoutOrdersInput, Prisma.OutletsUncheckedCreateWithoutOrdersInput>
+  where?: Prisma.OutletsWhereInput
+}
+
+export type OutletsUpdateToOneWithWhereWithoutOrdersInput = {
+  where?: Prisma.OutletsWhereInput
+  data: Prisma.XOR<Prisma.OutletsUpdateWithoutOrdersInput, Prisma.OutletsUncheckedUpdateWithoutOrdersInput>
+}
+
+export type OutletsUpdateWithoutOrdersInput = {
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address_text?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  latitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  longitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  max_coverage_km?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  min_order_amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  slot_date?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  weekly_hours?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+export type OutletsUncheckedUpdateWithoutOrdersInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  name?: Prisma.StringFieldUpdateOperationsInput | string
+  phone?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  address_text?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  latitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  longitude?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  max_coverage_km?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  min_order_amount?: Prisma.DecimalFieldUpdateOperationsInput | runtime.Decimal | runtime.DecimalJsLike | number | string
+  open_hours?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  slot_date?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  weekly_hours?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+}
+
+
+/**
+ * Count Type OutletsCountOutputType
+ */
+
+export type OutletsCountOutputType = {
+  orders: number
+}
+
+export type OutletsCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  orders?: boolean | OutletsCountOutputTypeCountOrdersArgs
+}
+
+/**
+ * OutletsCountOutputType without action
+ */
+export type OutletsCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the OutletsCountOutputType
+   */
+  select?: Prisma.OutletsCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * OutletsCountOutputType without action
+ */
+export type OutletsCountOutputTypeCountOrdersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.OrdersWhereInput
+}
 
 
 export type OutletsSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  phone?: boolean
+  address_text?: boolean
   latitude?: boolean
   longitude?: boolean
   max_coverage_km?: boolean
   min_order_amount?: boolean
+  open_hours?: boolean
+  slot_date?: boolean
+  weekly_hours?: boolean
+  orders?: boolean | Prisma.Outlets$ordersArgs<ExtArgs>
+  _count?: boolean | Prisma.OutletsCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["outlets"]>
 
 export type OutletsSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  phone?: boolean
+  address_text?: boolean
   latitude?: boolean
   longitude?: boolean
   max_coverage_km?: boolean
   min_order_amount?: boolean
+  open_hours?: boolean
+  slot_date?: boolean
+  weekly_hours?: boolean
 }, ExtArgs["result"]["outlets"]>
 
 export type OutletsSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
   id?: boolean
   name?: boolean
+  phone?: boolean
+  address_text?: boolean
   latitude?: boolean
   longitude?: boolean
   max_coverage_km?: boolean
   min_order_amount?: boolean
+  open_hours?: boolean
+  slot_date?: boolean
+  weekly_hours?: boolean
 }, ExtArgs["result"]["outlets"]>
 
 export type OutletsSelectScalar = {
   id?: boolean
   name?: boolean
+  phone?: boolean
+  address_text?: boolean
   latitude?: boolean
   longitude?: boolean
   max_coverage_km?: boolean
   min_order_amount?: boolean
+  open_hours?: boolean
+  slot_date?: boolean
+  weekly_hours?: boolean
 }
 
-export type OutletsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "latitude" | "longitude" | "max_coverage_km" | "min_order_amount", ExtArgs["result"]["outlets"]>
+export type OutletsOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "name" | "phone" | "address_text" | "latitude" | "longitude" | "max_coverage_km" | "min_order_amount" | "open_hours" | "slot_date" | "weekly_hours", ExtArgs["result"]["outlets"]>
+export type OutletsInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  orders?: boolean | Prisma.Outlets$ordersArgs<ExtArgs>
+  _count?: boolean | Prisma.OutletsCountOutputTypeDefaultArgs<ExtArgs>
+}
+export type OutletsIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type OutletsIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
 
 export type $OutletsPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "Outlets"
-  objects: {}
+  objects: {
+    orders: Prisma.$OrdersPayload<ExtArgs>[]
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
     name: string
+    phone: string | null
+    address_text: string | null
     latitude: runtime.Decimal
     longitude: runtime.Decimal
     max_coverage_km: runtime.Decimal
     min_order_amount: runtime.Decimal
+    open_hours: string | null
+    slot_date: string | null
+    weekly_hours: string | null
   }, ExtArgs["result"]["outlets"]>
   composites: {}
 }
@@ -838,6 +1108,7 @@ readonly fields: OutletsFieldRefs;
  */
 export interface Prisma__OutletsClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  orders<T extends Prisma.Outlets$ordersArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.Outlets$ordersArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$OrdersPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -869,10 +1140,15 @@ export interface Prisma__OutletsClient<T, Null = never, ExtArgs extends runtime.
 export interface OutletsFieldRefs {
   readonly id: Prisma.FieldRef<"Outlets", 'Int'>
   readonly name: Prisma.FieldRef<"Outlets", 'String'>
+  readonly phone: Prisma.FieldRef<"Outlets", 'String'>
+  readonly address_text: Prisma.FieldRef<"Outlets", 'String'>
   readonly latitude: Prisma.FieldRef<"Outlets", 'Decimal'>
   readonly longitude: Prisma.FieldRef<"Outlets", 'Decimal'>
   readonly max_coverage_km: Prisma.FieldRef<"Outlets", 'Decimal'>
   readonly min_order_amount: Prisma.FieldRef<"Outlets", 'Decimal'>
+  readonly open_hours: Prisma.FieldRef<"Outlets", 'String'>
+  readonly slot_date: Prisma.FieldRef<"Outlets", 'String'>
+  readonly weekly_hours: Prisma.FieldRef<"Outlets", 'String'>
 }
     
 
@@ -889,6 +1165,10 @@ export type OutletsFindUniqueArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Omit specific fields from the Outlets
    */
   omit?: Prisma.OutletsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OutletsInclude<ExtArgs> | null
   /**
    * Filter, which Outlets to fetch.
    */
@@ -908,6 +1188,10 @@ export type OutletsFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.Extension
    */
   omit?: Prisma.OutletsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OutletsInclude<ExtArgs> | null
+  /**
    * Filter, which Outlets to fetch.
    */
   where: Prisma.OutletsWhereUniqueInput
@@ -925,6 +1209,10 @@ export type OutletsFindFirstArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * Omit specific fields from the Outlets
    */
   omit?: Prisma.OutletsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OutletsInclude<ExtArgs> | null
   /**
    * Filter, which Outlets to fetch.
    */
@@ -974,6 +1262,10 @@ export type OutletsFindFirstOrThrowArgs<ExtArgs extends runtime.Types.Extensions
    */
   omit?: Prisma.OutletsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OutletsInclude<ExtArgs> | null
+  /**
    * Filter, which Outlets to fetch.
    */
   where?: Prisma.OutletsWhereInput
@@ -1021,6 +1313,10 @@ export type OutletsFindManyArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Omit specific fields from the Outlets
    */
   omit?: Prisma.OutletsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OutletsInclude<ExtArgs> | null
   /**
    * Filter, which Outlets to fetch.
    */
@@ -1070,6 +1366,10 @@ export type OutletsCreateArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    */
   omit?: Prisma.OutletsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OutletsInclude<ExtArgs> | null
+  /**
    * The data needed to create a Outlets.
    */
   data: Prisma.XOR<Prisma.OutletsCreateInput, Prisma.OutletsUncheckedCreateInput>
@@ -1117,6 +1417,10 @@ export type OutletsUpdateArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    * Omit specific fields from the Outlets
    */
   omit?: Prisma.OutletsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OutletsInclude<ExtArgs> | null
   /**
    * The data needed to update a Outlets.
    */
@@ -1184,6 +1488,10 @@ export type OutletsUpsertArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    */
   omit?: Prisma.OutletsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OutletsInclude<ExtArgs> | null
+  /**
    * The filter to search for the Outlets to update in case it exists.
    */
   where: Prisma.OutletsWhereUniqueInput
@@ -1210,6 +1518,10 @@ export type OutletsDeleteArgs<ExtArgs extends runtime.Types.Extensions.InternalA
    */
   omit?: Prisma.OutletsOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OutletsInclude<ExtArgs> | null
+  /**
    * Filter which Outlets to delete.
    */
   where: Prisma.OutletsWhereUniqueInput
@@ -1230,6 +1542,30 @@ export type OutletsDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Inter
 }
 
 /**
+ * Outlets.orders
+ */
+export type Outlets$ordersArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the Orders
+   */
+  select?: Prisma.OrdersSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the Orders
+   */
+  omit?: Prisma.OrdersOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OrdersInclude<ExtArgs> | null
+  where?: Prisma.OrdersWhereInput
+  orderBy?: Prisma.OrdersOrderByWithRelationInput | Prisma.OrdersOrderByWithRelationInput[]
+  cursor?: Prisma.OrdersWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.OrdersScalarFieldEnum | Prisma.OrdersScalarFieldEnum[]
+}
+
+/**
  * Outlets without action
  */
 export type OutletsDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1241,4 +1577,8 @@ export type OutletsDefaultArgs<ExtArgs extends runtime.Types.Extensions.Internal
    * Omit specific fields from the Outlets
    */
   omit?: Prisma.OutletsOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.OutletsInclude<ExtArgs> | null
 }
