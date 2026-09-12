@@ -86,12 +86,8 @@ function toOrderDetail(row: OrderRow): orderDetailType {
         total_laundry: Number(row.total_laundry),
         total_product: Number(row.total_product),
         delivery_fee: Number(row.delivery_fee),
-        discount_member: Number(row.discount_member),
-        discount_voucher: Number(row.discount_voucher),
         total_amount: row.total_amount,
         distance_km: Number(row.distance_km),
-        pickup_schedule: row.pickup_schedule ? row.pickup_schedule.toISOString() : null,
-        estimated_delivery: row.estimated_delivery ? row.estimated_delivery.toISOString() : null,
         notes: row.notes,
         created_at: row.created_at.toISOString(),
         updated_at: row.updated_at.toISOString(),
@@ -142,10 +138,6 @@ export class pgOrderRepository implements orderRepository {
                     total_amount: input.totals.total_amount,
                     status: input.status,
                     payment_method: input.payment_method,
-                    discount_member: input.discount_member,
-                    discount_voucher: input.discount_voucher,
-                    pickup_schedule: input.pickup_schedule,
-                    estimated_delivery: input.estimated_delivery,
                     notes: input.notes ?? null,
                     serviceOrderItems: {
                         create: input.services.map((s) => ({

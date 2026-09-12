@@ -2,11 +2,11 @@ import { Outlet } from "react-router-dom"
 import { Topbar } from "../components/Topbar"
 
 const CUSTOMER_NAV = [
+    { to: "/", label: "Home" },
     { to: "/dashboard", label: "Dashboard" },
     { to: "/layanan", label: "Layanan" },
     { to: "/toko", label: "Toko" },
-    { to: "/riwayat", label: "Riwayat" },
-    { to: "/profil", label: "Profil" },
+    { to: "/dashboard#profil", label: "Profil" },
 ]
 
 export function CustomerLayout() {

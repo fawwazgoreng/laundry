@@ -1,9 +1,11 @@
 import type { OrderStatus } from "./types";
 
 export function formatRupiah(value: number, withSymbol = true): string {
+    const rounded = Math.round(value ?? 0);
+    const normalized = Object.is(rounded, -0) ? 0 : rounded;
     const formatted = new Intl.NumberFormat("id-ID", {
         maximumFractionDigits: 0,
-    }).format(Math.round(value ?? 0));
+    }).format(normalized);
     return withSymbol ? `Rp ${formatted}` : formatted;
 }
 

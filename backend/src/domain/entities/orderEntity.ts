@@ -24,10 +24,6 @@ export class orderEntity {
         distance_km: z.coerce.number().nonnegative().default(0),
         delivery_fee: z.coerce.number().nonnegative().optional(),
         payment_method: z.enum(PAYMENT_METHODS, { message: "Invalid payment method" }),
-        discount_member: z.coerce.number().nonnegative().optional().default(0),
-        discount_voucher: z.coerce.number().nonnegative().optional().default(0),
-        pickup_schedule: z.coerce.date().refine((d) => d.getTime() > Date.now(), "Jadwal penjemputan harus di masa depan"),
-        estimated_delivery: z.coerce.date().refine((d) => d.getTime() > Date.now(), "Estimasi pengantaran harus di masa depan"),
         notes: z.string().optional(),
     });
 
@@ -88,19 +84,15 @@ export class orderEntity {
         productSubtotal: number
         itemCount: number
         deliveryFee: number
-        discountMember: number
-        discountVoucher: number
     }): orderTotalsType {
         const total = Math.max(
             0,
-            Math.round(input.laundrySubtotal + input.productSubtotal + input.deliveryFee - input.discountMember - input.discountVoucher),
+            Math.round(input.laundrySubtotal + input.productSubtotal + input.deliveryFee),
         );
         return {
             total_laundry: Math.round(input.laundrySubtotal),
             total_product: Math.round(input.productSubtotal),
             delivery_fee: Math.round(input.deliveryFee),
-            discount_member: Math.round(input.discountMember),
-            discount_voucher: Math.round(input.discountVoucher),
             total_amount: total,
             item_count: input.itemCount,
         };

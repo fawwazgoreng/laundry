@@ -1539,10 +1539,6 @@ export const OrdersScalarFieldEnum = {
   total_amount: 'total_amount',
   status: 'status',
   payment_method: 'payment_method',
-  discount_member: 'discount_member',
-  discount_voucher: 'discount_voucher',
-  pickup_schedule: 'pickup_schedule',
-  estimated_delivery: 'estimated_delivery',
   notes: 'notes',
   created_at: 'created_at',
   updated_at: 'updated_at'

@@ -16,3 +16,8 @@ export interface addressType {
     is_primary: boolean
     user_id: string
 }
+
+export type Coordinate = {
+    latitude: number,
+    longitude: number
+}

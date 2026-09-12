@@ -115,10 +115,6 @@ model Orders {
     total_amount      Int
     status            String               @db.VarChar(20)
     payment_method    String               @db.VarChar(20)
-    discount_member   Decimal              @default(0)
-    discount_voucher  Decimal              @default(0)
-    pickup_schedule   DateTime?
-    estimated_delivery DateTime?
     notes             String?              @db.Text
     created_at        DateTime             @default(now())
     updated_at        DateTime             @default(now()) @updatedAt

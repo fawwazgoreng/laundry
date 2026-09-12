@@ -31,12 +31,20 @@ even though its scripts look npm-ish.
 
 ## Backend
 
-- Dev server: `bun run dev` (runs `bun run --hot src/index.ts`).
-- No build/test/lint/typecheck scripts exist on the backend. Verification is via a one-off
-  `./node_modules/.bin/tsc --noEmit -p tsconfig.json` (TS 7 is installed in `node_modules`) plus
-  running the server. Frontend has `bun run build` (`tsc -b && vite build`) and `bun run lint`.
+- Dev server: `bun run dev` (runs `bun run --hot src/index.ts`). `src/index.ts` exports the Hono
+  `app` and lets Bun serve it — do NOT call `app.listen` in source (tests hit `app.request()`)
+  and there is no auto-listen in library imports.
+- Verification:
+  - Typecheck: `bun run typecheck` (i.e. `./node_modules/.bin/tsc --noEmit -p tsconfig.json`).
+  - Unit tests (entities + use cases, no DB): `bun run test` / `bun run test:unit`.
+  - Integration tests (real Postgres, Hono `app.request()` against `laundry_test`):
+    `bun run test:integration` — requires the local Postgres cluster + `laundry_test` schema pushed.
 - `bun`/`bunx` live at `~/.bun/bin` and may not be on PATH in a shell — use the full path or
   `export PATH="$HOME/.bun/bin:$PATH"`.
+- Frontend: `bun run build` (`tsc -b && vite build`), `bun run lint`, unit tests `bun run test`
+  (`tests/unit`, bun test — no jsdom/vitest, polyfill localStorage in tests), and Playwright e2e
+  `bun run test:e2e` (browsers via `bunx playwright install chromium`). `tests/unit` and `e2e/` are
+  OUTSIDE `tsconfig.app.json` include, so `tsc -b` ignores them, but eslint lints them.
 
 ### Clean / Onion architecture
 
@@ -70,6 +78,7 @@ config/        env.ts — zod-validates process.env (DATABASE_URL, JWT_SECRET, .
 
 ### Prisma (important quirks)
 
+- Dont change now database schema 
 - Schema: `src/infrastructure/prisma/schema.prisma`. Database is PostgreSQL.
 - **Generated client is committed to git** at `src/infrastructure/src/generated/prisma/` (output dir
   is relative to the schema file). Import it directly, e.g.
@@ -92,6 +101,8 @@ config/        env.ts — zod-validates process.env (DATABASE_URL, JWT_SECRET, .
   values — the server refuses to boot without them).
 - Local PostgreSQL in this environment: a user-owned cluster may be started without sudo via
   `/usr/lib/postgresql/17/bin/pg_ctl -D /tmp/opencode/pgdata -o "-p 5432 -k /tmp/opencode" start`
-  (DATABASE_URL points to `postgresql://postgres:postgres@localhost:5432/laundry`). Seed data
-  (admin user, outlet, laundry services, products) is created by
-  `bun run src/infrastructure/seed/seed.ts`.
+  (DATABASE_URL points to `postgresql://postgres:postgres@localhost:5432/laundry`). Push schemas for
+  `laundry` and `laundry_test` with `DATABASE_URL=... ./node_modules/.bin/prisma db push` from
+  `backend/` (do NOT add `--skip-generate`). Seed data (admin user, outlet, laundry services,
+  products, plus 6 demo orders across every status incl. payments/trackings/cashflows) is created by
+  `bun run src/infrastructure/seed/seed.ts`; demo orders are skipped when the DB already has orders.

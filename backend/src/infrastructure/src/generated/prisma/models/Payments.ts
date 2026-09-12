@@ -487,6 +487,10 @@ export type PaymentsUncheckedUpdateManyWithoutOrderNestedInput = {
   deleteMany?: Prisma.PaymentsScalarWhereInput | Prisma.PaymentsScalarWhereInput[]
 }
 
+export type NullableDateTimeFieldUpdateOperationsInput = {
+  set?: Date | string | null
+}
+
 export type PaymentsCreateWithoutOrderInput = {
   id?: string
   transaction_id: string

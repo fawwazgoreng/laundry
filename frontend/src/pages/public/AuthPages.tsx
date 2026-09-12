@@ -1,38 +1,31 @@
 import { useState } from "react"
 import type { ChangeEvent, FormEvent } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { WashingMachine, Eye, EyeOff } from "lucide-react"
+import { Shirt, Eye, EyeClosed } from "lucide-react"
 import { useAuth } from "../../context/AuthContext"
 import { ApiError } from "../../services/apiClient"
 import { Button, Input } from "../../components/ui"
 
-function AuthSidebar({ variant }: { variant: "login" | "register" }) {
+function AuthSidebar() {
     return (
-        <div className="relative hidden overflow-hidden bg-gradient-to-br from-primary via-red-700 to-red-900 p-12 text-white lg:flex lg:flex-col lg:justify-between">
-            <div className="absolute -left-24 -top-24 h-72 w-72 rounded-full bg-white/10 blur-2xl" />
-            <div className="absolute -bottom-24 -right-24 h-72 w-72 rounded-full bg-white/10 blur-2xl" />
-            <div className="relative flex items-center gap-3">
-                <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-primary">
-                    <WashingMachine className="h-6 w-6" />
+        <div className="relative hidden overflow-hidden bg-primary px-24 py-16 text-white lg:flex lg:flex-col lg:justify-between col-span-4">
+            <div className="relative flex items-center">
+                <span className="flex h-12 w-12 items-center justify-center rounded-2xl text-primary">
+                    <img src="/components/shirt-icon.png" alt="" />
                 </span>
                 <span className="text-2xl font-extrabold tracking-tight">Fadarosi</span>
             </div>
             <div className="relative">
-                <h2 className="text-4xl font-extrabold leading-tight tracking-tight">
-                    Perawatan Pakaian Premium Tanpa Repot
+                <h2 className="text-[40px] font-extrabold leading-tight tracking-tight">
+                    Kembalikan Kesegaran Pakaian Anda Bersama Kami
                 </h2>
-                <p className="mt-4 max-w-sm text-red-100">
-                    {variant === "login"
-                        ? "Silakan masuk untuk melanjutkan dan kelola cucian Anda dengan mudah."
-                        : "Bergabunglah dengan Fadarosi dan nikmati layanan laundry premium di rumah Anda."}
+                <p className="mt-4 text-[16px] font-extralight text-red-100">
+                    Masuk ke akun FADAROSI Anda untuk memantau cucian, menjadwalkan penjemputan, atau membeli detergen pewangi ramah lingkungan.
                 </p>
-                <ul className="mt-8 space-y-3 text-sm text-red-50">
-                    <li>✓ Jemput & antar gratis</li>
-                    <li>✓ Hasil bersih wangi maksimal</li>
-                    <li>✓ Status pesanan real-time</li>
-                </ul>
             </div>
-            <p className="relative text-sm text-red-200">&copy; {new Date().getFullYear()} Fadarosi Laundry</p>
+            <div className="relative">
+                <img src="/components/hero-image-pane.png" alt="" className="w-full" />
+            </div>
         </div>
     )
 }
@@ -62,13 +55,13 @@ export function LoginPage() {
     }
 
     return (
-        <div className="grid min-h-screen lg:grid-cols-2">
-            <AuthSidebar variant="login" />
-            <div className="flex items-center justify-center bg-white px-6 py-12">
+        <div className="grid min-h-screen lg:grid-cols-9">
+            <AuthSidebar />
+            <div className="flex items-center justify-center bg-white px-6 py-12 col-span-5">
                 <div className="w-full max-w-md">
                     <div className="mb-8 lg:hidden">
                         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white">
-                            <WashingMachine className="h-5 w-5" />
+                            <Shirt className="h-5 w-5" />
                         </span>
                     </div>
                     <h1 className="text-2xl font-extrabold tracking-tight text-ink-strong">Selamat Datang Kembali</h1>
@@ -83,7 +76,7 @@ export function LoginPage() {
                             onChange={(e) => setEmail(e.target.value)}
                             required
                         />
-                        <div>
+                        <div className="w-full relative">
                             <Input
                                 label="Password"
                                 type={showPassword ? "text" : "password"}
@@ -92,13 +85,17 @@ export function LoginPage() {
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                             />
-                            <button
+                            {showPassword ? <EyeClosed
                                 type="button"
                                 onClick={() => setShowPassword((v) => !v)}
-                                className="mt-2 text-xs font-medium text-primary hover:underline"
+                                className="mt-2 text-xs font-medium text-ink hover:underline absolute top-7 right-5"
                             >
-                                {showPassword ? "Sembunyikan" : "Tampilkan"} password
-                            </button>
+                            </EyeClosed> : <Eye
+                                type="button"
+                                onClick={() => setShowPassword((v) => !v)}
+                                className="mt-2 text-xs font-medium text-ink hover:underline absolute top-7 right-5"
+                            >
+                            </Eye>}
                         </div>
 
                         {error && (
@@ -148,13 +145,13 @@ export function RegisterPage() {
     }
 
     return (
-        <div className="grid min-h-screen lg:grid-cols-2">
-            <AuthSidebar variant="register" />
-            <div className="flex items-center justify-center bg-white px-6 py-12">
+        <div className="grid min-h-screen lg:grid-cols-9">
+            <AuthSidebar />
+            <div className="flex items-center justify-center bg-white px-6 py-12 col-span-5">
                 <div className="w-full max-w-md">
                     <div className="mb-8 lg:hidden">
                         <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-white">
-                            <WashingMachine className="h-5 w-5" />
+                            <Shirt className="h-5 w-5" />
                         </span>
                     </div>
                     <h1 className="text-2xl font-extrabold tracking-tight text-ink-strong">Selamat Datang</h1>
@@ -166,7 +163,7 @@ export function RegisterPage() {
                         <Input label="Username" placeholder="namakamu" value={form.username} onChange={set("username")} required />
                         <Input label="Nomor Telepon" type="tel" placeholder="081234567890" value={form.phone} onChange={set("phone")} required />
                         <Input label="Email" type="email" placeholder="nama@email.com" value={form.email} onChange={set("email")} required />
-                        <div>
+                        <div className="w-full relative">
                             <Input
                                 label="Password"
                                 type={showPassword ? "text" : "password"}
@@ -176,14 +173,17 @@ export function RegisterPage() {
                                 required
                                 minLength={8}
                             />
-                            <button
+                            {showPassword ? <EyeClosed
                                 type="button"
                                 onClick={() => setShowPassword((v) => !v)}
-                                className="mt-2 flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                                className="mt-2 text-xs font-medium text-ink hover:underline absolute top-7 right-5"
                             >
-                                {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                                {showPassword ? "Sembunyikan" : "Tampilkan"} password
-                            </button>
+                            </EyeClosed> : <Eye
+                                type="button"
+                                onClick={() => setShowPassword((v) => !v)}
+                                className="mt-2 text-xs font-medium text-ink hover:underline absolute top-7 right-5"
+                            >
+                            </Eye>}
                         </div>
 
                         {error && (

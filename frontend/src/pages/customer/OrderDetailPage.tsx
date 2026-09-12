@@ -1,264 +1,175 @@
-import { useEffect, useState } from "react"
-import { Link, useParams } from "react-router-dom"
-import { Calendar, FileText, MapPin, Package, Truck, User } from "lucide-react"
-import { orderApi, paymentApi } from "../../services/api"
-import { ApiError } from "../../services/apiClient"
-import { formatRupiah, ORDER_STATUSES, PAYMENT_METHOD_LABELS } from "../../lib/utils"
-import type { OrderDetail, Payment } from "../../lib/types"
-import { Button, Card, Spinner, StatusBadge } from "../../components/ui"
-import { cx } from "../../lib/utils"
+import { Check, CreditCard, MessageCircle } from "lucide-react"
+import { activeOrder } from "../lib/mockData"
+import { formatIDR } from "../lib/format"
 
-export default function OrderDetailPage() {
-    const { orderId } = useParams<{ orderId: string }>()
-    const [order, setOrder] = useState<OrderDetail | null>(null)
-    const [payment, setPayment] = useState<Payment | null>(null)
-    const [loading, setLoading] = useState(true)
-    const [error, setError] = useState("")
+const steps = ["Diterima", "Dicuci", "Disetrika", "Siap Antar", "Selesai"]
+const currentStepIndex = 2 // "Disetrika"
 
-    useEffect(() => {
-        let mounted = true
-        if (!orderId) return
-        Promise.all([orderApi.get(orderId), paymentApi.byOrder(orderId)])
-            .then(([o, p]) => {
-                if (!mounted) return
-                setOrder(o)
-                setPayment(p)
-            })
-            .catch((err) => {
-                if (mounted) setError(err instanceof ApiError ? err.message : "Gagal memuat detail pesanan")
-            })
-            .finally(() => {
-                if (mounted) setLoading(false)
-            })
-        return () => {
-            mounted = false
-        }
-    }, [orderId])
+export function OrderDetailPage() {
+  return (
+    <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
+      <nav className="text-xs text-gray-400">
+        Layanan / Riwayat Pesanan / <span className="text-ink-strong">Detail Pesanan</span>
+      </nav>
 
-    if (loading) {
-        return (
-            <div className="flex justify-center py-20">
-                <Spinner size="lg" />
-            </div>
-        )
-    }
-
-    if (error || !order) {
-        return (
-            <Card className="p-8 text-center">
-                <p className="text-sm text-gray-500">{error ?? "Pesanan tidak ditemukan"}</p>
-                <Link to="/riwayat">
-                    <Button className="mt-4">Kembali ke Riwayat</Button>
-                </Link>
-            </Card>
-        )
-    }
-
-    const statusIndex = ORDER_STATUSES.findIndex((s) => s.value === order.status)
-    const isCancelled = order.status === "DIBATALKAN"
-    const hasPickup = order.pickup_schedule && order.pickup_schedule !== ""
-
-    const info: Array<{ key: string; value: string; icon: typeof User }> = [
-        { key: "No. Pesanan", value: order.order_id, icon: FileText },
-        { key: "Nama", value: `${order.customer.username}`, icon: User },
-        { key: "Nomor Telepon", value: order.customer.phone, icon: User },
-        { key: "Outlet", value: order.outlet?.name ?? "-", icon: MapPin },
-    ]
-
-    const jadwal: Array<{ key: string; value: string; icon: typeof Calendar }> = [
-        { key: "Tanggal Pesanan", value: new Date(order.created_at).toLocaleString("id-ID"), icon: Calendar },
-        { key: "Pengambilan", value: hasPickup ? new Date(order.pickup_schedule!).toLocaleString("id-ID") : "-", icon: Truck },
-        { key: "Estimasi Pengantaran", value: order.estimated_delivery ? new Date(order.estimated_delivery).toLocaleString("id-ID") : "-", icon: Truck },
-    ]
-
-    const paymentStatus = payment?.status ?? "PENDING"
-
-    return (
+      <div className="flex flex-col gap-4 rounded-2xl border border-gray-200 bg-white p-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-            <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                <div>
-                    <h1 className="text-2xl font-bold text-ink-strong">Detail Pesanan</h1>
-                    <p className="mt-1 text-sm text-gray-500">{order.order_id}</p>
-                </div>
-                <StatusBadge status={order.status} size="lg" />
-            </div>
-
-            <div className="mt-6 grid gap-6 lg:grid-cols-5">
-                {/* Left column */}
-                <div className="space-y-6 lg:col-span-3">
-                    {/* Timeline */}
-                    <Card className="p-6">
-                        <h2 className="font-bold text-ink-strong">Progres Pengerjaan</h2>
-                        <div className="mt-6 flex items-start justify-between gap-1">
-                            {ORDER_STATUSES.map((s, i) => {
-                                const done = i < statusIndex
-                                const active = i === statusIndex
-                                const cancelledHere = isCancelled && i === statusIndex
-                                return (
-                                    <div key={s.value} className="flex flex-1 flex-col items-center text-center">
-                                        <div className="flex w-full items-center">
-                                            <div className={cx("h-1 flex-1 rounded", i === 0 ? "bg-transparent" : done ? "bg-primary" : "bg-gray-200")} />
-                                            <div
-                                                className={cx(
-                                                    "flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-bold",
-                                                    cancelledHere ? "bg-red-600 text-white" : active ? "bg-primary text-white ring-4 ring-primary/20" : done ? "bg-primary text-white" : "bg-gray-200 text-gray-400",
-                                                )}
-                                            >
-                                                {done ? "✓" : i + 1}
-                                            </div>
-                                            <div className={cx("h-1 flex-1 rounded", i === ORDER_STATUSES.length - 1 ? "bg-transparent" : active || done ? "bg-gray-200" : "bg-gray-200")} />
-                                        </div>
-                                        <p className={cx("mt-2 text-[11px] font-semibold leading-tight", active ? "text-primary" : done ? "text-ink-strong" : "text-gray-400")}>
-                                            {s.label}
-                                        </p>
-                                    </div>
-                                )
-                            })}
-                        </div>
-                        {isCancelled && (
-                            <p className="mt-5 rounded-lg bg-red-50 px-4 py-3 text-xs text-red-600">
-                                Pesanan ini telah dibatalkan. Dikutip ulang bila diperlukan pembayaran refund dari sisi kami.
-                            </p>
-                        )}
-                    </Card>
-
-                    {/* Service items */}
-                    <Card className="p-6">
-                        <h2 className="font-bold text-ink-strong">Rincian Item</h2>
-                        <div className="mt-4 space-y-3">
-                            {order.services.map((s) => (
-                                <div key={s.id} className="flex items-center justify-between rounded-xl border border-gray-100 bg-surface/50 px-4 py-3">
-                                    <div className="flex items-center gap-3">
-                                        <Package className="h-4 w-4 text-primary" />
-                                        <div>
-                                            <p className="text-sm font-semibold text-ink-strong">{s.service_name}</p>
-                                            <p className="text-xs text-gray-400">
-                                                {s.qty} {s.unit} &middot; {formatRupiah(s.price_per_unit)}/{s.unit}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <p className="text-sm font-bold text-ink-strong">{formatRupiah(s.subtotal)}</p>
-                                </div>
-                            ))}
-                            {order.products.map((p) => (
-                                <div key={p.id} className="flex items-center justify-between rounded-xl border border-gray-100 bg-surface/50 px-4 py-3">
-                                    <div className="flex items-center gap-3">
-                                        <Package className="h-4 w-4 text-primary" />
-                                        <div>
-                                            <p className="text-sm font-semibold text-ink-strong">{p.product_name}</p>
-                                            <p className="text-xs text-gray-400">{p.qty} pcs &middot; {formatRupiah(p.price)}</p>
-                                        </div>
-                                    </div>
-                                    <p className="text-sm font-bold text-ink-strong">{formatRupiah(p.subtotal)}</p>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
-
-                    {/* Order info */}
-                    <Card className="p-6">
-                        <h2 className="font-bold text-ink-strong">Info Pesanan</h2>
-                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                            {info.map((i) => (
-                                <div key={i.key} className="flex items-center gap-3">
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-light text-primary">
-                                        <i.icon className="h-4 w-4" />
-                                    </span>
-                                    <div>
-                                        <p className="text-[11px] text-gray-400">{i.key}</p>
-                                        <p className="text-sm font-medium text-ink-strong">{i.value}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
-                </div>
-
-                {/* Right column */}
-                <div className="space-y-6 lg:col-span-2">
-                    {/* Payment status */}
-                    <Card className="p-6">
-                        <div className="flex items-center justify-between">
-                            <h3 className="font-bold text-ink-strong">Pembayaran</h3>
-                            <span
-                                className={cx(
-                                    "rounded-full px-3 py-1 text-[11px] font-bold",
-                                    paymentStatus === "PAID" ? "bg-green-100 text-green-700" : paymentStatus === "REFUNDED" ? "bg-amber-100 text-amber-700" : "bg-yellow-100 text-yellow-700",
-                                )}
-                            >
-                                {paymentStatus === "PAID" ? "Lunas" : paymentStatus === "REFUNDED" ? "Dikembalikan" : "Menunggu"}
-                            </span>
-                        </div>
-                        <p className="mt-3 text-sm text-gray-600">
-                            Metode: <span className="font-medium text-ink-strong">{PAYMENT_METHOD_LABELS[order.payment_method]}</span>
-                        </p>
-                        {paymentStatus !== "PAID" && paymentStatus !== "REFUNDED" && paymentStatus !== "CANCELLED" && order.payment_method === "transfer_bank" && (
-                            <Link to={`/payment/${order.order_id}`}>
-                                <Button className="mt-4 w-full">Lanjutkan Pembayaran</Button>
-                            </Link>
-                        )}
-                        {paymentStatus === "PAID" && payment?.transaction_id && order.payment_method === "transfer_bank" && (
-                            <div className="mt-4 rounded-xl bg-surface p-4">
-                                <p className="text-xs text-gray-500">Nomor Virtual Account</p>
-                                <p className="mt-1 font-extrabold tracking-wider text-ink-strong">{payment.transaction_id}</p>
-                            </div>
-                        )}
-                    </Card>
-
-                    {/* Jadwal */}
-                    <Card className="p-6">
-                        <h3 className="font-bold text-ink-strong">Jadwal</h3>
-                        <div className="mt-4 space-y-3">
-                            {jadwal.map((j) => (
-                                <div key={j.key} className="flex items-center gap-3">
-                                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-light text-primary">
-                                        <j.icon className="h-4 w-4" />
-                                    </span>
-                                    <div>
-                                        <p className="text-[11px] text-gray-400">{j.key}</p>
-                                        <p className="text-sm font-medium text-ink-strong">{j.value}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </Card>
-
-                    {/* Price summary */}
-                    <Card className="p-6">
-                        <h3 className="font-bold text-ink-strong">Ringkasan Biaya</h3>
-                        <div className="mt-4 space-y-2.5 text-sm">
-                            <div className="flex justify-between text-gray-600">
-                                <span>Total Harga ({order.services.length} Layanan)</span>
-                                <span>{formatRupiah(order.total_laundry)}</span>
-                            </div>
-                            <div className="flex justify-between text-gray-600">
-                                <span>Produk</span>
-                                <span>{formatRupiah(order.total_product)}</span>
-                            </div>
-                            <div className="flex justify-between text-gray-600">
-                                <span>Biaya Pengiriman</span>
-                                <span>{formatRupiah(order.delivery_fee)}</span>
-                            </div>
-                            {order.discount_member > 0 && (
-                                <div className="flex justify-between text-green-600">
-                                    <span>Diskon Premium Member</span>
-                                    <span>-{formatRupiah(order.discount_member)}</span>
-                                </div>
-                            )}
-                            {order.discount_voucher > 0 && (
-                                <div className="flex justify-between text-green-600">
-                                    <span>Diskon Voucher Promo</span>
-                                    <span>-{formatRupiah(order.discount_voucher)}</span>
-                                </div>
-                            )}
-                        </div>
-                        <div className="mt-4 flex items-end justify-between border-t border-gray-100 pt-4">
-                            <span className="font-semibold text-ink-strong">Total Keseluruhan</span>
-                            <span className="text-2xl font-extrabold text-primary">{formatRupiah(order.total_amount)}</span>
-                        </div>
-                    </Card>
-                </div>
-            </div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-bold text-ink-strong">Pesanan #{activeOrder.id}</h1>
+            <span className="rounded-full bg-primary-light px-3 py-1 text-xs font-semibold text-primary">
+              Sedang Diproses
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-gray-400">
+            Dibuat pada: 15 Agustus 2024, 14:30 WIB
+          </p>
         </div>
-    )
+        <div className="flex gap-3">
+          <button className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-ink hover:bg-gray-50">
+            <MessageCircle size={15} /> Hubungi CS
+          </button>
+          <button className="rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary-light">
+            Batalkan Pesanan
+          </button>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-gray-200 bg-white p-6">
+        <h2 className="mb-6 text-sm font-semibold text-ink-strong">Status Pengerjaan</h2>
+        <div className="flex items-center">
+          {steps.map((step, idx) => (
+            <div key={step} className="flex flex-1 items-center last:flex-none">
+              <div className="flex flex-col items-center gap-2">
+                <span
+                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
+                    idx < currentStepIndex
+                      ? "bg-primary text-white"
+                      : idx === currentStepIndex
+                        ? "bg-primary text-white"
+                        : "bg-gray-100 text-gray-400"
+                  }`}
+                >
+                  {idx < currentStepIndex ? <Check size={15} /> : idx + 1}
+                </span>
+                <span
+                  className={`text-xs font-medium ${
+                    idx <= currentStepIndex ? "text-primary" : "text-gray-400"
+                  }`}
+                >
+                  {step}
+                </span>
+              </div>
+              {idx < steps.length - 1 && (
+                <span
+                  className={`mx-2 h-0.5 flex-1 ${
+                    idx < currentStepIndex ? "bg-primary" : "bg-gray-200"
+                  }`}
+                />
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_1fr_320px]">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6">
+          <h2 className="mb-4 text-sm font-semibold text-ink-strong">Informasi Pelanggan</h2>
+          <div className="space-y-3 text-sm">
+            <div>
+              <p className="text-xs uppercase text-gray-400">Nama Lengkap</p>
+              <p className="font-semibold text-ink-strong">{activeOrder.customerName}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-gray-400">Nomor Telepon</p>
+              <p className="font-semibold text-ink-strong">{activeOrder.customerPhone}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-gray-400">Alamat Pengantaran</p>
+              <p className="font-semibold text-ink-strong">{activeOrder.deliveryAddress}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-6">
+          <h2 className="mb-4 text-sm font-semibold text-ink-strong">Jadwal &amp; Penanganan</h2>
+          <div className="space-y-3 text-sm">
+            <div>
+              <p className="text-xs uppercase text-gray-400">Tipe Layanan</p>
+              <p className="font-semibold text-primary">{activeOrder.serviceName}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-gray-400">Jadwal Penjemputan</p>
+              <p className="font-semibold text-ink-strong">{activeOrder.pickupSchedule}</p>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-gray-400">Estimasi Selesai</p>
+              <p className="font-semibold text-ink-strong">{activeOrder.estimatedDone}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-gray-200 bg-white p-6">
+          <h2 className="mb-4 text-sm font-semibold text-ink-strong">Ringkasan Biaya</h2>
+          <div className="space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Subtotal Laundry (3.2 Kg)</span>
+              <span className="font-medium text-ink-strong">{formatIDR(activeOrder.subtotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Biaya Antar-Jemput</span>
+              <span className="font-medium text-ink-strong">{formatIDR(activeOrder.deliveryFee)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Diskon Premium Member</span>
+              <span className="font-medium text-primary">-{formatIDR(activeOrder.memberDiscount)}</span>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
+            <span className="text-sm font-semibold text-ink-strong">Total Pembayaran</span>
+            <span className="text-lg font-bold text-primary">{formatIDR(activeOrder.total)}</span>
+          </div>
+          <div className="mt-4 flex items-center gap-2 rounded-xl bg-gray-50 px-4 py-3">
+            <CreditCard size={16} className="text-gray-400" />
+            <div>
+              <p className="text-[10px] uppercase text-gray-400">Metode Pembayaran</p>
+              <p className="text-sm font-semibold text-ink-strong">{activeOrder.paymentMethod}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-gray-200 bg-white p-6">
+        <h2 className="mb-4 text-sm font-semibold text-ink-strong">Rincian Item Laundry</h2>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-left text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-xs text-gray-400">
+                <th className="pb-3 font-medium">Rincian Penanganan</th>
+                <th className="pb-3 text-right font-medium">Jumlah</th>
+                <th className="pb-3 text-right font-medium">Berat (Est)</th>
+                <th className="pb-3 text-right font-medium">Harga/Unit</th>
+                <th className="pb-3 text-right font-medium">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {activeOrder.items.map((item) => (
+                <tr key={item.id} className="border-b border-gray-50 last:border-0">
+                  <td className="py-4">
+                    <p className="font-semibold text-ink-strong">{item.label}</p>
+                    <p className="text-xs text-gray-400">{item.note}</p>
+                  </td>
+                  <td className="py-4 text-right text-ink">{item.qty} Pcs</td>
+                  <td className="py-4 text-right text-ink">{item.weightKg} Kg</td>
+                  <td className="py-4 text-right text-ink">{formatIDR(item.pricePerUnit)} /kg</td>
+                  <td className="py-4 text-right font-semibold text-ink-strong">
+                    {formatIDR(item.subtotal)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
 }

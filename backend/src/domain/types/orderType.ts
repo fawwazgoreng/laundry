@@ -34,10 +34,6 @@ export type orderCreateType = {
     distance_km: number
     delivery_fee?: number
     payment_method: paymentMethod
-    discount_member?: number
-    discount_voucher?: number
-    pickup_schedule: Date
-    estimated_delivery: Date
     notes?: string
 }
 
@@ -68,8 +64,6 @@ export interface orderSummaryType {
     total_laundry: number
     total_product: number
     delivery_fee: number
-    discount_member: number
-    discount_voucher: number
     total_amount: number
     item_count: number
 }
@@ -101,12 +95,8 @@ export interface orderDetailType {
     total_laundry: number
     total_product: number
     delivery_fee: number
-    discount_member: number
-    discount_voucher: number
     total_amount: number
     distance_km: number
-    pickup_schedule: string | null
-    estimated_delivery: string | null
     notes: string | null
     created_at: string
     updated_at: string
@@ -157,8 +147,6 @@ export interface orderTotalsType {
     total_laundry: number
     total_product: number
     delivery_fee: number
-    discount_member: number
-    discount_voucher: number
     total_amount: number
     item_count: number
 }
@@ -171,10 +159,6 @@ export type orderNewRecordType = {
     distance_km: number
     delivery_fee: number
     payment_method: paymentMethod
-    discount_member: number
-    discount_voucher: number
-    pickup_schedule: Date
-    estimated_delivery: Date
     notes?: string
     services: serviceItemRecord[]
     products: productItemRecord[]

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Link, NavLink, useNavigate } from "react-router-dom"
-import { LogOut, Menu, WashingMachine, X } from "lucide-react"
+import { LogOut, Menu, X } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
 import { cx } from "../lib/utils"
 import { Button } from "./ui"
@@ -25,8 +25,8 @@ export function Topbar({ items }: { items: NavItem[] }) {
             <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
                 <div className="flex items-center gap-8">
                     <Link to={user ? (user.role === "admin" ? "/admin" : "/dashboard") : "/"} className="flex items-center gap-2">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white">
-                            <WashingMachine className="h-5 w-5" />
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl">
+                            <img src="/components/shirt-icon" className="h-5 w-5" />
                         </span>
                         <span className="text-lg font-extrabold tracking-tight text-primary">Fadarosi</span>
                     </Link>

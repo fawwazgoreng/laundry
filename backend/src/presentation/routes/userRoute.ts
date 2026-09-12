@@ -30,4 +30,5 @@ userRouter.post("/logout", authMiddleware, (c) => controller.logout(c));
 userRouter.get("/me", authMiddleware, (c) => controller.me(c));
 userRouter.put("/profile", authMiddleware, (c) => controller.updateProfile(c));
 
+
 export default userRouter;

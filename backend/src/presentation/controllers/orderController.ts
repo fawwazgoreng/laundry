@@ -32,7 +32,7 @@ export class orderController {
         const user = c.get("user");
         const filters: orderListFilters = {
             search: c.req.query("search"),
-            status: (c.req.query("status") as orderListFilters["status"]) ?? "all",
+            status: (c.req.query("status") ?? "all") as orderListFilters["status"],
             service: c.req.query("service"),
             page: c.req.query("page") ? Number(c.req.query("page")) : 1,
             perPage: c.req.query("perPage") ? Number(c.req.query("perPage")) : 10,

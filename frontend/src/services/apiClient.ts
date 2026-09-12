@@ -1,6 +1,6 @@
 import type { ApiEnvelope, AuthPayload, Meta } from "../lib/types";
 
-export const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:3000/api/v1";
+export const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:3000/api";
 
 export class ApiError extends Error {
     status: number

@@ -63,13 +63,13 @@ app.notFound((c) =>
 
 app.onError((error, c) => handleAppError(error, c));
 
-app.route("/api/v1/users", userRouter);
-app.route("/api/v1/addresses", addressRouter);
-app.route("/api/v1/outlets", outletRouter);
-app.route("/api/v1/services", serviceRouter);
-app.route("/api/v1/products", productRouter);
-app.route("/api/v1/orders", orderRouter);
-app.route("/api/v1/payments", paymentRouter);
-app.route("/api/v1/admin", adminRouter);
+app.route("/api/users", userRouter);
+app.route("/api/addresses", addressRouter);
+app.route("/api/outlets", outletRouter);
+app.route("/api/services", serviceRouter);
+app.route("/api/products", productRouter);
+app.route("/api/orders", orderRouter);
+app.route("/api/payments", paymentRouter);
+app.route("/api/admin", adminRouter);
 
 export default app;

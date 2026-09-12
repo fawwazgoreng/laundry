@@ -77,17 +77,12 @@ export class CreateOrderUseCase {
             products.push({ ...item, subtotal });
         }
 
-        const subtotalBeforeDiscount = laundrySubtotal + productSubtotal;
-        const discountMember = Math.min(dto.discount_member ?? 0, subtotalBeforeDiscount * 0.15);
-        const discountVoucher = Math.min(dto.discount_voucher ?? 0, subtotalBeforeDiscount - discountMember);
         const deliveryFee = orderEntity.computeDeliveryFee(dto.distance_km);
         const totals = orderEntity.computeTotals({
             laundrySubtotal,
             productSubtotal,
             itemCount: services.length + products.length,
             deliveryFee,
-            discountMember,
-            discountVoucher,
         });
 
         let orderId = "";
@@ -104,10 +99,6 @@ export class CreateOrderUseCase {
                     distance_km: dto.distance_km,
                     delivery_fee: totals.delivery_fee,
                     payment_method: dto.payment_method,
-                    discount_member: discountMember,
-                    discount_voucher: discountVoucher,
-                    pickup_schedule: dto.pickup_schedule,
-                    estimated_delivery: dto.estimated_delivery,
                     notes: dto.notes,
                     services,
                     products,

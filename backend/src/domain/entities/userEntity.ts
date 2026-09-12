@@ -17,13 +17,13 @@ export class userEntity {
             .min(3, "Username must be at least 3 characters")
             .max(50, "Username must be at most 50 characters")
             .regex(/^[a-zA-Z0-9_]+$/, "Username may only contain letters, numbers and underscores"),
-        email: z.string().email("Invalid email address").max(150),
+        email: z.email({message: "Invalid email address"}).max(150),
         password: passwordSchema,
         phone: z.string().regex(/^\+?[0-9]{8,15}$/, "Invalid phone number"),
     });
 
     private static readonly loginSchema = z.object({
-        email: z.string().email("Invalid email address"),
+        email: z.email({message: "Invalid email address"}).max(150),
         password: z.string().min(1, "Password is required"),
     });
 
