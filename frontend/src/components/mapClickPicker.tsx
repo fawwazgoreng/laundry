@@ -41,16 +41,13 @@ export function MapClickPicker({
           style={{ height: "100%", width: "100%" }}
         >
           <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
+            
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <Marker position={[marker.lat, marker.lng]} />
           <ClickHandler onPick={handlePick} />
         </MapContainer>
       </div>
-      <p className="text-xs text-gray-500">
-        Koordinat terpilih: {marker.lat.toFixed(6)}, {marker.lng.toFixed(6)}
-      </p>
     </div>
   )
 }

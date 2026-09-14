@@ -5,6 +5,7 @@ const CUSTOMER_NAV = [
     { to: "/", label: "Home" },
     { to: "/dashboard", label: "Dashboard" },
     { to: "/layanan", label: "Layanan" },
+    { to: "/history", label: "history" },
     { to: "/toko", label: "Toko" },
 ]
 

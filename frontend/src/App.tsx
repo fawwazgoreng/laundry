@@ -18,6 +18,7 @@ import { AdminOrderManagementPage } from "./pages/admin/AdminOrderManagementPage
 import { AdminProductManagementPage } from "./pages/admin/AdminProductManagementPage"
 import { AdminServiceManagementPage } from "./pages/admin/AdminServiceManagementPage"
 import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage"
+import { UserOrderHistory } from "./pages/customer/HistoryPage"
 
 function NotFound() {
     const { user } = useAuth()
@@ -49,6 +50,7 @@ export default function App() {
             <Route element={<ProtectedRoute />}>
                 <Route element={<CustomerLayout />}>
                     <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/history" element={<UserOrderHistory />} />
                     <Route path="/layanan" element={<LaundryWizardPage />} />
                     <Route path="/toko" element={<ShopPage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
