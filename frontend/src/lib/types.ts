@@ -20,6 +20,7 @@ export interface User {
     role: "user" | "admin"
     phone: string
     is_verified: boolean
+    created_at?: string
 }
 
 export interface AuthTokens {
@@ -220,8 +221,10 @@ export interface AdminStats {
     recent_orders: Array<{
         order_id: string
         customer_name: string
+        customer_phone: string
         status: string
         total_amount: number
+        items_summary: string
         created_at: string
     }>
     service_revenue: Array<{ service_name: string; total: number; count: number }>

@@ -54,7 +54,7 @@ describe("api.get", () => {
         expect(data).toEqual({ ok: true });
         expect(fetchMock).toHaveBeenCalled();
         const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-        expect(url).toBe("http://localhost:3000/api/v1/users/me");
+        expect(url).toBe("http://localhost:3000/api/users/me");
         expect(new Headers(init.headers).get("Authorization")).toBe("Bearer a");
         expect(new Headers(init.headers).get("Content-Type")).toBe("application/json");
     });
@@ -145,7 +145,7 @@ describe("api.post", () => {
     it("sends a JSON body", async () => {
         await api.post<{ ok: boolean }>("/orders", { services: [] });
         const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-        expect(url).toBe("http://localhost:3000/api/v1/orders");
+        expect(url).toBe("http://localhost:3000/api/orders");
         expect((init as RequestInit).method).toBe("POST");
         expect(String((init as RequestInit).body)).toBe(JSON.stringify({ services: [] }));
     });

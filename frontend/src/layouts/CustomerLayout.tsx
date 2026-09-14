@@ -6,7 +6,6 @@ const CUSTOMER_NAV = [
     { to: "/dashboard", label: "Dashboard" },
     { to: "/layanan", label: "Layanan" },
     { to: "/toko", label: "Toko" },
-    { to: "/dashboard#profil", label: "Profil" },
 ]
 
 export function CustomerLayout() {

@@ -6,19 +6,18 @@ import { CustomerLayout } from "./layouts/CustomerLayout"
 import { AdminLayout } from "./layouts/AdminLayout"
 import LandingPage from "./pages/public/LandingPage"
 import { LoginPage, RegisterPage } from "./pages/public/AuthPages"
-import CustomerDashboard from "./pages/customer/CustomerDashboard"
-import OrderWizard from "./pages/customer/OrderWizard"
-import ProductShopPage from "./pages/customer/ProductShopPage"
-import OrderHistoryPage from "./pages/customer/OrderHistoryPage"
-import OrderDetailPage from "./pages/customer/OrderDetailPage"
-import PaymentPage from "./pages/customer/PaymentPage"
-import ProfilePage from "./pages/customer/ProfilePage"
-import AdminDashboard from "./pages/admin/AdminDashboard"
-import AdminOrders from "./pages/admin/AdminOrders"
-import AdminOrderDetail from "./pages/admin/AdminOrderDetail"
-import AdminServices from "./pages/admin/AdminServices"
-import AdminProducts from "./pages/admin/AdminProducts"
-import AdminSettings from "./pages/admin/AdminSettings"
+import { DashboardPage } from "./pages/customer/DashboardPage"
+import { LaundryWizardPage } from "./pages/customer/LaundryWizardPage"
+import { ShopPage } from "./pages/customer/ShopPage"
+import { CheckoutPage } from "./pages/customer/CheckoutPage"
+import { OrderDetailPage } from "./pages/customer/OrderDetailPage"
+import { OrderTrackingPage } from "./pages/customer/OrderTrackingPage"
+import { PaymentPage } from "./pages/customer/PaymentPage"
+import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage"
+import { AdminOrderManagementPage } from "./pages/admin/AdminOrderManagementPage"
+import { AdminProductManagementPage } from "./pages/admin/AdminProductManagementPage"
+import { AdminServiceManagementPage } from "./pages/admin/AdminServiceManagementPage"
+import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage"
 
 function NotFound() {
     const { user } = useAuth()
@@ -49,25 +48,24 @@ export default function App() {
             {/* Customer (logged in) */}
             <Route element={<ProtectedRoute />}>
                 <Route element={<CustomerLayout />}>
-                    <Route path="/dashboard" element={<CustomerDashboard />} />
-                    <Route path="/layanan" element={<OrderWizard />} />
-                    <Route path="/toko" element={<ProductShopPage />} />
-                    <Route path="/riwayat" element={<OrderHistoryPage />} />
+                    <Route path="/dashboard" element={<DashboardPage />} />
+                    <Route path="/layanan" element={<LaundryWizardPage />} />
+                    <Route path="/toko" element={<ShopPage />} />
+                    <Route path="/checkout" element={<CheckoutPage />} />
                     <Route path="/riwayat/:orderId" element={<OrderDetailPage />} />
+                    <Route path="/tracking/:orderId" element={<OrderTrackingPage />} />
                     <Route path="/payment/:orderId" element={<PaymentPage />} />
-                    <Route path="/profil" element={<ProfilePage />} />
                 </Route>
             </Route>
 
             {/* Admin */}
             <Route element={<ProtectedRoute adminOnly />}>
                 <Route element={<AdminLayout />}>
-                    <Route path="/admin" element={<AdminDashboard />} />
-                    <Route path="/admin/pesanan" element={<AdminOrders />} />
-                    <Route path="/admin/pesanan/:orderId" element={<AdminOrderDetail />} />
-                    <Route path="/admin/layanan" element={<AdminServices />} />
-                    <Route path="/admin/produk" element={<AdminProducts />} />
-                    <Route path="/admin/pengaturan" element={<AdminSettings />} />
+                    <Route path="/admin" element={<AdminDashboardPage />} />
+                    <Route path="/admin/pesanan" element={<AdminOrderManagementPage />} />
+                    <Route path="/admin/layanan" element={<AdminServiceManagementPage />} />
+                    <Route path="/admin/produk" element={<AdminProductManagementPage />} />
+                    <Route path="/admin/pengaturan" element={<AdminSettingsPage />} />
                 </Route>
             </Route>
 

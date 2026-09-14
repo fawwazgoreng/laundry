@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
+import { useParams } from "react-router-dom"
 import { AlertTriangle, Box, Check, Copy, Hash, Info, RefreshCcw, ShieldCheck, Timer } from "lucide-react"
-import { formatIDR } from "../lib/format"
+import { formatIDR } from "../../lib/format"
+import { orderApi, paymentApi } from "../../services/api"
 
 const terms = [
   {
@@ -25,19 +27,50 @@ const terms = [
   },
 ]
 
-const summary = [
-  { label: "Total Harga (4 Barang)", value: 114100 },
-  { label: "Biaya Pengiriman", value: 10000 },
-  { label: "Diskon Premium Member", value: -15000 },
-  { label: "Diskon Voucher Promo", value: -10000 },
-]
+interface SummaryRow {
+  label: string
+  value: number
+}
 
-const total = summary.reduce((acc, item) => acc + item.value, 0)
-const vaNumber = "262080000123456"
+const paymentMethodLabel: Record<string, string> = {
+  fadarosipay: "FADAROSI Pay - E-Wallet",
+  transfer_bank: "Bank BRI - akun virtual",
+  cod: "Bayar di Tempat (COD)",
+}
 
 export function PaymentPage() {
-  const [secondsLeft, setSecondsLeft] = useState(4 * 60 + 33)
+  const { orderId } = useParams<{ orderId: string }>()
+  const [summary, setSummary] = useState<SummaryRow[]>([])
+  const [vaNumber, setVaNumber] = useState("")
+  const [paymentLabel, setPaymentLabel] = useState("Bank BRI - akun virtual")
+  const [createdAt, setCreatedAt] = useState("")
+  const [secondsLeft, setSecondsLeft] = useState(24 * 60 * 60)
   const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    if (!orderId) return
+    Promise.all([paymentApi.byOrder(orderId), orderApi.get(orderId)])
+      .then(([payment, order]) => {
+        setVaNumber(payment.transaction_id)
+        setPaymentLabel(paymentMethodLabel[order.payment_method] ?? "Transfer Bank")
+        setCreatedAt(
+          new Date(order.created_at).toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }),
+        )
+        const rows: SummaryRow[] = [
+          {
+            label: `Total Harga (${order.services.length + order.products.length} Barang)`,
+            value: order.total_laundry + order.total_product,
+          },
+          { label: "Biaya Pengiriman", value: order.delivery_fee },
+        ]
+        setSummary(rows)
+      })
+      .catch(() => undefined)
+  }, [orderId])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -46,7 +79,9 @@ export function PaymentPage() {
     return () => clearInterval(interval)
   }, [])
 
-  const minutes = String(Math.floor(secondsLeft / 60)).padStart(2, "0")
+  const total = summary.reduce((acc, item) => acc + item.value, 0)
+  const hours = String(Math.floor(secondsLeft / 3600)).padStart(2, "0")
+  const minutes = String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, "0")
   const seconds = String(secondsLeft % 60).padStart(2, "0")
 
   function handleCopy() {
@@ -59,7 +94,7 @@ export function PaymentPage() {
     <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
       <div>
         <h1 className="text-2xl font-bold text-ink-strong">Pembayaran</h1>
-        <p className="text-sm text-gray-500">selesaikan pembayaran untuk CLN-81202</p>
+        <p className="text-sm text-gray-500">selesaikan pembayaran untuk {orderId}</p>
       </div>
 
       <div className="flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -69,11 +104,11 @@ export function PaymentPage() {
           </span>
           <div>
             <p className="text-sm font-semibold text-ink-strong">Selesaikan pembayaran sebelum waktu habis</p>
-            <p className="text-xs text-gray-400">Pesanan dibuat tanggal 12 Sept 2024</p>
+            <p className="text-xs text-gray-400">Pesanan dibuat tanggal {createdAt}</p>
           </div>
         </div>
         <span className="rounded-lg bg-primary px-5 py-2.5 font-mono text-lg font-bold text-white">
-          00:{minutes}:{seconds}
+          {hours}:{minutes}:{seconds}
         </span>
       </div>
 
@@ -102,7 +137,7 @@ export function PaymentPage() {
           <div className="mb-4 flex items-center gap-2">
             <Box size={16} className="text-ink" />
             <div>
-              <p className="text-sm font-semibold text-ink-strong">Bank BRI - akun virtual</p>
+              <p className="text-sm font-semibold text-ink-strong">{paymentLabel}</p>
               <p className="text-xs text-gray-400">Silahkan transfer ke nomor berikut</p>
             </div>
           </div>

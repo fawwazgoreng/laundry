@@ -1,34 +1,97 @@
+import { useEffect, useState } from "react"
+import { useParams } from "react-router-dom"
 import { Clock, Home, Warehouse } from "lucide-react"
-import { activeOrder, orderTrackingSteps } from "../lib/mockData"
-import { formatIDR } from "../lib/format"
+import { formatIDR } from "../../lib/format"
+import type { OrderDetail } from "../../lib/types"
+import { orderApi } from "../../services/api"
+
+const stepMeta: Record<string, { label: string; description: string }> = {
+  BARU: { label: "Pesanan Dibuat", description: "Pesanan diterima dan menunggu konfirmasi outlet." },
+  DITERIMA: { label: "Diterima Outlet", description: "Pakaian telah diterima staf di outlet." },
+  DIPROSES: { label: "Dicuci & Disetrika", description: "Pakaian sedang dicuci dan disetrika." },
+  SIAP_ANTAR: { label: "Siap Antar", description: "Pakaian siap diantar kembali ke alamat Anda." },
+  SELESAI: { label: "Selesai", description: "Pesanan telah terkirim dan selesai." },
+  DIBATALKAN: { label: "Dibatalkan", description: "Pesanan dibatalkan." },
+}
+
+interface TrackingStep {
+  id: string
+  timestamp: string | null
+  label: string
+  description: string
+  done: boolean
+  active: boolean
+}
 
 export function OrderTrackingPage() {
+  const { orderId } = useParams<{ orderId: string }>()
+  const [order, setOrder] = useState<OrderDetail | null>(null)
+
+  useEffect(() => {
+    if (!orderId) return
+    orderApi
+      .get(orderId)
+      .then(setOrder)
+      .catch(() => undefined)
+  }, [orderId])
+
+  if (!order) {
+    return (
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <p className="py-16 text-center text-sm text-gray-400">Memuat status pengiriman...</p>
+      </div>
+    )
+  }
+
+  const meta = stepMeta[order.status] ?? { label: order.status, description: "" }
+  const trackings = [...order.trackings].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  )
+  const orderTrackingSteps: TrackingStep[] = trackings.map((t) => ({
+    id: t.id,
+    timestamp: new Date(t.created_at).toLocaleString("id-ID", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    }),
+    label: stepMeta[t.status]?.label ?? t.notes,
+    description: t.notes || stepMeta[t.status]?.description || "",
+    done: t.status !== order.status,
+    active: t.status === order.status,
+  }))
+
   return (
     <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-2">
       <div className="space-y-6">
         <div className="rounded-2xl border border-gray-200 bg-white p-6">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-bold text-ink-strong">Order #{activeOrder.id}</h1>
+            <h1 className="text-lg font-bold text-ink-strong">Order #{order.order_id}</h1>
             <span className="rounded-full bg-primary-light px-3 py-1 text-xs font-semibold text-primary">
-              Sedang Diproses
+              {meta.label}
             </span>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <div>
               <p className="text-xs text-gray-400">Nama Pelanggan</p>
-              <p className="text-sm font-semibold text-ink-strong">{activeOrder.customerName}</p>
+              <p className="text-sm font-semibold text-ink-strong">{order.customer.username}</p>
             </div>
             <div>
               <p className="text-xs text-gray-400">Layanan Terpilih</p>
-              <p className="text-sm font-semibold text-ink-strong">Cuci Setrika</p>
+              <p className="text-sm font-semibold text-ink-strong">
+                {order.services.map((s) => s.service_name).join(", ") || "Produk Toko"}
+              </p>
             </div>
             <div>
               <p className="text-xs text-gray-400">Berat Cucian</p>
-              <p className="text-sm font-semibold text-ink-strong">3.2 Kg</p>
+              <p className="text-sm font-semibold text-ink-strong">
+                {order.services.reduce((sum, s) => sum + s.qty, 0)} Kg
+              </p>
             </div>
             <div>
               <p className="text-xs text-gray-400">Total Biaya</p>
-              <p className="text-sm font-semibold text-primary">{formatIDR(activeOrder.subtotal)}</p>
+              <p className="text-sm font-semibold text-primary">{formatIDR(order.total_amount)}</p>
             </div>
           </div>
         </div>
@@ -92,7 +155,7 @@ export function OrderTrackingPage() {
               <Warehouse size={16} />
             </span>
             <span className="mt-1 rounded bg-white px-2 py-0.5 text-[10px] font-semibold shadow">
-              Starting Outlet
+              {order.outlet?.name ?? "Starting Outlet"}
             </span>
           </div>
 
@@ -108,7 +171,7 @@ export function OrderTrackingPage() {
           <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
             <span className="h-4 w-4 rounded-full border-2 border-white bg-primary shadow" />
             <span className="mt-1 rounded bg-primary px-2 py-0.5 text-[10px] font-semibold text-white shadow">
-              Rumah Anda
+              {order.address?.label ?? "Rumah Anda"}
             </span>
           </div>
         </div>

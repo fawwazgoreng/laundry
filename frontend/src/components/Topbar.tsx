@@ -22,16 +22,17 @@ export function Topbar({ items }: { items: NavItem[] }) {
 
     return (
         <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur">
-            <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-                <div className="flex items-center gap-8">
+            <div className="mx-auto grid grid-cols-3 h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+                <div className="flex items-center gap-8 col-span-1">
                     <Link to={user ? (user.role === "admin" ? "/admin" : "/dashboard") : "/"} className="flex items-center gap-2">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl">
-                            <img src="/components/shirt-icon" className="h-5 w-5" />
+                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
+                            <img src="/components/shirt-icon.png" className="h-5 w-5" />
                         </span>
                         <span className="text-lg font-extrabold tracking-tight text-primary">Fadarosi</span>
                     </Link>
+                </div>
 
-                    <nav className="hidden items-center gap-1 md:flex">
+                <nav className="hidden items-center gap-1 md:flex jus col-span-1">
                         {items.map((item) => (
                             <NavLink
                                 key={item.to}
@@ -47,10 +48,9 @@ export function Topbar({ items }: { items: NavItem[] }) {
                                 {item.label}
                             </NavLink>
                         ))}
-                    </nav>
-                </div>
+                </nav>
 
-                <div className="hidden items-center gap-3 md:flex">
+                <div className="hidden items-center justify-end gap-3 md:flex col-span-1">
                     <div className="flex items-center gap-2.5 rounded-xl border border-gray-200 bg-white py-1.5 pl-1.5 pr-4">
                         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-light text-sm font-bold text-primary">
                             {user?.username?.charAt(0)?.toUpperCase()}

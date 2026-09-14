@@ -1,7 +1,10 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Check, Scissors, Shirt, Wind, Zap } from "lucide-react"
-import { services } from "../lib/mockData"
-import { formatIDR } from "../lib/format"
+import { formatIDR } from "../../lib/format"
+import type { Service } from "../../lib/types"
+import { serviceApi } from "../../services/api"
+import { useOrderDraft } from "../../context/OrderDraftContext"
 
 const wizardSteps = ["Jenis Cucian", "Detail & Berat", "Alamat & Jadwal", "Konfirmasi"]
 
@@ -14,10 +17,66 @@ const serviceIcons: Record<string, typeof Wind> = {
 
 const estimatedWeightKg = 3.0
 
+function slugifyName(name: string): string {
+  const map: Record<string, string> = {
+    "Cuci Kering": "cuci-kering",
+    "Cuci Setrika": "cuci-setrika",
+    Setrika: "setrika-saja",
+    Express: "express-6-jam",
+  }
+  return map[name] ?? name.toLowerCase().replace(/[^a-z0-9]+/g, "-")
+}
+
+interface ServiceCard {
+  id: number
+  name: string
+  description: string
+  slug: string
+  pricePerKg: number
+}
+
 export function LaundryWizardPage() {
-  const [selectedServiceId, setSelectedServiceId] = useState(services[1].id)
+  const navigate = useNavigate()
+  const { addService } = useOrderDraft()
+  const [services, setServices] = useState<ServiceCard[]>([])
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null)
+
+  useEffect(() => {
+    serviceApi
+      .list()
+      .then((list: Service[]) => {
+        const cards: ServiceCard[] = list.map((s) => ({
+          id: s.id,
+          name: s.name,
+          description: s.description,
+          slug: slugifyName(s.name),
+          pricePerKg: s.price_per_unit,
+        }))
+        setServices(cards)
+        setSelectedServiceId((current) => current ?? cards[0]?.id ?? null)
+      })
+      .catch(() => undefined)
+  }, [])
+
   const selectedService = services.find((s) => s.id === selectedServiceId) ?? services[0]
-  const estimatedTotal = selectedService.pricePerKg * estimatedWeightKg
+  const estimatedTotal = (selectedService?.pricePerKg ?? 0) * estimatedWeightKg
+
+  function handleContinue() {
+    if (!selectedService) return
+    addService(
+      {
+        id: selectedService.id,
+        name: selectedService.name,
+        unit: "kg",
+        price_per_unit: selectedService.pricePerKg,
+        description: selectedService.description,
+        estimated_duration_hours: 24,
+        is_active: true,
+      },
+      estimatedWeightKg,
+    )
+    navigate("/checkout")
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-6 py-8">
@@ -92,7 +151,7 @@ export function LaundryWizardPage() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">Layanan Terpilih</span>
-              <span className="font-medium text-ink-strong">{selectedService.name}</span>
+              <span className="font-medium text-ink-strong">{selectedService?.name ?? "-"}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Estimasi Berat</span>
@@ -100,14 +159,20 @@ export function LaundryWizardPage() {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Biaya per Kg</span>
-              <span className="font-medium text-ink-strong">{formatIDR(selectedService.pricePerKg)}</span>
+              <span className="font-medium text-ink-strong">
+                {selectedService ? formatIDR(selectedService.pricePerKg) : "-"}
+              </span>
             </div>
           </div>
           <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
             <span className="text-sm font-semibold text-ink-strong">Estimasi Total</span>
             <span className="text-lg font-bold text-primary">{formatIDR(estimatedTotal)}</span>
           </div>
-          <button className="mt-5 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-white hover:bg-primary-dark">
+          <button
+            onClick={handleContinue}
+            disabled={!selectedService}
+            className="mt-5 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
+          >
             Lanjutkan
           </button>
         </aside>

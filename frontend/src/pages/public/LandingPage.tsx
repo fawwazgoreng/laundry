@@ -53,15 +53,14 @@ export default function LandingPage() {
     const [products, setProducts] = useState<Product[]>([]);
 
     useEffect(() => {
-        setLoading(true)
         const res = async () => {
             const service = await serviceApi.list()
             const product = await productApi.list();
             setLayanan(service);
             setProducts(product.data);
+            setLoading(false)
         };
-        res()
-        setLoading(false)
+        res().catch(() => setLoading(false))
     }, [])
 
     if (loading) {
