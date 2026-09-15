@@ -79,39 +79,40 @@ export function AdminServiceManagementPage() {
   }
 
   return (
-    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[1fr_360px]">
-      <div>
-        <h1 className="text-2xl font-bold text-ink-strong">Manajemen Layanan</h1>
-        <p className="mb-5 text-sm text-gray-500">Kelola Layanan</p>
+    <>
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[1fr_360px]">
+        <div>
+          <h1 className="text-2xl font-bold text-ink-strong">Manajemen Layanan</h1>
+          <p className="mb-5 text-sm text-gray-500">Kelola Layanan</p>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {services.map((service) => (
-            <div key={service.id} className="rounded-2xl border border-gray-200 bg-white p-5">
-              <div className="flex items-start justify-between">
-                <p className="text-base font-semibold text-ink-strong">{service.name}</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleRemove(service.id)}
-                    className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:text-primary"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                  <button className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:text-primary">
-                    <Pencil size={14} />
-                  </button>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {services.map((service) => (
+              <div key={service.id} className="rounded-2xl border border-gray-200 bg-white p-5">
+                <div className="flex items-start justify-between">
+                  <p className="text-base font-semibold text-ink-strong">{service.name}</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => handleRemove(service.id)}
+                      className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:text-primary"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <button className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:text-primary">
+                      <Pencil size={14} />
+                    </button>
+                  </div>
                 </div>
+                <p className="mt-2 text-sm text-gray-500">{service.description}</p>
+                <p className="mt-2 text-sm text-gray-500">
+                  {service.pricePerUnit.toLocaleString("id-ID")} per 1 unit ( {service.unit} )
+                </p>
+                <p className="text-sm text-gray-500">estimasi selesai {service.etaHours} jam</p>
               </div>
-              <p className="mt-2 text-sm text-gray-500">{service.description}</p>
-              <p className="mt-2 text-sm text-gray-500">
-                {service.pricePerUnit.toLocaleString("id-ID")} per 1 unit ( {service.unit} )
-              </p>
-              <p className="text-sm text-gray-500">estimasi selesai {service.etaHours} jam</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
-
-      <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-6">
+      <aside className="h-full fixed right-0 top-15  rounded-2xl border border-gray-200 bg-white p-6">
         <h2 className="mb-4 text-base font-bold text-ink-strong">Tambah Layanan Baru</h2>
 
         <label className="mb-1 block text-xs font-medium text-gray-500">Nama Layanan</label>
@@ -169,6 +170,6 @@ export function AdminServiceManagementPage() {
           </button>
         </div>
       </aside>
-    </div>
+    </>
   )
 }

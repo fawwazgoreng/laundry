@@ -192,7 +192,7 @@ export const AddressSection = () => {
           {addresses.map((addr) => (
             <div
               key={addr.id}
-              className="rounded-xl bg-white border-t-4 border-r-4 p-4 border-r-primary border-t-primary col-span-1"
+              className="rounded-xl bg-white border-t-4 border-r-4 p-4 h-32 border-r-primary border-t-primary col-span-1"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
@@ -203,15 +203,17 @@ export const AddressSection = () => {
                 </div>
                 <span className="flex gap-4">
                   <span className="w-9 h-9 bg-gray-200 text-ink rounded-lg p-2 cursor-pointer" onClick={() => handleDelete(addr.id)}>
-                    <Trash></Trash>
+                    <Trash size={20}></Trash>
                   </span>
                   <span className="w-9 h-9 bg-gray-200 text-ink rounded-lg p-2 cursor-pointer" onClick={() => handleEdit(addr)}>
-                    <Edit></Edit>
+                    <Edit size={20}></Edit>
                   </span>
                 </span>
               </div>
               <p className="mt-2 text-xs text-gray-500">{addr.fullAddress}</p>
-              <span className="w-full h-2 bg-gray-200"></span>
+              <p className="w-full h-2 border-t-[0.5px] border-t-gray-200 mt-2 p-2 text-sm font-light">
+                {addr.latitude} {addr.longitude}
+              </p>
 
             </div>
           ))}

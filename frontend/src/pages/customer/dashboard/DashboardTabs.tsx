@@ -14,7 +14,6 @@ const tabs: TabItem[] = [
   { key: "ringkasan", label: "Ringkasan", icon: LayoutGrid, src: "#ringkasan" },
   { key: "profil", label: "Profil", icon: UserIcon, src: "#profil" },
   { key: "alamat", label: "Alamat", icon: MapPin, src: "#alamat" },
-  { key: "history", label: "History", icon: History, src: "#history" },
 ]
 
 interface DashboardTabsProps {

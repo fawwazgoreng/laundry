@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Check, Minus, Plus, Trash2, Wallet, Landmark } from "lucide-react"
 import { formatIDR } from "../../lib/format"
-import type { Address, Outlet, OrderDetail } from "../../lib/types"
-import { addressApi, orderApi, outletApi, paymentApi } from "../../services/api"
+import type { Address, Outlet, OrderDetail, User } from "../../lib/types"
+import { addressApi, authApi, orderApi, outletApi, paymentApi } from "../../services/api"
 import { useOrderDraft } from "../../context/OrderDraftContext"
 import { ApiError } from "../../services/apiClient"
 
@@ -30,7 +30,7 @@ interface DeliverAddress {
 
 export function CheckoutPage() {
   const navigate = useNavigate()
-  const { services, products } = useOrderDraft()
+  const { services, products, removeProduct, removeService } = useOrderDraft()
   const [cart, setCart] = useState<CartLine[]>(() => [
     ...services.map((s) => ({
       id: s.service.id,
@@ -55,6 +55,9 @@ export function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<"transfer" | "cod">("transfer")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [choiceAddress, setChoiceAddress] = useState(addresses[0]?.id || 0)
+
 
   useEffect(() => {
     addressApi
@@ -72,9 +75,11 @@ export function CheckoutPage() {
         ),
       )
       .catch(() => undefined)
+      authApi.me().then((user) => setCurrentUser(user))
   }, [])
 
   const primaryAddress = addresses.find((a) => a.isPrimary) ?? addresses[0]
+
 
   function updateQty(id: number, delta: number) {
     setCart((prev) =>
@@ -86,6 +91,8 @@ export function CheckoutPage() {
 
   function removeLine(id: number) {
     setCart((prev) => prev.filter((line) => line.id !== id))
+    removeProduct(id)
+    removeService(id)
   }
 
   const itemsTotal = cart.reduce((sum, l) => sum + l.qty * l.pricePerUnit, 0)
@@ -111,7 +118,7 @@ export function CheckoutPage() {
           notes: s.notes || undefined,
         })),
         products: products.map((p) => ({ product_id: p.product.id, qty: p.qty })),
-        user_address_id: primaryAddress.id,
+        user_address_id: choiceAddress,
         outlet_id: outlet.id,
         distance_km,
         payment_method: paymentMethod === "cod" ? "cod" : "transfer_bank",
@@ -166,8 +173,8 @@ export function CheckoutPage() {
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink-strong">Layanan &amp; Produk Terpilih</h2>
               <div className="flex gap-4 text-xs font-semibold text-primary">
-                <button>+ Tambah Layanan</button>
-                <button>+ Tambah Barang</button>
+                <Link to={"/layanan"}>+ Tambah Layanan</Link>
+                <Link to={"/toko"}>+ Tambah Barang</Link>
               </div>
             </div>
             <div className="divide-y divide-gray-100">
@@ -200,7 +207,7 @@ export function CheckoutPage() {
                         {formatIDR(line.qty * line.pricePerUnit)}
                       </p>
                     </div>
-                    <button onClick={() => removeLine(line.id)} className="text-gray-300 hover:text-primary">
+                    <button onClick={() => removeLine(line.id)} className="text-gray-300 hover:text-primary cursor-pointer">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -217,9 +224,32 @@ export function CheckoutPage() {
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink-strong">Alamat Pengiriman &amp; Penjemputan</h2>
-              <button className="text-xs font-semibold text-primary">Ubah Alamat</button>
             </div>
-            {primaryAddress ? (
+            {addresses.map((addr) => (
+              <div key={addr.id} onClick={() => setChoiceAddress(addr.id)} className={`cursor-pointer rounded-xl p-4 flex gap-6 items-center  h-fit m-4 border-2 ${addr.id == choiceAddress ? "border-primary" : "border-gray-200"}`}>
+                                <span
+                  className={`h-6 w-6 rounded-full border-2 ${
+                    choiceAddress === addr.id ? "border-primary bg-primary" : "border-gray-300"
+                  }`}
+                />
+                <span className="">
+
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-semibold text-ink-strong">{addr.label}</p>
+                  {primaryAddress.isPrimary && (
+                    <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
+                      {addr.isPrimary ? "Utama" : "-"}
+                    </span>
+                  )}
+                </div>
+                <p className="mt-1 text-sm text-gray-500">
+                  {primaryAddress.recipientName} • {currentUser?.phone || "-"}
+                </p>
+                <p className="text-sm text-gray-500">{primaryAddress.fullAddress}</p>
+                  </span>
+                </div>
+            ))}
+            {/* {primaryAddress ? (
               <>
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-semibold text-ink-strong">{primaryAddress.label}</p>
@@ -230,13 +260,13 @@ export function CheckoutPage() {
                   )}
                 </div>
                 <p className="mt-1 text-sm text-gray-500">
-                  {primaryAddress.recipientName} • {primaryAddress.phone || "-"}
+                  {primaryAddress.recipientName} • {currentUser?.phone || "-"}
                 </p>
                 <p className="text-sm text-gray-500">{primaryAddress.fullAddress}</p>
               </>
             ) : (
               <p className="text-sm text-gray-400">Belum ada alamat. Tambahkan alamat terlebih dahulu.</p>
-            )}
+            )} */}
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
@@ -313,7 +343,7 @@ export function CheckoutPage() {
           {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}
           <button
             onClick={handleCreateOrder}
-            disabled={submitting || !primaryAddress || services.length === 0}
+            disabled={submitting || !choiceAddress || (services.length === 0 && products.length === 0)}
             className="mt-5 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
           >
             {submitting ? "Membuat Pesanan..." : "Buat Pesanan Sekarang"}

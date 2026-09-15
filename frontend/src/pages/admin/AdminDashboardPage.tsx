@@ -13,6 +13,8 @@ const statIcons = [ShoppingBag, Award, Box, Zap]
 interface StatCard {
   label: string
   value: string
+  bg: string
+  text: string
 }
 
 interface AdminOrderRow {
@@ -36,40 +38,15 @@ export function AdminDashboardPage() {
   const [adminOrders, setAdminOrders] = useState<AdminOrderRow[]>([])
   const [lowStockAlerts, setLowStockAlerts] = useState<LowStockItem[]>([])
   const [weeklyRevenue, setWeeklyRevenue] = useState<Array<{ day: string; value: number }>>([])
-    const [coords, setCoords] = useState({ lat: -6.496861119036644, lng: 110.90468997753888 })
-    const [address, setAddress] = useState<string>("")
-    const [loadingAddress, setLoadingAddress] = useState(false)
-    const { locate, loading: loadingGps } = useGeolocation()
-  
-    async function lookupAddress(lat: number, lng: number) {
-      setLoadingAddress(true)
-      try {
-        const result = await reverseGeocode(lat, lng)
-        setAddress(result.displayName)
-      } catch {
-        setAddress("Alamat tidak ditemukan")
-      } finally {
-        setLoadingAddress(false)
-      }
-    }
-  
-    function handleMapPick(next: { lat: number; lng: number }) {
-      setCoords(next)
-      lookupAddress(next.lat, next.lng)
-    }
-  
-    function handleUseMyLocation() {
-      locate()
-    }
 
   useEffect(() => {
     Promise.all([adminApi.stats(), orderApi.list({ perPage: 5 })])
       .then(([stats, page]) => {
         setAdminDashboardStats([
-          { label: "Pesanan Hari Ini", value: String(stats.orders_today) },
-          { label: "Pendapatan Hari Ini", value: formatIDR(stats.revenue_today) },
-          { label: "Laundry Diproses", value: String(stats.laundry_in_progress) },
-          { label: "Produk Terjual", value: String(stats.products_sold) },
+          { label: "Pesanan Hari Ini", value: String(stats.orders_today) , bg: "#FEE2E2", text: "#DC2626"},
+          { label: "Pendapatan Hari Ini", value: formatIDR(stats.revenue_today), bg: "#D1FAE5", text: "#10B981"},
+          { label: "Laundry Diproses", value: String(stats.laundry_in_progress), bg: "#DBEAFE", text: "#3B82F6" },
+          { label: "Produk Terjual", value: String(stats.products_sold), bg: "#F9FAFB", text: "#374151"},
         ])
         setAdminOrders(
           page.data.map((o: OrderListItem) => ({
@@ -113,7 +90,7 @@ export function AdminDashboardPage() {
           const Icon = statIcons[idx]
           return (
             <div key={stat.label} className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-5">
-              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary-light text-primary">
+              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[${stat.bg}] text-[${stat.text}]`}>
                 <Icon size={20} />
               </span>
               <div>
@@ -125,8 +102,8 @@ export function AdminDashboardPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
+      <div className="grid grid-cols-3 grid-rows-4 gap-6">
+        <div className="rounded-2xl border border-gray-200 row-span-3 bg-white p-6 col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-ink-strong">Pesanan Terbaru</h2>
             <Link to="/admin/pesanan" className="text-xs font-semibold text-primary hover:underline">
@@ -167,7 +144,7 @@ export function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 col-span-1 row-span-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
             <h2 className="mb-4 text-sm font-semibold text-ink-strong">Ringkasan Pendapatan (Mingguan)</h2>
             <div className="h-40">

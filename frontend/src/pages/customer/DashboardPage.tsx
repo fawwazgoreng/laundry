@@ -10,7 +10,6 @@ import { SpendingTrend } from "./dashboard/SpendingTrend"
 import { RecentActivity } from "./dashboard/RecentActivity"
 import { ProfileSection } from "./dashboard/ProfileSection"
 import { AddressSection } from "./dashboard/AddressSection"
-import { OrderHistoryTable } from "./dashboard/OrderHistoryTable"
 import type { Activity, DashboardStat, HistoryRow } from "./dashboard/types"
 
 // Ambil angka pertama dari teks satuan, misal "2 Kg" -> "2"
@@ -128,7 +127,6 @@ export const DashboardPage = () => {
 
       <AddressSection />
 
-      <OrderHistoryTable orders={orderHistory} />
     </div>
   )
 }

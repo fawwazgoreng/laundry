@@ -97,73 +97,76 @@ export function AdminProductManagementPage() {
   }
 
   return (
-    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[1fr_360px]">
-      <div>
-        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative flex-1 sm:max-w-xs">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari produk..."
-              className="w-full rounded-full border border-gray-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-primary"
-            />
+    <>
+      <div className="mx-auto grid w-full grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[1fr_360px]">
+        <div>
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative flex-1 sm:max-w-xs">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari produk..."
+                className="w-full rounded-xl bg-white border border-gray-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-primary"
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm bg-white text-ink outline-none"
+              >
+                {categories.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+              <span className="flex h-10 w-10 p-2 items-center justify-center bg-white rounded-lg text-primary">
+                <Box size={20} className="bg-primary-light" />
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="rounded-lg border border-gray-200 px-4 py-2.5 text-sm text-ink outline-none focus:border-primary"
-            >
-              {categories.map((c) => (
-                <option key={c}>{c}</option>
-              ))}
-            </select>
-            <span className="flex h-10 w-10 items-center justify-center rounded-lg border border-primary bg-primary-light text-primary">
-              <Box size={16} />
-            </span>
-          </div>
-        </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          {filtered.map((product) => (
-            <div key={product.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-              <div className="aspect-square w-full overflow-hidden bg-gray-100">
-                {product.imageUrl ? (
-                  <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-gray-400">Gambar</div>
-                )}
-              </div>
-              <div className="p-4">
-                <p className="text-[11px] font-semibold uppercase text-primary">{product.category}</p>
-                <p className="mt-1 text-sm font-semibold text-ink-strong">{product.name}</p>
-                <p className="text-xs text-gray-400">Stok: {product.stock} Pcs</p>
-                <p className="mt-1 text-base font-bold text-ink-strong">{formatIDR(product.price)}</p>
-                <div className="mt-3 flex gap-2">
-                  <button className="flex-1 rounded-lg border border-gray-200 py-2 text-xs font-semibold text-ink hover:bg-gray-50">
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleRemove(product.id)}
-                    className="flex-1 rounded-lg border border-primary py-2 text-xs font-semibold text-primary hover:bg-primary-light"
-                  >
-                    Hapus
-                  </button>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+            {filtered.map((product) => (
+              <div key={product.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                <div className="aspect-square w-full overflow-hidden bg-gray-100">
+                  {product.imageUrl ? (
+                    <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center text-sm text-gray-400">Gambar</div>
+                  )}
+                </div>
+                <div className="p-4">
+                  <p className="text-[11px] font-semibold uppercase text-primary">{product.category}</p>
+                  <p className="mt-1 text-sm font-semibold text-ink-strong">{product.name}</p>
+                  <p className="text-xs text-gray-400">Stok: {product.stock} Pcs</p>
+                  <p className="mt-1 text-base font-bold text-ink-strong">{formatIDR(product.price)}</p>
+                  <div className="mt-3 flex gap-2">
+                    <button className="flex-1 rounded-lg border border-gray-200 py-2 text-xs font-semibold text-ink hover:bg-gray-50">
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => handleRemove(product.id)}
+                      className="flex-1 rounded-lg border border-primary py-2 text-xs font-semibold text-primary hover:bg-primary-light"
+                    >
+                      Hapus
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          {filtered.length === 0 && (
-            <p className="col-span-full py-12 text-center text-sm text-gray-400">
-              Tidak ada produk pada kategori ini.
-            </p>
-          )}
+            {filtered.length === 0 && (
+              <p className="col-span-full py-12 text-center text-sm text-gray-400">
+                Tidak ada produk pada kategori ini.
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
-      <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-6">
+      <aside className="h-full fixed right-0 top-15  rounded-2xl border border-gray-200 bg-white p-6">
+
         <h2 className="mb-4 text-base font-bold text-ink-strong">Tambah Produk Baru</h2>
 
         <label className="mb-1 block text-xs font-medium text-gray-500">Nama Produk</label>
@@ -218,12 +221,16 @@ export function AdminProductManagementPage() {
           className="mb-4 w-full resize-none rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-primary"
         />
 
-        <label className="mb-1 block text-xs font-medium text-gray-500">Upload Foto Produk</label>
+        <label id="foto" className="mb-1 block text-xs font-medium text-gray-500">Upload Foto Produk
+
         <div className="mb-6 flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-primary/40 bg-primary-light/40 py-8 text-center">
           <UploadCloud size={22} className="text-primary" />
           <p className="text-sm font-semibold text-primary">Klik untuk Upload</p>
           <p className="text-xs text-gray-400">Format JPG, PNG up to 2MB</p>
         </div>
+        </label>
+
+        <input id="foto" type="file" onChange={() => upploadPhoto()} hidden />
 
         <div className="flex gap-3">
           <button
@@ -241,6 +248,7 @@ export function AdminProductManagementPage() {
           </button>
         </div>
       </aside>
-    </div>
+    </>
+
   )
 }

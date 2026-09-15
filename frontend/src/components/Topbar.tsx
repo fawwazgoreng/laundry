@@ -56,8 +56,7 @@ export function Topbar({ items }: { items: NavItem[] }) {
                             {user?.username?.charAt(0)?.toUpperCase()}
                         </span>
                         <div className="leading-tight">
-                            <p className="text-sm font-semibold text-ink-strong">{user?.username}</p>
-                            <p className="text-[11px] text-gray-400">{user?.role === "admin" ? "Admin" : "Pelanggan"}</p>
+                            <p className="text-sm font-semibold text-ink-strong">{user?.username} ( {user?.role === "admin" ? "Admin" : ""} )</p>
                         </div>
                     </div>
                     <button

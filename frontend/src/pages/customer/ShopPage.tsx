@@ -5,6 +5,7 @@ import type { Product } from "../../lib/types"
 import { productApi } from "../../services/api"
 import { useOrderDraft } from "../../context/OrderDraftContext"
 import { PRODUCT_CATEGORIES } from "../../lib/utils"
+import { useNavigate } from "react-router-dom"
 
 interface CardProduct {
   id: number
@@ -15,6 +16,7 @@ interface CardProduct {
 }
 
 export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) => void }) {
+  const navigate = useNavigate()
   const { addProduct } = useOrderDraft()
   const [products, setProducts] = useState<CardProduct[]>([])
   const [category, setCategory] = useState("Semua")
@@ -66,6 +68,7 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
     }
     addProduct(record)
     onAddToOrder?.(product.id)
+    navigate("/checkout")
   }
 
   return (
@@ -73,6 +76,16 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
       <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-4">
         <h2 className="mb-3 px-2 text-sm font-semibold text-ink-strong">Kategori Produk</h2>
         <nav className="flex flex-col gap-1">
+              <button
+              onClick={() => setCategory("Semua")}
+              className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors cursor-pointer ${
+                category === "Semua"
+                  ? "bg-primary-light text-primary"
+                  : "text-ink hover:bg-gray-50"
+              }`}
+            >
+              Semua
+            </button>
           {productCategories.map((c) => (
             <button
               key={c}

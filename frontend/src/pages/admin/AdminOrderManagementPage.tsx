@@ -101,17 +101,15 @@ export function AdminOrderManagementPage() {
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
-                isActive
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${isActive
                   ? "border-primary bg-primary text-white"
                   : "border-gray-200 bg-white text-ink hover:bg-gray-50"
-              }`}
+                }`}
             >
               {tab.label}
               <span
-                className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
-                  isActive ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
-                }`}
+                className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${isActive ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
+                  }`}
               >
                 {counts[tab.key] ?? 0}
               </span>
@@ -127,7 +125,7 @@ export function AdminOrderManagementPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cari nomor order atau nama pelanggan..."
-            className="w-full rounded-full border border-gray-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-primary"
+            className="w-full rounded-xl bg-white border border-gray-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-primary"
           />
         </div>
       </div>
@@ -197,20 +195,22 @@ export function AdminOrderManagementPage() {
             </tbody>
           </table>
         </div>
-      </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-gray-400">Menampilkan {filtered.length} dari {orders.length} pesanan</p>
-        <div className="flex items-center gap-2">
-          <button className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:bg-gray-50">
-            <ChevronLeft size={16} />
-          </button>
-          <button className="h-8 w-8 rounded-lg bg-primary text-sm font-semibold text-white">1</button>
-          <button className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:bg-gray-50">
-            <ChevronRight size={16} />
-          </button>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-3 mt-2 border-t-2 border-gray-200">
+          <p className="text-sm text-gray-400">Menampilkan {filtered.length} dari {orders.length} pesanan</p>
+          <div className="flex items-center gap-2">
+            <button className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:bg-gray-50">
+              <ChevronLeft size={16} />
+            </button>
+            <button className="h-8 w-8 rounded-lg bg-primary text-sm font-semibold text-white">1</button>
+            <button className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:bg-gray-50">
+              <ChevronRight size={16} />
+            </button>
+          </div>
         </div>
       </div>
+
+
     </div>
   )
 }
