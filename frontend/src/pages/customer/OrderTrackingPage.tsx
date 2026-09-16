@@ -130,8 +130,8 @@ export function OrderTrackingPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-4">
-        <div className="mb-4 flex items-center gap-2 rounded-xl bg-primary-light px-4 py-3">
+      <div className="rounded-2xl border relative border-gray-200 bg-white">
+        <div className="mb-4 flex items-center absolute z-100 gap-2 top-4 left-4 rounded-xl bg-white px-4 py-3">
           <Clock size={16} className="text-primary" />
           <div>
             <p className="text-xs text-gray-500">Estimasi Tiba</p>
@@ -139,7 +139,7 @@ export function OrderTrackingPage() {
           </div>
         </div>
 
-        <div className="relative h-96 overflow-hidden rounded-xl bg-gray-100">
+        <div className="relative h-96 overflow-hidden rounded-xl bg-gray-200">
           <svg viewBox="0 0 400 400" className="h-full w-full">
             <path
               d="M 40 340 C 120 300, 140 260, 120 220 S 200 140, 240 120 S 320 70, 340 40"

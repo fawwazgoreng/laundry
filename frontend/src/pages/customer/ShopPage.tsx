@@ -33,7 +33,7 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
             name: p.name,
             category: p.category,
             price: p.price,
-            imageUrl: p.image || "/components/product-placeholder.png",
+            imageUrl: p.image,
           })),
         )
       })

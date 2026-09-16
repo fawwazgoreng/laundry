@@ -130,8 +130,16 @@ export default function LandingPage() {
             </section>
 
             {/* Benefits */}
-            <section className="border-y border-gray-100 bg-surface">
-                <div className="mx-auto grid max-w-7xl gap-6 px-4 py-14 sm:px-6 md:grid-cols-3">
+            <section className="border-y border-gray-100 bg-surface ">
+                                <div className="flex justify-between items-end-safe mb-12 w-full mx-auto max-w-7xl px-4 pt-20 sm:px-6">
+                    <div className=" max-w-2xl">
+                        <span className="text-sm font-semibold uppercase tracking-widest text-primary">Benefits</span>
+                        <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-ink-strong">
+                            Mengapa memilih <b className="text-primary">FADAROSI</b> laundry
+                        </h2>
+                    </div>
+                </div>
+                <div className="mx-auto grid max-w-7xl gap-6 px-4 pb-20 sm:px-6 md:grid-cols-3">
                     {BENEFITS.map((b) => (
                         <div key={b.title} className="rounded-2xl bg-white p-6 shadow-sm">
                             <span className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary-light text-primary">
@@ -185,7 +193,7 @@ export default function LandingPage() {
 
 
             {/* Steps */}
-            <section id="langkah" className="mx-auto px-4 py-20 sm:px-6 bg-surface">
+            <section id="cara-kerja" className="mx-auto px-4 py-20 sm:px-6 bg-surface">
                 <div className="max-w-7xl mx-auto">
                     <div className="mx-auto mb-12 max-w-2xl text-center">
                         <span className="text-sm font-semibold uppercase tracking-widest text-primary">Cara Kerja</span>
@@ -215,8 +223,8 @@ export default function LandingPage() {
 
             {/* CTA */}
             <section className="bg-ink-strong py-16">
-                <div className="mx-auto grid max-w-7xl w-auto grid-cols-4 justify-between gap-10 px-20 py-10 text-sm sm:flex-row sm:px-6">
-                    <div className="col-span-1 flex flex-col gap-5">
+                <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-10 px-6 py-10 text-sm sm:grid-cols-2 lg:grid-cols-4 lg:items-start">
+                    <div className="flex flex-col gap-5">
                         <div className="flex items-center gap-2">
                             <span className="flex h-9 w-9 items-center p-1 justify-center rounded-full bg-primary text-white">
                                 <img src="/components/shirt-icon.png" className="" />
@@ -233,7 +241,7 @@ export default function LandingPage() {
                             ))}
                         </span>
                     </div>
-                    <div className="col-span-1">
+                    <div>
                         <p className="font-semibold text-primary-light text-[16px]">Layanan Kami</p>
                         <span className="flex flex-col gap-4 py-4">
                             {layanan.map((service) => (
@@ -241,7 +249,7 @@ export default function LandingPage() {
                             ))}
                         </span>
                     </div>
-                    <div className="col-span-2 flex justify-end">
+                    <div className="flex lg:col-span-2 lg:justify-end">
                         <div className="flex flex-col gap-4">
                             <p className="font-semibold text-primary-light text-[16px]">Hubungi Kami</p>
                             {footerCallUs.map((callUs, key) => (

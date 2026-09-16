@@ -7,6 +7,8 @@ import { useGeolocation } from "../../../lib/useGeoLocation"
 import { addressApi } from "../../../services/api"
 import type { Address } from "../../../lib/types"
 import type { CustomerAddress } from "./types"
+import DeletePopup from "../../../components/deletePopUp"
+import { useToast } from "../../../components/Toast"
 
 // Posisi awal peta ketika form alamat masih kosong
 const DEFAULT_CENTER = { lat: -6.496861119036644, lng: 110.90468997753888 }
@@ -45,11 +47,14 @@ const validateForm = (form: AddressForm): string | null => {
 
 // Bagian pengelolaan alamat: daftar alamat + form tambah/edit dengan peta
 export const AddressSection = () => {
+  const { success: toastSuccess, error: toastError } = useToast()
   const [addresses, setAddresses] = useState<CustomerAddress[]>([])
   const [form, setForm] = useState<AddressForm>(emptyForm)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loadingAddress, setLoadingAddress] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<CustomerAddress | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const { result: gpsResult, loading: loadingGps, locate } = useGeolocation()
 
   // Muat daftar alamat milik pengguna dari backend
@@ -152,21 +157,23 @@ export const AddressSection = () => {
     try {
       if (editingId === null) {
         await addressApi.create(payload)
+        toastSuccess("Alamat berhasil ditambahkan")
       } else {
         await addressApi.update(editingId, payload)
+        toastSuccess("Alamat berhasil diperbarui")
       }
       setForm(emptyForm())
       setEditingId(null)
       await loadAddresses()
     } catch (err) {
       setError(err instanceof Error ? err.message : "Gagal menyimpan alamat")
+      toastError(err instanceof Error ? err.message : "Gagal menyimpan alamat")
     }
   }
 
-  // Hapus alamat setelah dikonfirmasi pengguna
+  // Hapus alamat setelah dikonfirmasi lewat pop-up
   const handleDelete = async (id: number) => {
-    const confirmed = window.confirm("Hapus alamat ini?")
-    if (!confirmed) return
+    setDeleting(true)
     try {
       await addressApi.remove(id)
       setAddresses((prev) => prev.filter((addr) => addr.id !== id))
@@ -174,8 +181,13 @@ export const AddressSection = () => {
         setEditingId(null)
         setForm(emptyForm())
       }
+      setDeleteTarget(null)
+      toastSuccess("Alamat berhasil dihapus")
     } catch {
-      setError("Gagal menghapus alamat")
+      setDeleteTarget(null)
+      toastError("Gagal menghapus alamat")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -188,11 +200,11 @@ export const AddressSection = () => {
       </div>
 
       <div className="rounded-2xl" id="alamat">
-        <div className="mt-4 space-y-3 grid grid-cols-2 gap-5">
+        <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
           {addresses.map((addr) => (
             <div
               key={addr.id}
-              className="rounded-xl bg-white border-t-4 border-r-4 p-4 h-32 border-r-primary border-t-primary col-span-1"
+              className="col-span-1 h-32 rounded-xl border-r-4 border-t-4 border-r-primary border-t-primary bg-white p-4"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-2">
@@ -202,7 +214,7 @@ export const AddressSection = () => {
                   <p className="text-sm font-semibold text-ink-strong">{addr.label}</p>
                 </div>
                 <span className="flex gap-4">
-                  <span className="w-9 h-9 bg-gray-200 text-ink rounded-lg p-2 cursor-pointer" onClick={() => handleDelete(addr.id)}>
+                  <span className="w-9 h-9 bg-gray-200 text-ink rounded-lg p-2 cursor-pointer" onClick={() => setDeleteTarget(addr)}>
                     <Trash size={20}></Trash>
                   </span>
                   <span className="w-9 h-9 bg-gray-200 text-ink rounded-lg p-2 cursor-pointer" onClick={() => handleEdit(addr)}>
@@ -287,6 +299,17 @@ export const AddressSection = () => {
           </div>
         </div>
       </div>
+
+      {/* Pop-up konfirmasi penghapusan alamat */}
+      <DeletePopup
+        open={deleteTarget !== null}
+        dataName={deleteTarget?.label}
+        loading={deleting}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) handleDelete(deleteTarget.id)
+        }}
+      />
     </>
   )
 }

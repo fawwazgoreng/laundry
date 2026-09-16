@@ -32,7 +32,7 @@ export function Topbar({ items }: { items: NavItem[] }) {
                     </Link>
                 </div>
 
-                <nav className="hidden items-center gap-1 md:flex jus col-span-1">
+                <nav className="hidden items-center justify-center gap-1 md:flex col-span-1">
                         {items.map((item) => (
                             <NavLink
                                 key={item.to}
@@ -51,12 +51,12 @@ export function Topbar({ items }: { items: NavItem[] }) {
                 </nav>
 
                 <div className="hidden items-center justify-end gap-3 md:flex col-span-1">
-                    <div className="flex items-center gap-2.5 rounded-xl border border-gray-200 bg-white py-1.5 pl-1.5 pr-4">
-                        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-light text-sm font-bold text-primary">
+                    <div className="flex items-center gap-2.5 rounded-xl bg-white py-1.5 pl-1.5 pr-4">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-light text-sm font-bold text-primary">
                             {user?.username?.charAt(0)?.toUpperCase()}
                         </span>
                         <div className="leading-tight">
-                            <p className="text-sm font-semibold text-ink-strong">{user?.username} ( {user?.role === "admin" ? "Admin" : ""} )</p>
+                            <p className="text-sm font-semibold text-ink-strong">{user?.username} {user?.role === "admin" ? "( Admin )" : ""}</p>
                         </div>
                     </div>
                     <button

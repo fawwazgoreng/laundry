@@ -1,5 +1,5 @@
 import { HashLink } from "react-router-hash-link"
-import { History, LayoutGrid, MapPin, User as UserIcon } from "lucide-react"
+import { LayoutGrid, MapPin, User as UserIcon } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 interface TabItem {

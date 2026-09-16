@@ -56,7 +56,11 @@ async function request<T>(
 ): Promise<{ data: T; meta?: Meta }> {
     const build = (token: string | null) => {
         const headers = new Headers(options.headers)
-        headers.set("Content-Type", "application/json")
+        if (options.body instanceof FormData) {
+            headers.delete('Content-Type');
+        } else if (!headers.has('Content-Type')) {
+            headers.set('Content-Type', 'application/json');
+        }
         if (token) headers.set("Authorization", `Bearer ${token}`)
         return { ...options, headers }
     }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import type { Outlet } from "../../lib/types"
 import { outletApi } from "../../services/api"
+import { useToast } from "../../components/Toast"
 
 interface DayHours {
   day: string
@@ -41,6 +42,7 @@ function serializeWeeklyHours(hours: DayHours[]): string {
 }
 
 export function AdminSettingsPage() {
+  const { success: toastSuccess, error: toastError } = useToast()
   const [outletId, setOutletId] = useState<number | null>(null)
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
@@ -85,9 +87,10 @@ export function AdminSettingsPage() {
         weekly_hours: serializeWeeklyHours(hours),
       })
       setSaved(true)
+      toastSuccess("Pengaturan outlet berhasil disimpan")
       setTimeout(() => setSaved(false), 2000)
-    } catch {
-      // ignore
+    } catch (err) {
+      toastError(err instanceof Error ? err.message : "Gagal menyimpan pengaturan outlet")
     } finally {
       setSaving(false)
     }

@@ -62,24 +62,25 @@ export function CheckoutPage() {
   useEffect(() => {
     addressApi
       .list()
-      .then((list: Address[]) =>
-        setAddresses(
-          list.map((a) => ({
-            id: a.id,
-            label: a.label,
-            isPrimary: a.is_primary,
-            fullAddress: a.address_text,
-            recipientName: a.label,
-            phone: "",
-          })),
-        ),
-      )
+      .then((list: Address[]) => {
+        const mapped = list.map((a) => ({
+          id: a.id,
+          label: a.label,
+          isPrimary: a.is_primary,
+          fullAddress: a.address_text,
+          recipientName: a.label,
+          phone: "",
+        }))
+        setAddresses(mapped)
+        // Tandai alamat utama (atau alamat pertama) sebagai pilihan bawaan
+        const primary = mapped.find((a) => a.isPrimary) ?? mapped[0]
+        if (primary) setChoiceAddress(primary.id)
+      })
       .catch(() => undefined)
       authApi.me().then((user) => setCurrentUser(user))
   }, [])
 
   const primaryAddress = addresses.find((a) => a.isPrimary) ?? addresses[0]
-
 
   function updateQty(id: number, delta: number) {
     setCart((prev) =>
@@ -226,47 +227,34 @@ export function CheckoutPage() {
               <h2 className="text-sm font-semibold text-ink-strong">Alamat Pengiriman &amp; Penjemputan</h2>
             </div>
             {addresses.map((addr) => (
-              <div key={addr.id} onClick={() => setChoiceAddress(addr.id)} className={`cursor-pointer rounded-xl p-4 flex gap-6 items-center  h-fit m-4 border-2 ${addr.id == choiceAddress ? "border-primary" : "border-gray-200"}`}>
-                                <span
-                  className={`h-6 w-6 rounded-full border-2 ${
+              <div
+                key={addr.id}
+                onClick={() => setChoiceAddress(addr.id)}
+                className={`mb-3 flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 sm:flex-row sm:items-center sm:gap-6 ${
+                  addr.id == choiceAddress ? "border-primary" : "border-gray-200"
+                }`}
+              >
+                <span
+                  className={`h-6 w-6 shrink-0 rounded-full border-2 ${
                     choiceAddress === addr.id ? "border-primary bg-primary" : "border-gray-300"
                   }`}
                 />
-                <span className="">
-
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-ink-strong">{addr.label}</p>
-                  {primaryAddress.isPrimary && (
-                    <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
-                      {addr.isPrimary ? "Utama" : "-"}
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-sm text-gray-500">
-                  {primaryAddress.recipientName} • {currentUser?.phone || "-"}
-                </p>
-                <p className="text-sm text-gray-500">{primaryAddress.fullAddress}</p>
-                  </span>
-                </div>
+                <span>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-ink-strong">{addr.label}</p>
+                    {addr.isPrimary && (
+                      <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        Utama
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {addr.recipientName} • {currentUser?.phone || "-"}
+                  </p>
+                  <p className="text-sm text-gray-500">{addr.fullAddress}</p>
+                </span>
+              </div>
             ))}
-            {/* {primaryAddress ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-semibold text-ink-strong">{primaryAddress.label}</p>
-                  {primaryAddress.isPrimary && (
-                    <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
-                      Utama
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-sm text-gray-500">
-                  {primaryAddress.recipientName} • {currentUser?.phone || "-"}
-                </p>
-                <p className="text-sm text-gray-500">{primaryAddress.fullAddress}</p>
-              </>
-            ) : (
-              <p className="text-sm text-gray-400">Belum ada alamat. Tambahkan alamat terlebih dahulu.</p>
-            )} */}
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6">

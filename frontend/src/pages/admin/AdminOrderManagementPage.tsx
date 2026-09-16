@@ -4,6 +4,9 @@ import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
 import type { OrderListItem, OrderStatus } from "../../lib/types"
 import { orderApi } from "../../services/api"
+import { ApiError } from "../../services/apiClient"
+import { useToast } from "../../components/Toast"
+import { ConfirmDialog } from "../../components/ConfirmDialog"
 
 const tabs = [
   { key: "semua", label: "Semua" },
@@ -26,9 +29,12 @@ interface AdminOrderRow {
 }
 
 export function AdminOrderManagementPage() {
+  const { success: toastSuccess, error: toastError } = useToast()
   const [activeTab, setActiveTab] = useState("semua")
   const [search, setSearch] = useState("")
   const [orders, setOrders] = useState<AdminOrderRow[]>([])
+  const [statusTarget, setStatusTarget] = useState<{ order: AdminOrderRow; next: OrderStatus } | null>(null)
+  const [updating, setUpdating] = useState(false)
 
   const load = () =>
     orderApi
@@ -77,14 +83,30 @@ export function AdminOrderManagementPage() {
     return list
   }, [orders, activeTab, search])
 
+  // Buka pop-up konfirmasi sebelum status pesanan diubah ke tahap berikutnya
   function handleAdvance(order: AdminOrderRow) {
     const current = statusOrder.indexOf(order.status)
     const next = statusOrder[current + 1]
     if (!next) return
-    orderApi
-      .updateStatus(order.id, next)
-      .then(load)
-      .catch(() => undefined)
+    setStatusTarget({ order, next })
+  }
+
+  // Jalankan perubahan status pesanan setelah dikonfirmasi admin
+  async function confirmStatusChange() {
+    if (!statusTarget) return
+    setUpdating(true)
+    try {
+      await orderApi.updateStatus(statusTarget.order.id, statusTarget.next)
+      toastSuccess(
+        `Status ${statusTarget.order.id} diubah menjadi "${adminStatusLabel[statusTarget.next]}"`,
+      )
+      setStatusTarget(null)
+      await load()
+    } catch (err) {
+      toastError(err instanceof ApiError ? err.message : "Gagal mengubah status pesanan")
+    } finally {
+      setUpdating(false)
+    }
   }
 
   return (
@@ -211,6 +233,21 @@ export function AdminOrderManagementPage() {
       </div>
 
 
+      {/* Konfirmasi khusus sebelum status pesanan diubah */}
+      <ConfirmDialog
+        open={statusTarget !== null}
+        title="Konfirmasi Ubah Status"
+        message={
+          statusTarget
+            ? `Status pesanan ${statusTarget.order.id} akan diubah dari "${adminStatusLabel[statusTarget.order.status]}" menjadi "${adminStatusLabel[statusTarget.next]}". Lanjutkan?`
+            : ""
+        }
+        confirmLabel="Ubah Status"
+        cancelLabel="Batal"
+        loading={updating}
+        onConfirm={confirmStatusChange}
+        onCancel={() => setStatusTarget(null)}
+      />
     </div>
   )
 }

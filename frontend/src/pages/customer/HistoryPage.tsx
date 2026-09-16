@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ChevronLeft, ChevronRight, Eye, Pencil, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, Eye, Search } from "lucide-react"
 import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
 import type { OrderListItem, OrderStatus } from "../../lib/types"
@@ -13,8 +13,6 @@ const tabs = [
   { key: "siap_antar", label: "Siap Antar" },
   { key: "selesai", label: "Selesai" },
 ]
-
-const statusOrder: OrderStatus[] = ["BARU", "DITERIMA", "DIPROSES", "SIAP_ANTAR", "SELESAI"]
 
 interface AdminOrderRow {
   id: string
@@ -77,16 +75,6 @@ export function UserOrderHistory() {
     }
     return list
   }, [orders, activeTab, search])
-
-  function handleAdvance(order: AdminOrderRow) {
-    const current = statusOrder.indexOf(order.status)
-    const next = statusOrder[current + 1]
-    if (!next) return
-    orderApi
-      .updateStatus(order.id, next)
-      .then(load)
-      .catch(() => undefined)
-  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">

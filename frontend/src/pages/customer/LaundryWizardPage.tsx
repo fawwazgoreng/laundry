@@ -119,7 +119,7 @@ export function LaundryWizardPage() {
                   <button
                     key={service.id}
                     onClick={() => setSelectedServiceId(service.id)}
-                    className={`relative flex flex-col gap-3 rounded-2xl border bg-white p-5 text-left transition-colors ${
+                    className={`relative flex flex-col gap-3 rounded-2xl border-2 bg-white p-5 text-left transition-colors ${
                       isSelected ? "border-primary" : "border-gray-200"
                     }`}
                   >

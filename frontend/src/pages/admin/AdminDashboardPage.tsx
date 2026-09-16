@@ -15,6 +15,7 @@ interface StatCard {
   value: string
   bg: string
   text: string
+  colorClass: string
 }
 
 interface AdminOrderRow {
@@ -43,10 +44,10 @@ export function AdminDashboardPage() {
     Promise.all([adminApi.stats(), orderApi.list({ perPage: 5 })])
       .then(([stats, page]) => {
         setAdminDashboardStats([
-          { label: "Pesanan Hari Ini", value: String(stats.orders_today) , bg: "#FEE2E2", text: "#DC2626"},
-          { label: "Pendapatan Hari Ini", value: formatIDR(stats.revenue_today), bg: "#D1FAE5", text: "#10B981"},
-          { label: "Laundry Diproses", value: String(stats.laundry_in_progress), bg: "#DBEAFE", text: "#3B82F6" },
-          { label: "Produk Terjual", value: String(stats.products_sold), bg: "#F9FAFB", text: "#374151"},
+          { label: "Pesanan Hari Ini", value: String(stats.orders_today), bg: "#FEE2E2", text: "#DC2626", colorClass: "bg-red-100 text-red-600" },
+          { label: "Pendapatan Hari Ini", value: formatIDR(stats.revenue_today), bg: "#D1FAE5", text: "#10B981", colorClass: "bg-emerald-100 text-emerald-600" },
+          { label: "Laundry Diproses", value: String(stats.laundry_in_progress), bg: "#DBEAFE", text: "#3B82F6", colorClass: "bg-blue-100 text-blue-600" },
+          { label: "Produk Terjual", value: String(stats.products_sold), bg: "#F9FAFB", text: "#374151", colorClass: "bg-gray-100 text-gray-600" },
         ])
         setAdminOrders(
           page.data.map((o: OrderListItem) => ({
@@ -90,7 +91,7 @@ export function AdminDashboardPage() {
           const Icon = statIcons[idx]
           return (
             <div key={stat.label} className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-5">
-              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[${stat.bg}] text-[${stat.text}]`}>
+              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${stat.colorClass}`}>
                 <Icon size={20} />
               </span>
               <div>
@@ -102,8 +103,8 @@ export function AdminDashboardPage() {
         })}
       </div>
 
-      <div className="grid grid-cols-3 grid-rows-4 gap-6">
-        <div className="rounded-2xl border border-gray-200 row-span-3 bg-white p-6 col-span-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 lg:grid-rows-4">
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 lg:col-span-2 row-span-3">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-ink-strong">Pesanan Terbaru</h2>
             <Link to="/admin/pesanan" className="text-xs font-semibold text-primary hover:underline">
@@ -144,7 +145,7 @@ export function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="space-y-6 col-span-1 row-span-4">
+        <div className="space-y-6 lg:col-span-1 row-span-4">
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
             <h2 className="mb-4 text-sm font-semibold text-ink-strong">Ringkasan Pendapatan (Mingguan)</h2>
             <div className="h-40">

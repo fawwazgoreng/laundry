@@ -2,6 +2,9 @@ import { useEffect, useState } from "react"
 import { Pencil, Trash2 } from "lucide-react"
 import type { Service } from "../../lib/types"
 import { serviceApi } from "../../services/api"
+import { ApiError } from "../../services/apiClient"
+import { useToast } from "../../components/Toast"
+import DeletePopup from "../../components/deletePopUp"
 
 interface ServiceRow {
   id: number
@@ -14,13 +17,22 @@ interface ServiceRow {
 }
 
 export function AdminServiceManagementPage() {
+  const { success: toastSuccess, error: toastError } = useToast()
   const [services, setServices] = useState<ServiceRow[]>([])
+
+  // State form layanan (dipakai untuk Tambah maupun Edit)
+  const [editingId, setEditingId] = useState<number | null>(null)
   const [name, setName] = useState("")
   const [unit, setUnit] = useState("Kg")
   const [price, setPrice] = useState("")
   const [eta, setEta] = useState("")
   const [loading, setLoading] = useState(false)
 
+  // State pop-up konfirmasi hapus
+  const [deleteTarget, setDeleteTarget] = useState<ServiceRow | null>(null)
+  const [deleting, setDeleting] = useState(false)
+
+  // Muat ulang daftar layanan dari backend
   const load = () =>
     serviceApi
       .list()
@@ -43,77 +55,116 @@ export function AdminServiceManagementPage() {
     load()
   }, [])
 
-  function handleRemove(id: number) {
-    serviceApi
-      .remove(id)
-      .then(load)
-      .catch(() => undefined)
-  }
-
+  // Kosongkan seluruh form kembali ke kondisi awal
   function handleReset() {
+    setEditingId(null)
     setName("")
     setUnit("Kg")
     setPrice("")
     setEta("")
   }
 
+  // Isi form dengan data layanan yang akan diedit
+  function handleEdit(service: ServiceRow) {
+    setEditingId(service.id)
+    setName(service.name)
+    setUnit(service.unit)
+    setPrice(String(service.pricePerUnit))
+    setEta(String(service.etaHours))
+  }
+
+  // Simpan layanan (buat baru atau perbarui) lalu muat ulang daftar
   async function handleSubmit() {
     if (!name.trim() || !price) return
     setLoading(true)
+    const description =
+      services.find((s) => s.id === editingId)?.description ?? `${name.trim()} — unit ${unit || "Kg"}`
     try {
-      await serviceApi.create({
+      const payload = {
         name: name.trim(),
         unit: unit || "Kg",
         price_per_unit: Number(price),
-        description: `${name.trim()} — unit ${unit || "Kg"}`,
+        description,
         estimated_duration_hours: eta ? Number(eta) : 24,
         is_active: true,
-      })
+      }
+      if (editingId === null) {
+        await serviceApi.create(payload)
+        toastSuccess("Layanan berhasil ditambahkan")
+      } else {
+        await serviceApi.update(editingId, payload)
+        toastSuccess("Layanan berhasil diperbarui")
+      }
       handleReset()
       await load()
-    } catch {
-      // ignore
+    } catch (err) {
+      toastError(err instanceof ApiError ? err.message : "Gagal menyimpan layanan")
     } finally {
       setLoading(false)
     }
   }
 
-  return (
-    <>
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[1fr_360px]">
-        <div>
-          <h1 className="text-2xl font-bold text-ink-strong">Manajemen Layanan</h1>
-          <p className="mb-5 text-sm text-gray-500">Kelola Layanan</p>
+  // Jalankan penghapusan layanan setelah dikonfirmasi lewat pop-up
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await serviceApi.remove(deleteTarget.id)
+      toastSuccess("Layanan berhasil dihapus")
+      setDeleteTarget(null)
+      if (editingId === deleteTarget.id) handleReset()
+      await load()
+    } catch (err) {
+      toastError(err instanceof ApiError ? err.message : "Gagal menghapus layanan")
+    } finally {
+      setDeleting(false)
+    }
+  }
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            {services.map((service) => (
-              <div key={service.id} className="rounded-2xl border border-gray-200 bg-white p-5">
-                <div className="flex items-start justify-between">
-                  <p className="text-base font-semibold text-ink-strong">{service.name}</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => handleRemove(service.id)}
-                      className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:text-primary"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                    <button className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:text-primary">
-                      <Pencil size={14} />
-                    </button>
-                  </div>
+  return (
+    <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[1fr_360px]">
+      {/* Daftar layanan */}
+      <div>
+        <h1 className="text-2xl font-bold text-ink-strong">Manajemen Layanan</h1>
+        <p className="mb-5 text-sm text-gray-500">Kelola Layanan</p>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {services.map((service) => (
+            <div key={service.id} className="rounded-2xl border border-gray-200 bg-white p-5">
+              <div className="flex items-start justify-between">
+                <p className="text-base font-semibold text-ink-strong">{service.name}</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setDeleteTarget(service)}
+                    className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:text-primary"
+                    aria-label={`Hapus ${service.name}`}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleEdit(service)}
+                    className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:text-primary"
+                    aria-label={`Edit ${service.name}`}
+                  >
+                    <Pencil size={14} />
+                  </button>
                 </div>
-                <p className="mt-2 text-sm text-gray-500">{service.description}</p>
-                <p className="mt-2 text-sm text-gray-500">
-                  {service.pricePerUnit.toLocaleString("id-ID")} per 1 unit ( {service.unit} )
-                </p>
-                <p className="text-sm text-gray-500">estimasi selesai {service.etaHours} jam</p>
               </div>
-            ))}
-          </div>
+              <p className="mt-2 text-sm text-gray-500">{service.description}</p>
+              <p className="mt-2 text-sm text-gray-500">
+                {service.pricePerUnit.toLocaleString("id-ID")} per 1 unit ( {service.unit} )
+              </p>
+              <p className="text-sm text-gray-500">estimasi selesai {service.etaHours} jam</p>
+            </div>
+          ))}
         </div>
       </div>
-      <aside className="h-full fixed right-0 top-15  rounded-2xl border border-gray-200 bg-white p-6">
-        <h2 className="mb-4 text-base font-bold text-ink-strong">Tambah Layanan Baru</h2>
+
+      {/* Form Tambah / Edit layanan (kolom kanan yang tetap saat digulir di layar lebar) */}
+      <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-6 lg:sticky lg:top-20">
+        <h2 className="mb-4 text-base font-bold text-ink-strong">
+          {editingId === null ? "Tambah Layanan Baru" : "Edit Layanan"}
+        </h2>
 
         <label className="mb-1 block text-xs font-medium text-gray-500">Nama Layanan</label>
         <input
@@ -160,7 +211,7 @@ export function AdminServiceManagementPage() {
             disabled={loading || !name.trim() || !price}
             className="flex-1 rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
           >
-            {loading ? "Menyimpan..." : "Simpan Layanan"}
+            {loading ? "Menyimpan..." : editingId === null ? "Simpan Layanan" : "Simpan Perubahan"}
           </button>
           <button
             onClick={handleReset}
@@ -170,6 +221,15 @@ export function AdminServiceManagementPage() {
           </button>
         </div>
       </aside>
-    </>
+
+      {/* Pop-up konfirmasi penghapusan layanan */}
+      <DeletePopup
+        open={deleteTarget !== null}
+        dataName={deleteTarget?.name}
+        loading={deleting}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={confirmDelete}
+      />
+    </div>
   )
 }
