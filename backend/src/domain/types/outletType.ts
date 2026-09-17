@@ -17,4 +17,6 @@ export type outletUpdateType = {
     max_coverage_km?: number
     min_order_amount?: number
     weekly_hours?: string
+    latitude?: number
+    longitude?: number
 }

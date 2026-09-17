@@ -56,6 +56,9 @@ export class pgOutletRepository implements outletRepository {
                 ...(data.max_coverage_km !== undefined ? { max_coverage_km: data.max_coverage_km } : {}),
                 ...(data.min_order_amount !== undefined ? { min_order_amount: data.min_order_amount } : {}),
                 ...(data.weekly_hours !== undefined ? { weekly_hours: data.weekly_hours } : {}),
+                ...(data.latitude !== undefined ? { latitude: data.latitude } : {}),
+                ...(data.longitude !== undefined ? { longitude: data.longitude } : {}),
+            
             },
         });
         return toOutletType(row);

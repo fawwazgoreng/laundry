@@ -6,8 +6,10 @@ export interface adminStatsType {
     recent_orders: Array<{
         order_id: string
         customer_name: string
+        customer_phone: string
         status: string
         total_amount: number
+        items_summary: string
         created_at: string
     }>
     service_revenue: Array<{

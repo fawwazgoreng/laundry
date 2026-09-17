@@ -9,6 +9,7 @@ type UserRow = {
     role: string
     phone: string
     is_verified: boolean
+    created_at: Date
 };
 
 function toUserType(row: UserRow): userType {
@@ -19,6 +20,7 @@ function toUserType(row: UserRow): userType {
         role: row.role as userRole,
         phone: row.phone,
         is_verified: row.is_verified,
+        created_at: row.created_at.toISOString(),
     };
 }
 
@@ -39,6 +41,7 @@ export class pgUserRepository implements userRepository {
                 role: true,
                 phone: true,
                 is_verified: true,
+                created_at: true,
             },
         });
         return toUserType(user);
@@ -55,6 +58,7 @@ export class pgUserRepository implements userRepository {
                 phone: true,
                 is_verified: true,
                 password: true,
+                created_at: true,
             },
         });
         if (!user) return null;
@@ -71,6 +75,7 @@ export class pgUserRepository implements userRepository {
                 role: true,
                 phone: true,
                 is_verified: true,
+                created_at: true,
             },
         });
         return user ? toUserType(user) : null;
@@ -87,6 +92,7 @@ export class pgUserRepository implements userRepository {
                 role: true,
                 phone: true,
                 is_verified: true,
+                created_at: true,
             },
         });
         return toUserType(user);
@@ -108,6 +114,7 @@ export class pgUserRepository implements userRepository {
                 role: true,
                 phone: true,
                 is_verified: true,
+                created_at: true,
             },
         });
         return toUserType(user);

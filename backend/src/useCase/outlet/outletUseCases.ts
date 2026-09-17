@@ -37,6 +37,8 @@ const updateSchema = z.object({
     max_coverage_km: z.coerce.number().nonnegative().optional(),
     min_order_amount: z.coerce.number().nonnegative().optional(),
     weekly_hours: z.string().max(500).optional(),
+    latitude: z.coerce.number().min(-90).max(90, "Invalid latitude"),
+    longitude: z.coerce.number().min(-180).max(180, "Invalid longitude"),
 });
 
 export class UpdateOutletUseCase {

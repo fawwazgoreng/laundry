@@ -2,4 +2,8 @@
 node_modules/
 
 /src/infrastructure/database/migrations
+
+# runtime logs (file-based history)
+logs/
+
 .vscode

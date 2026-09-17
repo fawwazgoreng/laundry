@@ -19,6 +19,7 @@ export interface userType {
     role: userRole
     phone: string
     is_verified: boolean
+    created_at?: string
 }
 
 export interface userWithPassword extends userType {
