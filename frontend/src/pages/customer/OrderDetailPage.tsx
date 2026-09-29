@@ -5,13 +5,14 @@ import { formatIDR } from "../../lib/format"
 import type { OrderDetail } from "../../lib/types"
 import { orderApi } from "../../services/api"
 
-const steps = ["Diterima", "Dicuci", "Disetrika", "Siap Antar", "Selesai"]
+const steps = ["Diterima", "Diproses", "Siap Antar", "Selesai", "Dibatalkan"]
 
 const stepIndexByStatus: Record<string, number> = {
   DITERIMA: 0,
   DIPROSES: 1,
-  SIAP_ANTAR: 3,
-  SELESAI: 4,
+  SIAP_ANTAR: 2,
+  SELESAI: 3,
+  DIBATALKAN: 4,
 }
 
 const paymentLabel: Record<string, string> = {
@@ -160,8 +161,8 @@ export function OrderDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="flex flex-col gap-8 rounded-2xl border border-gray-200 bg-white p-6 lg:col-span-2 lg:flex-row lg:gap-20">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 grid-rows-4">
+        <div className="flex flex-col gap-8 row-span-2 rounded-2xl border border-gray-200 bg-white p-6 lg:col-span-2 lg:flex-row lg:gap-20">
           <div className="flex-1">
             <h2 className="mb-4 text-sm font-semibold text-ink-strong">Informasi Pelanggan</h2>
             <div className="space-y-3 text-sm">
@@ -206,8 +207,7 @@ export function OrderDetailPage() {
           </div>
         </div>
 
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 lg:col-span-1 lg:row-span-3">
+        <div className="rounded-2xl border row-span-2 border-gray-200 bg-white p-6 lg:col-span-1 lg:row-span-3">
           <h2 className="mb-4 text-md font-semibold text-ink-strong border-b-[0.5px] border-gray-200 py-2">Ringkasan Biaya</h2>
           <div className="space-y-3 text-sm px-2">
             <div className="flex justify-between ">
@@ -238,8 +238,7 @@ export function OrderDetailPage() {
           </div>
         </div>
 
-
-        <div className="rounded-2xl border border-gray-200 bg-white p-6 lg:col-span-2">
+        <div className="rounded-2xl border row-span-3 border-gray-200 bg-white p-6 lg:col-span-2">
           <h2 className="mb-4 text-sm font-semibold text-ink-strong">Rincian Item Laundry</h2>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-sm">

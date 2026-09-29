@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import { CreateOrderUseCase, UpdateOrderStatusUseCase, CancelOrderUseCase, DeleteOrderUseCase } from "./orderUseCases";
+import { CreateOrderUseCase, UpdateOrderStatusUseCase, CancelOrderUseCase, DeleteOrderUseCase, type midtransSnapClient } from "./orderUseCases";
 import type { addressRepository } from "../../domain/repositories/addressRepository";
 import type { cashflowRepository } from "../../domain/repositories/cashflowRepository";
 import type { orderRepository } from "../../domain/repositories/orderRepository";
@@ -128,7 +128,9 @@ describe("CreateOrderUseCase", () => {
 
         const result = await uc.execute("u-1", validInput());
 
-        expect(result.order_id).toBe("CLN-20260908-001");
+        expect(result.order_id).toBe(orderEntity.generateOrderId(1));
+        expect(result.token).toBe("");
+        expect(result.redirect_url).toBe("");
         expect(orderRepo.create).toHaveBeenCalled();
         const created = (orderRepo.create as ReturnType<typeof mock>).mock.calls[0][0];
         expect(created.status).toBe("BARU");
@@ -202,7 +204,7 @@ describe("CreateOrderUseCase", () => {
         await expect(uc.execute("u-1", validInput())).rejects.toMatchObject({ statusCode: 409 });
     });
 
-    it("issues a virtual account for transfer_bank", async () => {
+    it("issues a midtrans snap transaction for transfer_bank", async () => {
         const order = makeOrder();
         const orderRepo = {
             countByDatePrefix: mock(() => 0),
@@ -221,6 +223,12 @@ describe("CreateOrderUseCase", () => {
             })),
             confirm: mock(() => null),
         } as unknown as paymentRepository;
+        const snapFake = {
+            createTransaction: mock(async () => ({
+                token: "snap-token-1",
+                redirect_url: "https://app.sandbox.midtrans.com/snap/v3/redirect",
+            })),
+        } as midtransSnapClient;
 
         const uc = new CreateOrderUseCase(
             orderRepo,
@@ -230,12 +238,16 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => outlet) } as unknown as outletRepository,
             paymentRepo,
             { create: mock(async () => ({})) } as unknown as cashflowRepository,
+            snapFake,
         );
 
-        await uc.execute("u-1", { ...validInput(), payment_method: "transfer_bank" });
+        const result = await uc.execute("u-1", { ...validInput(), payment_method: "transfer_bank" });
 
+        expect(snapFake.createTransaction).toHaveBeenCalled();
         const payment = (paymentRepo.create as ReturnType<typeof mock>).mock.calls[0][0];
-        expect(payment.transaction_id).toMatch(/^2620/);
+        expect(payment.transaction_id).toBe("snap-token-1");
+        expect(result.token).toBe("snap-token-1");
+        expect(result.order_id).toBe(orderEntity.generateOrderId(1));
     });
 
     it("retries on duplicate order id collisions", async () => {

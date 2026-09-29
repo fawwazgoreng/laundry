@@ -13,6 +13,7 @@ import type {
     Outlet,
     OutletInput,
     Payment,
+    PaymentGate,
     Product,
     ProductInput,
     Service,
@@ -69,7 +70,7 @@ export const outletApi = {
 }
 
 export const orderApi = {
-    create: (data: OrderCreateInput) => api.post<OrderDetail>("/orders", data),
+    create: (data: OrderCreateInput) => api.post<PaymentGate>("/orders", data),
     list: (params?: {
         search?: string
         status?: string

@@ -104,6 +104,7 @@ export interface orderDetailType {
         id: string
         username: string
         phone: string
+        email?: string
     }
     address: {
         id: number
@@ -120,6 +121,12 @@ export interface orderDetailType {
     products: productOrderItemType[]
     payment: paymentSummaryType | null
     trackings: orderTrackingType[]
+}
+
+export interface paymentGate {
+    redirect_url: string
+    token: string
+    order_id: string
 }
 
 export type orderListFilters = {

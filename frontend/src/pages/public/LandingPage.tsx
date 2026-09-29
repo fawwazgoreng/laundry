@@ -172,7 +172,7 @@ export default function LandingPage() {
                             return (
                                 <div key={p.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white flex flex-col">
                                     <span className="flex w-full items-center justify-between ">
-                                        <img src={p.image} alt={p.name} className="w-full max-h-40"/>
+                                        <img src={p.image} alt={p.name} className="w-full max-h-64"/>
                                     </span>
                                     <span className="flex flex-col p-4">
                                     <h3 className="font-medium text-primary text-[16px]">{p.category}</h3>

@@ -10,7 +10,6 @@ Single git repo, **two independent apps** — there is NO monorepo/workspace wir
   **Tailwind CSS** with a crimson palette. `design/` holds the PNG UI mockups that are the source of
   truth for page/component structure; OCR the PNGs with `tesseract -l ind+eng` when you need their text.
 - `backend/` — Hono API on Bun. Entry `src/index.ts`, listens on port 3000.
-- `docs/` — API + architecture documentation (keep in sync with code).
 
 Bun is the package manager and (for the backend) the runtime. Frontend lockfiles are also `bun.lock`
 even though its scripts look npm-ish.
@@ -21,11 +20,25 @@ even though its scripts look npm-ish.
   `#f3f4f6` surface, `#374151` text, `#111827` dark text). Do NOT add other CSS frameworks.
 - Routing via `react-router-dom`. Layouts in `src/layouts/` (Guest / Customer / Admin), each with its own
   sidebar; pages in `src/pages/{public,customer,admin}/`; shared UI in `src/components/`.
+- Pages are wired to the backend API, not static mocks: customer `DashboardPage`, `LaundryWizardPage`
+  (`/layanan`), `ShopPage` (`/toko`), `CheckoutPage`, `OrderDetailPage` (`/riwayat/:orderId`),
+  `OrderTrackingPage` (`/tracking/:orderId`), `PaymentPage` (`/payment/:orderId`); admin
+  `AdminDashboardPage` (`/admin`), `AdminOrderManagementPage` (`/admin/pesanan`),
+  `AdminServiceManagementPage` (`/admin/layanan`), `AdminProductManagementPage` (`/admin/produk`),
+  `AdminReportPage` (`/admin/laporan`), `AdminSettingsPage` (`/admin/pengaturan`).
+  `AdminReportPage` filters cashflow/orders client-side over a preset month range OR a custom
+  date range (`Dari`/`Sampai` inputs) and has a `window.print()` "Cetak Laporan" action — the
+  `Topbar` carries `print:hidden` so prints only show the report body + a print-only header.
+- Shared helpers live in `src/lib/`: `types.ts` (backend-shaped types), `utils.ts`
+  (`formatRupiah`, `formatDateLong`, `PRODUCT_CATEGORIES`, `cx`), `format.ts` (`formatIDR` alias),
+  `orderStatus.ts` (`adminStatusLabel`/`adminStatusStyle` keyed to backend status strings). Pages in
+  `src/pages/customer|admin/` import these as `../../lib/...`.
 - API client is a thin `fetch` wrapper in `src/services/` returning the backend envelope
   `{ success, status, message, data, meta? }`, with automatic access-token refresh. Auth state via
   `AuthContext` (`useAuth`); role-gate routes with the `ProtectedRoute` component.
 - Order status flow used everywhere (as in the mockups):
-  `BARU → DITERIMA → DIPROSES → SIAP_ANTAR → SELESAI` (+ `DIBATALKAN`).
+  `BARU → DITERIMA → DIPROSES → SIAP_ANTAR → SELESAI` (+ `DIBATALKAN`). Backend status strings are
+  used verbatim in the frontend status maps (no lowercase alias keys).
 - Brand: **Fadarosi**. Order IDs look like `CLN-YYYYMMDD-NNN`. Payment methods:
   `fadarosipay`, `transfer_bank` (VA), `cod`.
 
@@ -45,6 +58,32 @@ even though its scripts look npm-ish.
   (`tests/unit`, bun test — no jsdom/vitest, polyfill localStorage in tests), and Playwright e2e
   `bun run test:e2e` (browsers via `bunx playwright install chromium`). `tests/unit` and `e2e/` are
   OUTSIDE `tsconfig.app.json` include, so `tsc -b` ignores them, but eslint lints them.
+
+### Midtrans payment gateway
+
+- Payment methods: `fadarosipay` (instant wallet PAID + income cashflow at checkout), `transfer_bank`
+  (Midtrans Snap VA token; payment stays PENDING until the webhook confirms it), `cod` (PENDING, paid
+  when the order reaches SELESAI). Payment methods without a VA/bank gateway (fadarosipay, cod) never
+  call Midtrans.
+- Required env (env.ts fails fast if missing): `MIDTRANS_MERCHANT_ID`, `MIDTRANS_SERVER_KEY`,
+  `MIDTRANS_CLIENT_KEY` (sandbox values in `backend/.env`; frontend only needs
+  `VITE_PUBLIC_MIDTRANS_CLIENT_KEY` to open the Snap JS overlay). See `backend/.env.example`.
+- Only `transfer_bank` calls Midtrans Snap: `CreateOrderUseCase` builds a token via `midtransSnapClient`
+  (injectable 8th constructor param — unit tests inject a fake and never hit the network;
+  `defaultMidtransSnap()` wraps the real `midtrans-client` Snap). The Snap `token` is stored as
+  `payments.transaction_id`; the create response returns `paymentGate { redirect_url, token, order_id }`
+  (NOT full order detail — fetch `GET /api/orders/:orderId` for `status`/`payment`).
+- Webhook `POST /api/midtrans/notification` (public route, JSON body) verifies the Midtrans signature
+  `sha512(order_id + status_code + gross_amount + serverKey)` (hex, compare lowercase), then re-reads the
+  authoritative status via `snap.transaction.status(order_id)` (cast through a local `snapWithTransaction`
+  type — `@types/midtrans-client` does not declare it) and marks the payment PAID + books income
+  (`category: "sales"`) idempotently (a second PAID notification is a no-op). Logic lives in
+  `src/useCase/payment/midtransNotificationUseCase.ts`; wired as `handleMidtransNotificationUseCase`
+  singleton in `presentation/routes/container.ts`.
+- `orderDetailType.customer` includes `email` — Midtrans `customer_details` requires it (an empty email
+  is rejected with HTTP 400). Keep `email` in the `user` select of `pgOrderRepository` includes.
+- Integration tests hit the real Midtrans sandbox for transfer_bank orders, so `bun run test:integration`
+  runs with `--timeout=30000` (Bun's 5s default is shorter than the sandbox round-trip).
 
 ### Clean / Onion architecture
 
@@ -73,8 +112,9 @@ config/        env.ts — zod-validates process.env (DATABASE_URL, JWT_SECRET, .
   (also Prisma/Zod errors) to a consistent JSON envelope via `helper/errorHandling`.
 - Admin-only endpoints go behind `adminMiddleware` (from `container.ts`). It composes the bearer
   auth middleware and rejects non-`admin` roles with `AppError.forbidden`.
-- API routes: `/api/v1/users`, `/api/v1/addresses`, `/api/v1/outlets`, `/api/v1/services`,
-  `/api/v1/products`, `/api/v1/orders`, `/api/v1/payments`, `/api/v1/admin`; health check `/health`.
+- API routes: `/api/users`, `/api/addresses`, `/api/outlets`, `/api/services`,
+  `/api/products`, `/api/orders`, `/api/payments`, `/api/midtrans`, `/api/admin`; health check `/health`.
+  Frontend `API_BASE` = `VITE_API_URL` ?? `http://localhost:3000/api`.
 
 ### Prisma (important quirks)
 
@@ -97,8 +137,8 @@ config/        env.ts — zod-validates process.env (DATABASE_URL, JWT_SECRET, .
 ## Environment / git gotchas
 
 - `.env` files and `*.skills-lock.json` are gitignored at the root. Copy `backend/.env.example` to
-  `backend/.env` and set `DATABASE_URL` + a long random `JWT_SECRET` (env.ts fails fast on missing
-  values — the server refuses to boot without them).
+  `backend/.env` and set `DATABASE_URL` + a long random `JWT_SECRET` + the `MIDTRANS_*` sandbox keys
+  (env.ts fails fast on missing values — the server refuses to boot without them).
 - Local PostgreSQL in this environment: a user-owned cluster may be started without sudo via
   `/usr/lib/postgresql/17/bin/pg_ctl -D /tmp/opencode/pgdata -o "-p 5432 -k /tmp/opencode" start`
   (DATABASE_URL points to `postgresql://postgres:postgres@localhost:5432/laundry`). Push schemas for

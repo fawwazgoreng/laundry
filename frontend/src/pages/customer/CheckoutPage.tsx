@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Check, Minus, Plus, Trash2, Wallet, Landmark } from "lucide-react"
+import { Check, Minus, Plus, Trash2, Wallet, Landmark, WashingMachine, Box } from "lucide-react"
 import { formatIDR } from "../../lib/format"
-import type { Address, Outlet, OrderDetail, User } from "../../lib/types"
+import type { Address, Outlet, User, PaymentGate } from "../../lib/types"
 import { addressApi, authApi, orderApi, outletApi, paymentApi } from "../../services/api"
 import { useOrderDraft } from "../../context/OrderDraftContext"
 import { ApiError } from "../../services/apiClient"
+import type { SnapResult } from "../../global/payment.global"
 
 const progressSteps = ["Pilih Layanan", "Detail & Berat", "Jadwal & Alamat", "Konfirmasi & Bayar"]
 
@@ -17,6 +18,7 @@ interface CartLine {
   qty: number
   unit: string
   pricePerUnit: number
+  image?: string
 }
 
 interface DeliverAddress {
@@ -49,6 +51,7 @@ export function CheckoutPage() {
       qty: p.qty,
       unit: "Pcs",
       pricePerUnit: p.product.price,
+      image: p.product.image
     })),
   ])
   const [addresses, setAddresses] = useState<DeliverAddress[]>([])
@@ -77,8 +80,25 @@ export function CheckoutPage() {
         if (primary) setChoiceAddress(primary.id)
       })
       .catch(() => undefined)
-      authApi.me().then((user) => setCurrentUser(user))
+    authApi.me().then((user) => setCurrentUser(user))
   }, [])
+
+
+  useEffect(() => {
+    const scriptUrl = 'https://app.sandbox.midtrans.com/snap/snap.js';
+
+    const scriptTag = document.createElement('script');
+    scriptTag.src = scriptUrl;
+
+    const myMidtransClientKey = import.meta.env.VITE_PUBLIC_MIDTRANS_CLIENT_KEY;
+    scriptTag.setAttribute('data-client-key', myMidtransClientKey);
+
+    document.body.appendChild(scriptTag);
+
+    return () => {
+      document.body.removeChild(scriptTag);
+    }
+  }, []);
 
   const primaryAddress = addresses.find((a) => a.isPrimary) ?? addresses[0]
 
@@ -103,7 +123,7 @@ export function CheckoutPage() {
   const total = itemsTotal + deliveryFee - memberDiscount - voucherDiscount
 
   async function handleCreateOrder() {
-    if (!primaryAddress || services.length === 0) return
+    if (!primaryAddress) return
     setSubmitting(true)
     setError("")
     try {
@@ -112,7 +132,7 @@ export function CheckoutPage() {
       if (!outlet) throw new ApiError("Tidak ada outlet yang tersedia", 404)
       const distance_km = 2.5
       const paidDelivery = orderApi
-      const order: OrderDetail = await paidDelivery.create({
+      const order: PaymentGate = await paidDelivery.create({
         services: services.map((s) => ({
           laundry_service_id: s.service.id,
           qty: s.qty,
@@ -127,14 +147,40 @@ export function CheckoutPage() {
         estimated_delivery: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
         notes: "",
       })
-      if (order.payment && order.payment.transaction_id) {
-        try {
-          await paymentApi.byOrder(order.order_id)
-        } catch {
-          // best-effort payment fetch
+      if (paymentMethod === "transfer") {
+        // Dapatkan Snap Token (Bisa berada di properti order.payment.snap_token atau panggil API payment terpisah)
+        let snapToken = order.token;
+
+        // Jika backend Anda membutuhkan dipanggil ulang via paymentApi:
+        if (!snapToken && order.order_id) {
+          const paymentRes = await paymentApi.byOrder(order.order_id);
+          snapToken = paymentRes.transaction_id;
         }
+
+        if (snapToken && window.snap) {
+          // 3. Panggil Pop-up Snap Midtrans menggunakan token yang didapat
+          window.snap.pay(snapToken, {
+            onSuccess: (result: SnapResult) => {
+              console.log('Success:', result);
+              navigate(`/riwayat/${order.order_id}`);
+            },
+            onPending: (result: SnapResult) => {
+              console.log('Pending:', result);
+              navigate(`/riwayat/${order.order_id}`);
+            },
+            onError: (result: SnapResult) => {
+              console.error('Error:', result);
+              setError('Pembayaran gagal, silakan coba lagi.');
+            },
+            onClose: () => {
+              navigate(`/riwayat/${order.order_id}`);
+            },
+          });
+        } else {
+          throw new Error("Gagal mendapatkan Snap Token dari backend");
+        }
+        // navigate(`/payment/${order.order_id}`)
       }
-      navigate(`/payment/${order.order_id}`)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Terjadi kesalahan saat membuat pesanan")
     } finally {
@@ -181,6 +227,15 @@ export function CheckoutPage() {
             <div className="divide-y divide-gray-100">
               {cart.map((line) => (
                 <div key={line.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className=" w-16 h-16 flex items-center justify-center">
+                      <span className="bg-primary-light w-full overflow-hidden h-full flex items-center justify-center text-6xl rounded-xl">
+                          {line.tag == "Layanan Laundry" ? (
+                            <WashingMachine></WashingMachine>
+                          ) : (
+                            <img src={line.image} className="w-full h-full" alt="" />
+                          )}
+                      </span>
+                  </div>
                   <div>
                     <span className="rounded bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
                       {line.tag}
@@ -230,14 +285,12 @@ export function CheckoutPage() {
               <div
                 key={addr.id}
                 onClick={() => setChoiceAddress(addr.id)}
-                className={`mb-3 flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 sm:flex-row sm:items-center sm:gap-6 ${
-                  addr.id == choiceAddress ? "border-primary" : "border-gray-200"
-                }`}
+                className={`mb-3 flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 sm:flex-row sm:items-center sm:gap-6 ${addr.id == choiceAddress ? "border-primary" : "border-gray-200"
+                  }`}
               >
                 <span
-                  className={`h-6 w-6 shrink-0 rounded-full border-2 ${
-                    choiceAddress === addr.id ? "border-primary bg-primary" : "border-gray-300"
-                  }`}
+                  className={`h-6 w-6 shrink-0 rounded-full border-2 ${choiceAddress === addr.id ? "border-primary bg-primary" : "border-gray-300"
+                    }`}
                 />
                 <span>
                   <div className="flex items-center gap-2">
@@ -276,14 +329,12 @@ export function CheckoutPage() {
             <div className="space-y-3">
               <button
                 onClick={() => setPaymentMethod("transfer")}
-                className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left ${
-                  paymentMethod === "transfer" ? "border-primary" : "border-gray-200"
-                }`}
+                className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left ${paymentMethod === "transfer" ? "border-primary" : "border-gray-200"
+                  }`}
               >
                 <span
-                  className={`h-4 w-4 rounded-full border-2 ${
-                    paymentMethod === "transfer" ? "border-primary bg-primary" : "border-gray-300"
-                  }`}
+                  className={`h-4 w-4 rounded-full border-2 ${paymentMethod === "transfer" ? "border-primary bg-primary" : "border-gray-300"
+                    }`}
                 />
                 <Landmark size={18} className="text-gray-400" />
                 <div>
@@ -293,14 +344,12 @@ export function CheckoutPage() {
               </button>
               <button
                 onClick={() => setPaymentMethod("cod")}
-                className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left ${
-                  paymentMethod === "cod" ? "border-primary" : "border-gray-200"
-                }`}
+                className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left ${paymentMethod === "cod" ? "border-primary" : "border-gray-200"
+                  }`}
               >
                 <span
-                  className={`h-4 w-4 rounded-full border-2 ${
-                    paymentMethod === "cod" ? "border-primary bg-primary" : "border-gray-300"
-                  }`}
+                  className={`h-4 w-4 rounded-full border-2 ${paymentMethod === "cod" ? "border-primary bg-primary" : "border-gray-300"
+                    }`}
                 />
                 <Wallet size={18} className="text-gray-400" />
                 <div>

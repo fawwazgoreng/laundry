@@ -11,11 +11,14 @@ import type {
     orderListFilters,
     orderListItemType,
     orderStatus,
+    paymentGate,
 } from "../../domain/types/orderType";
 import type { meta } from "../../domain/types/globalType";
 import type { paymentType } from "../../domain/types/paymentType";
 import { AppError } from "../../helper/errorHandling/appError";
 import { logger } from "../../helper/logging/logger";
+import { env } from "../../config/env";
+import * as midtransClient from "midtrans-client";
 
 function buildMeta(count: number, page: number, perPage: number): meta {
     return {
@@ -35,6 +38,20 @@ function isDuplicateOrderId(error: unknown): boolean {
     );
 }
 
+export type snapTransaction = { token: string; redirect_url: string };
+
+export interface midtransSnapClient {
+    createTransaction(parameter: Record<string, unknown>): Promise<snapTransaction>
+}
+
+export function defaultMidtransSnap(): midtransSnapClient {
+    return new midtransClient.Snap({
+        clientKey: env.MIDTRANS_CLIENT_KEY,
+        isProduction: env.NODE_ENV === "production",
+        serverKey: env.MIDTRANS_SERVER_KEY,
+    }) as unknown as midtransSnapClient;
+}
+
 export class CreateOrderUseCase {
     constructor(
         private readonly orderRepository: orderRepository,
@@ -44,9 +61,10 @@ export class CreateOrderUseCase {
         private readonly outletRepository: outletRepository,
         private readonly paymentRepository: paymentRepository,
         private readonly cashflowRepository: cashflowRepository,
-    ) {}
+        private readonly snap: midtransSnapClient = defaultMidtransSnap(),
+    ) { }
 
-    async execute(userId: string, input: unknown): Promise<orderDetailType> {
+    async execute(userId: string, input: unknown): Promise<paymentGate> {
         const dto = orderEntity.validateCreate(input);
 
         const address = await this.addressRepository.findById(userId, dto.user_address_id);
@@ -117,9 +135,30 @@ export class CreateOrderUseCase {
         }
 
         if (!order) throw new Error("failed to create order");
-        await this.issuePayment(order, dto.payment_method, totals.total_amount);
 
-        const fresh = await this.orderRepository.findByOrderId(orderId);
+        let snapToken: snapTransaction | null = null;
+        if (dto.payment_method === "transfer_bank") {
+            const parameter = {
+                "transaction_details": {
+                    "order_id": order.order_id,
+                    "gross_amount": order.total_amount
+                },
+                "credit_card": {
+                    "secure": true
+                },
+                "customer_details": {
+                    "first_name": order.customer.username,
+                    "last_name": "",
+                    "email": order.customer.email ?? "",
+                    "phone": order.customer.phone ?? ""
+                }
+            };
+
+            snapToken = await this.snap.createTransaction(parameter);
+        }
+
+        await this.issuePayment(order, dto.payment_method, totals.total_amount, snapToken?.token);
+
         logger.info("order created", {
             requestUserId: userId,
             orderId,
@@ -128,10 +167,14 @@ export class CreateOrderUseCase {
             serviceCount: services.length,
             productCount: products.length,
         });
-        return fresh ?? order;
+        return {
+            redirect_url: snapToken?.redirect_url ?? "",
+            token: snapToken?.token ?? "",
+            order_id: orderId,
+        }
     }
 
-    private async issuePayment(order: orderDetailType, method: string, amount: number): Promise<paymentType | null> {
+    private async issuePayment(order: orderDetailType, method: string, amount: number, transactionToken?: string): Promise<paymentType | null> {
         if (method === "fadarosipay") {
             const payment = await this.paymentRepository.create({
                 order_id: order.order_id,
@@ -156,16 +199,15 @@ export class CreateOrderUseCase {
         }
 
         if (method === "transfer_bank") {
-            const virtualAccount = `2620${String(Math.floor(100000000000 + Math.random() * 899999999999))}`;
             const payment = await this.paymentRepository.create({
                 order_id: order.order_id,
                 payment_type: method,
                 gross_amount: amount,
-                transaction_id: virtualAccount,
+                transaction_id: transactionToken,
             });
-            logger.warn("virtual account issued", {
+            logger.warn("midtrans snap transaction issued", {
                 orderId: order.order_id,
-                virtualAccount,
+                snapToken: transactionToken,
                 expiresInHours: 24,
             });
             return payment;
@@ -180,7 +222,7 @@ export class CreateOrderUseCase {
 }
 
 export class ListOrdersUseCase {
-    constructor(private readonly orderRepository: orderRepository) {}
+    constructor(private readonly orderRepository: orderRepository) { }
 
     async execute(
         userId: string,
@@ -206,7 +248,7 @@ export class ListOrdersUseCase {
 }
 
 export class GetOrderUseCase {
-    constructor(private readonly orderRepository: orderRepository) {}
+    constructor(private readonly orderRepository: orderRepository) { }
 
     async execute(orderId: string, userId: string, role: string): Promise<orderDetailType> {
         const order = await this.orderRepository.findByOrderId(orderId);
@@ -224,7 +266,7 @@ export class UpdateOrderStatusUseCase {
         private readonly orderRepository: orderRepository,
         private readonly paymentRepository: paymentRepository,
         private readonly cashflowRepository: cashflowRepository,
-    ) {}
+    ) { }
 
     async execute(orderId: string, input: unknown, actorUserId: string): Promise<orderDetailType> {
         const { status } = input as { status: unknown };
@@ -284,7 +326,7 @@ export class CancelOrderUseCase {
     constructor(
         private readonly orderRepository: orderRepository,
         private readonly cashflowRepository: cashflowRepository,
-    ) {}
+    ) { }
 
     async execute(orderId: string, userId: string): Promise<orderDetailType> {
         const order = await this.orderRepository.findByOrderId(orderId);
@@ -318,7 +360,7 @@ export class DeleteOrderUseCase {
     constructor(
         private readonly orderRepository: orderRepository,
         private readonly cashflowRepository: cashflowRepository,
-    ) {}
+    ) { }
 
     async execute(orderId: string, actorUserId: string): Promise<orderDetailType> {
         const order = await this.orderRepository.findByOrderId(orderId);

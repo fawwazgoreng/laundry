@@ -2,12 +2,20 @@ import { useEffect, useState } from "react"
 import type { Outlet } from "../../lib/types"
 import { outletApi } from "../../services/api"
 import { useToast } from "../../components/Toast"
+import { useGeolocation } from "../../lib/useGeoLocation"
+import { LocateFixed } from "lucide-react"
+import { reverseGeocode } from "../../lib/geoCode"
+import { MapClickPickerAdmin } from "../../components/mapClickPickerAdmin"
 
 interface DayHours {
   day: string
   active: boolean
   range: string
 }
+
+type Coords = { lat: number; lng: number }
+
+const FALLBACK_CENTER: Coords = { lat: -6.7559, lng: 111.0378 }
 
 const defaultDays: DayHours[] = [
   { day: "Senin", active: true, range: "08:00 - 20:00" },
@@ -43,27 +51,56 @@ function serializeWeeklyHours(hours: DayHours[]): string {
 
 export function AdminSettingsPage() {
   const { success: toastSuccess, error: toastError } = useToast()
+
+  // FIX: hook dipanggil DI DALAM komponen, bukan di module scope
+  const { loading: loadingGps, locate , result } = useGeolocation()
+
   const [outletId, setOutletId] = useState<number | null>(null)
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
   const [address, setAddress] = useState("")
   const [hours, setHours] = useState<DayHours[]>(defaultDays)
   const [radius, setRadius] = useState(5)
+
+  const [coords, setCoords] = useState<Coords | null>(null)
+
+  const [loadingOutlet, setLoadingOutlet] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [mapError, setMapError] = useState<string | null>(null)
 
   useEffect(() => {
+    let cancelled = false
+
     outletApi
       .getDefault()
       .then((o: Outlet) => {
+        if (cancelled) return
         setOutletId(o.id)
         setName(o.name)
         setPhone(o.phone ?? "")
         setAddress(o.address_text ?? "")
         setHours(parseWeeklyHours(o.weekly_hours))
         setRadius(o.max_coverage_km)
+        setCoords(
+          o.latitude != null && o.longitude != null
+            ? { lat: o.latitude, lng: o.longitude }
+            : FALLBACK_CENTER,
+        )
+        console.log(o)
       })
-      .catch(() => undefined)
+      .catch(() => {
+        if (cancelled) return
+        setCoords(FALLBACK_CENTER)
+        toastError("Gagal memuat data outlet")
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingOutlet(false)
+      })
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   function toggleDay(idx: number) {
@@ -74,8 +111,35 @@ export function AdminSettingsPage() {
     )
   }
 
+  async function applyCoords(next: Coords, fillAddress = false) {
+    setCoords(next)
+    setMapError(null)
+
+    if (!fillAddress) return
+    try {
+      const result = await reverseGeocode(next.lat, next.lng)
+      if (result) setAddress(result.displayName)
+    } catch {
+      // Reverse geocode gagal bukan masalah fatal — koordinat tetap tersimpan.
+    }
+  }
+
+  async function handleUseMyLocation() {
+    try {
+      locate()
+      if (result == null) {
+        setMapError("Izin lokasi ditolak. Pilih manual di peta.")
+        return 
+      }
+      console.log(result)
+      await applyCoords({ lat: result?.lat, lng: result?.lng }, true)
+    } catch {
+      setMapError("Izin lokasi ditolak. Pilih manual di peta.")
+    }
+  }
+
   async function handleSave() {
-    if (!outletId) return
+    if (!outletId || !coords) return
     setSaving(true)
     setSaved(false)
     try {
@@ -85,7 +149,9 @@ export function AdminSettingsPage() {
         address_text: address || undefined,
         max_coverage_km: radius,
         weekly_hours: serializeWeeklyHours(hours),
-      })
+        latitude: coords.lat,
+        longitude: coords.lng,
+      }).then(res => console.log(res))
       setSaved(true)
       toastSuccess("Pengaturan outlet berhasil disimpan")
       setTimeout(() => setSaved(false), 2000)
@@ -98,7 +164,8 @@ export function AdminSettingsPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
-      <div className="rounded-2xl border border-gray-200 bg-white p-6">
+      {/* --- Profil Outlet --- */}
+      <section className="rounded-2xl border border-gray-200 bg-white p-6">
         <h2 className="mb-4 text-base font-bold text-ink-strong">Profil Outlet Cleanora</h2>
         <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
@@ -124,9 +191,10 @@ export function AdminSettingsPage() {
           onChange={(e) => setAddress(e.target.value)}
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-primary"
         />
-      </div>
+      </section>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-6">
+      {/* --- Jam Operasional --- */}
+      <section className="rounded-2xl border border-gray-200 bg-white p-6">
         <h2 className="mb-4 text-base font-bold text-ink-strong">Jam Operasional Outlet</h2>
         <div className="divide-y divide-gray-100">
           {hours.map((h, idx) => (
@@ -143,7 +211,9 @@ export function AdminSettingsPage() {
                 <input
                   value={h.range}
                   onChange={(e) =>
-                    setHours((prev) => prev.map((row, i) => (i === idx ? { ...row, range: e.target.value } : row)))
+                    setHours((prev) =>
+                      prev.map((row, i) => (i === idx ? { ...row, range: e.target.value } : row)),
+                    )
                   }
                   className="w-36 rounded-lg border border-gray-200 px-3 py-1.5 text-right text-sm outline-none focus:border-primary"
                 />
@@ -155,10 +225,12 @@ export function AdminSettingsPage() {
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-2xl border border-gray-200 bg-white p-6">
+      {/* --- Radius & Titik Outlet --- */}
+      <section className="rounded-2xl border border-gray-200 bg-white p-6">
         <h2 className="mb-4 text-base font-bold text-ink-strong">Radius &amp; Area Jangkauan Kurir</h2>
+
         <div className="mb-5 flex items-center gap-4">
           <span className="w-24 shrink-0 text-sm font-medium text-ink-strong">Radius Antar</span>
           <input
@@ -175,33 +247,43 @@ export function AdminSettingsPage() {
           </span>
         </div>
 
-        <div className="relative h-64 overflow-hidden rounded-xl bg-gray-100">
-          <div className="absolute inset-0 opacity-60">
-            <svg viewBox="0 0 400 260" className="h-full w-full">
-              <rect width="400" height="260" fill="#eceae4" />
-              {Array.from({ length: 10 }).map((_, i) => (
-                <rect key={i} x={i * 42} y={0} width="20" height="260" fill="#ddd8ce" opacity={i % 2 ? 0.5 : 0.2} />
-              ))}
-              {Array.from({ length: 6 }).map((_, i) => (
-                <rect key={i} x={0} y={i * 46} width="400" height="18" fill="#ddd8ce" opacity={i % 2 ? 0.4 : 0.15} />
-              ))}
-            </svg>
-          </div>
-          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-            <span
-              className="block rounded-full border-2 border-sky-400"
-              style={{ width: `${radius * 22}px`, height: `${radius * 22}px` }}
-            />
-          </div>
-          <div className="absolute left-1/2 top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary ring-4 ring-primary-light" />
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs text-gray-500">Klik di peta untuk memindahkan titik outlet.</p>
+          <button
+            onClick={handleUseMyLocation}
+            disabled={loadingGps}
+            className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold text-ink hover:bg-gray-50 disabled:opacity-50"
+          >
+            <LocateFixed size={14} />
+            {loadingGps ? "Mencari..." : "Gunakan Lokasi Saya"}
+          </button>
         </div>
-      </div>
 
-      <div className="flex items-center gap-4 justify-end">
+        {loadingOutlet || !coords ? (
+          <div className="flex h-64 items-center justify-center rounded-xl bg-gray-100 text-sm text-gray-400">
+            Memuat peta...
+          </div>
+        ) : (
+          <MapClickPickerAdmin
+            value={coords}
+            onChange={(next) => applyCoords(next)}
+            radiusKm={radius}
+            className="h-80 w-full overflow-hidden rounded-xl"
+          />
+        )}
+
+        {mapError && <p className="mt-2 text-xs font-medium text-red-500">{mapError}</p>}
+
+        <p className="mt-2 text-xs text-gray-400">
+          Titik: {coords ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}` : "-"}
+        </p>
+      </section>
+
+      <div className="flex items-center justify-end gap-4">
         {saved && <span className="text-sm font-semibold text-emerald-600">Tersimpan!</span>}
         <button
           onClick={handleSave}
-          disabled={saving || !outletId}
+          disabled={saving || !outletId || !coords}
           className="rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
         >
           {saving ? "Menyimpan..." : "Simpan Perubahan"}

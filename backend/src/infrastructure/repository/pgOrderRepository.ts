@@ -15,7 +15,7 @@ import type {
 
 type OrderRow = Prisma.OrdersGetPayload<{
     include: {
-        user: { select: { id: true; username: true; phone: true } }
+        user: { select: { id: true; username: true; phone: true; email: true } }
         address: { select: { id: true; label: true; address_text: true } }
         outlet: { select: { id: true; name: true; latitude: true; longitude: true } }
         payments: true
@@ -95,6 +95,7 @@ function toOrderDetail(row: OrderRow): orderDetailType {
             id: row.user.id,
             username: row.user.username,
             phone: row.user.phone,
+            email: row.user.email,
         },
         address: row.address
             ? { id: row.address.id, label: row.address.label, address_text: row.address.address_text }
@@ -113,7 +114,7 @@ function toOrderDetail(row: OrderRow): orderDetailType {
 }
 
 const orderInclude = {
-    user: { select: { id: true, username: true, phone: true } },
+    user: { select: { id: true, username: true, phone: true, email: true } },
     address: { select: { id: true, label: true, address_text: true } },
     outlet: { select: { id: true, name: true, latitude: true, longitude: true } },
     payments: { orderBy: { created_at: "desc" as const }, take: 1 },

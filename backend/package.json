@@ -5,21 +5,23 @@
     "typecheck": "./node_modules/.bin/tsc --noEmit -p tsconfig.json",
     "test": "bun test src/domain/entities src/useCase",
     "test:unit": "bun test src/domain/entities src/useCase",
-    "test:integration": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/laundry_test\" bun test tests/integration",
-    "seed" : "bun run src/infrastructure/seed/seed.ts"
+    "test:integration": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/laundry_test\" bun test --timeout=30000 tests/integration",
+    "seed": "bun run src/infrastructure/seed/seed.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.9.1",
     "@prisma/client": "^7.9.1",
+    "@types/midtrans-client": "^1.4.0",
     "dotenv": "^17.4.2",
     "hono": "^4.13.0",
     "hono-rate-limiter": "^0.5.3",
+    "midtrans-client": "^1.4.3",
     "pg": "^8.22.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/node": "^26.1.2",
+    "@types/node": "^26.6.1",
     "@types/pg": "^8.20.4",
     "prisma": "^7.9.1",
     "prisma-json-types-generator": "^5.1.1",

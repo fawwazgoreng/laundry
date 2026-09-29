@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ChevronLeft, ChevronRight, Eye, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, CreditCard, Eye, MapPin, Receipt, Search } from "lucide-react"
 import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
 import type { OrderListItem, OrderStatus } from "../../lib/types"
@@ -156,6 +156,15 @@ export function UserOrderHistory() {
                     <div className="flex items-center justify-end gap-2">
                       <Link to={"/riwayat/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
                         <Eye size={14} />
+                      </Link>
+                      <Link to={"/tracking/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
+                        <MapPin size={14} />
+                      </Link>
+                      <Link to={"/payment/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
+                        <CreditCard size={14} />
+                      </Link>
+                      <Link to={"/nota/" + order.id} target="blank" className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
+                        <Receipt size={14} />
                       </Link>
                     </div>
                   </td>

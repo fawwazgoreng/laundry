@@ -12,6 +12,10 @@ const envSchema = z.object({
     LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
     LOG_DIR: z.string().min(1).default("logs"),
     LOG_RETENTION_DAYS: z.coerce.number().int().positive().default(30),
+    MIDTRANS_MERCHANT_ID: z.string().min(1),
+    MIDTRANS_SERVER_KEY: z.string().min(1),
+    MIDTRANS_CLIENT_KEY: z.string().min(1)
+
 });
 
 const parsed = envSchema.safeParse(process.env);

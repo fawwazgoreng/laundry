@@ -11,6 +11,7 @@ import { pgStatsRepository } from "../../infrastructure/repository/pgStatsReposi
 import { pgTokenRepository } from "../../infrastructure/repository/pgTokenRepository";
 import { pgUserRepository } from "../../infrastructure/repository/pgUserRepository";
 import { AuthUseCase } from "../../useCase/user/authUseCase";
+import { HandleMidtransNotificationUseCase } from "../../useCase/payment/midtransNotificationUseCase";
 import { createAdminMiddleware } from "../middleware/adminMiddleware";
 import { createAuthMiddleware } from "../middleware/authMiddleware";
 
@@ -34,3 +35,8 @@ export const tokenIssuer = new jwtTokenEntity(
 export const authUseCase = new AuthUseCase(userRepository, tokenRepository, tokenIssuer);
 export const authMiddleware = createAuthMiddleware(authUseCase);
 export const adminMiddleware = createAdminMiddleware(authMiddleware);
+export const handleMidtransNotificationUseCase = new HandleMidtransNotificationUseCase(
+    paymentRepository,
+    orderRepository,
+    cashflowRepository,
+);

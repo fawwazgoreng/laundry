@@ -17,6 +17,7 @@ import paymentRouter from "./presentation/routes/paymentRoute";
 import productRouter from "./presentation/routes/productRoute";
 import serviceRouter from "./presentation/routes/serviceRoute";
 import userRouter from "./presentation/routes/userRoute";
+import midtransRouter from "./presentation/routes/midtransRouter";
 import type { AppVariables } from "./presentation/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -71,5 +72,6 @@ app.route("/api/products", productRouter);
 app.route("/api/orders", orderRouter);
 app.route("/api/payments", paymentRouter);
 app.route("/api/admin", adminRouter);
+app.route("/api/midtrans", midtransRouter);
 
 export default app;

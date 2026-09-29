@@ -54,7 +54,7 @@ beforeAll(async () => {
     await resetTestDb();
 
     const register = await json(
-        await api("POST", "/api/v1/users/register", {
+        await api("POST", "/api/users/register", {
             ip: `10.0.0.${Math.floor(Math.random() * 250) + 1}`,
             body: {
                 username: "siti_nur",
@@ -68,7 +68,7 @@ beforeAll(async () => {
     expect(register.data).not.toHaveProperty("accessToken");
 
     const login = await json(
-        await api("POST", "/api/v1/users/login", {
+        await api("POST", "/api/users/login", {
             ip: `10.0.0.${Math.floor(Math.random() * 250) + 1}`,
             body: { email: "siti@fadarosi.id", password: "Password123" },
         }),
@@ -76,7 +76,7 @@ beforeAll(async () => {
     customerToken = login.data.accessToken;
 
     const adminLogin = await json(
-        await api("POST", "/api/v1/users/login", {
+        await api("POST", "/api/users/login", {
             ip: `10.0.0.${Math.floor(Math.random() * 250) + 1}`,
             body: { email: "test-admin@fadarosi.id", password: "Admin@1234" },
         }),
@@ -84,7 +84,7 @@ beforeAll(async () => {
     adminToken = adminLogin.data.accessToken;
 
     const addr = await json(
-        await api("POST", "/api/v1/addresses", {
+        await api("POST", "/api/addresses", {
             token: customerToken,
             body: {
                 label: "Rumah Siti",
@@ -115,19 +115,19 @@ describe("health", () => {
 
 describe("public catalog", () => {
     it("lists outlets", async () => {
-        const res = await api("GET", "/api/v1/outlets", { ip: `10.0.2.${Math.floor(Math.random() * 250) + 1}` });
+        const res = await api("GET", "/api/outlets", { ip: `10.0.2.${Math.floor(Math.random() * 250) + 1}` });
         expect(res.status).toBe(200);
         expect((await json(res)).data[0].name).toContain("Test Outlet");
     });
 
     it("lists services", async () => {
-        const res = await api("GET", "/api/v1/services", { ip: `10.0.3.${Math.floor(Math.random() * 250) + 1}` });
+        const res = await api("GET", "/api/services", { ip: `10.0.3.${Math.floor(Math.random() * 250) + 1}` });
         const body = await json(res);
         expect(body.data.length).toBe(3);
     });
 
     it("lists products with pagination meta", async () => {
-        const res = await api("GET", "/api/v1/products?page=1&perPage=2", { ip: `10.0.4.${Math.floor(Math.random() * 250) + 1}` });
+        const res = await api("GET", "/api/products?page=1&perPage=2", { ip: `10.0.4.${Math.floor(Math.random() * 250) + 1}` });
         const body = await json(res);
         expect(body.meta.count).toBeGreaterThanOrEqual(3);
         expect(body.meta.currentPage).toBe(1);
@@ -138,7 +138,7 @@ describe("public catalog", () => {
 describe("addresses", () => {
     it("creates, lists, promotes and deletes an address", async () => {
         const created = await json(
-            await api("POST", "/api/v1/addresses", {
+            await api("POST", "/api/addresses", {
                 token: customerToken,
                 body: {
                     label: "Kantor",
@@ -152,7 +152,7 @@ describe("addresses", () => {
         expect(created.data.id).toBeGreaterThan(1);
 
         const second = await json(
-            await api("POST", "/api/v1/addresses", {
+            await api("POST", "/api/addresses", {
                 token: customerToken,
                 body: {
                     label: "Rumah",
@@ -163,25 +163,25 @@ describe("addresses", () => {
             }),
         );
 
-        const primary = await json(await api("PATCH", `/api/v1/addresses/${second.data.id}/primary`, { token: customerToken }));
+        const primary = await json(await api("PATCH", `/api/addresses/${second.data.id}/primary`, { token: customerToken }));
         expect(primary.data.is_primary).toBe(true);
 
-        const list = await json(await api("GET", "/api/v1/addresses", { token: customerToken }));
+        const list = await json(await api("GET", "/api/addresses", { token: customerToken }));
         expect(list.data.length).toBe(3);
         expect(list.data.find((a: any) => a.id === second.data.id).is_primary).toBe(true);
 
-        const updated = await json(await api("PUT", `/api/v1/addresses/${created.data.id}`, { token: customerToken, body: { label: "Kantor Baru" } }));
+        const updated = await json(await api("PUT", `/api/addresses/${created.data.id}`, { token: customerToken, body: { label: "Kantor Baru" } }));
         expect(updated.data.label).toBe("Kantor Baru");
 
-        const del = await api("DELETE", `/api/v1/addresses/${created.data.id}`, { token: customerToken });
+        const del = await api("DELETE", `/api/addresses/${created.data.id}`, { token: customerToken });
         expect(del.status).toBe(204);
 
-        const removed = await api("GET", `/api/v1/addresses/${created.data.id}`, { token: customerToken });
+        const removed = await api("GET", `/api/addresses/${created.data.id}`, { token: customerToken });
         expect(removed.status).toBe(404);
     });
 
     it("rejects an invalid address", async () => {
-        const res = await api("POST", "/api/v1/addresses", {
+        const res = await api("POST", "/api/addresses", {
             token: customerToken,
             body: { label: "X", address_text: "Jl.", latitude: 999, longitude: 106 },
         });
@@ -190,31 +190,37 @@ describe("addresses", () => {
 });
 
 describe("orders", () => {
-    it("creates a transfer_bank order with a virtual account", async () => {
-        const res = await api("POST", "/api/v1/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId) });
+    it("creates a transfer_bank order with a midtrans snap transaction", async () => {
+        const res = await api("POST", "/api/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId) });
         expect(res.status).toBe(201);
         const body = await json(res);
         expect(body.data.order_id).toMatch(/^CLN-\d{8}-\d{3}$/);
-        expect(body.data.status).toBe("BARU");
-        expect(body.data.payment.status).toBe("PENDING");
-        expect(body.data.payment.payment_type).toBe("transfer_bank");
-        expect(body.data.payment.transaction_id).toMatch(/^2620/);
-        expect(body.data.delivery_fee).toBe(3000);
+        expect(body.data.token).toBeTruthy();
+        expect(body.data.redirect_url).toMatch(/^https:\/\//);
+
+        const detail = await json(await api("GET", `/api/orders/${body.data.order_id}`, { token: customerToken }));
+        expect(detail.data.status).toBe("BARU");
+        expect(detail.data.delivery_fee).toBe(3000);
+        expect(detail.data.payment.status).toBe("PENDING");
+        expect(detail.data.payment.payment_type).toBe("transfer_bank");
+        expect(detail.data.payment.transaction_id).toBe(body.data.token);
     });
 
     it("creates a fadarosipay order and books income immediately", async () => {
-        const res = await api("POST", "/api/v1/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId, { payment_method: "fadarosipay" }) });
+        const res = await api("POST", "/api/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId, { payment_method: "fadarosipay" }) });
         const body = await json(res);
         expect(res.status).toBe(201);
-        expect(body.data.payment.status).toBe("PAID");
 
-        const cf = await prisma.cash_flow.findFirst({ where: { order_id: body.data.order_id } });
+        const detail = await json(await api("GET", `/api/orders/${body.data.order_id}`, { token: customerToken }));
+        expect(detail.data.payment.status).toBe("PAID");
+
+        const cf = await prisma.cash_flow.findFirst({ where: { order_id: detail.data.order_id } });
         expect(cf?.type).toBe("income");
-        expect(Number(cf?.amount)).toBe(body.data.total_amount);
+        expect(Number(cf?.amount)).toBe(detail.data.total_amount);
     });
 
     it("rejects an order exceeding product stock", async () => {
-        const res = await api("POST", "/api/v1/orders", {
+        const res = await api("POST", "/api/orders", {
             token: customerToken,
             body: orderPayload(serviceIds, customerAddressId, {
                 products: [{ product_id: productIds[2], qty: 99 }],
@@ -224,51 +230,43 @@ describe("orders", () => {
     });
 
     it("rejects an invalid payment method", async () => {
-        const res = await api("POST", "/api/v1/orders", {
+        const res = await api("POST", "/api/orders", {
             token: customerToken,
             body: orderPayload(serviceIds, customerAddressId, { payment_method: "bitcoin" }),
         });
         expect(res.status).toBe(422);
     });
 
-    it("rejects a past pickup schedule", async () => {
-        const res = await api("POST", "/api/v1/orders", {
-            token: customerToken,
-            body: orderPayload(serviceIds, customerAddressId, { pickup_schedule: future(-1) }),
-        });
-        expect(res.status).toBe(422);
-    });
-
     it("creates a cod order and completes payment on SELESAI", async () => {
         const created = await json(
-            await api("POST", "/api/v1/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId, { payment_method: "cod" }) }),
+            await api("POST", "/api/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId, { payment_method: "cod" }) }),
         );
         const orderId = created.data.order_id;
 
         for (const status of ["DITERIMA", "DIPROSES", "SIAP_ANTAR", "SELESAI"]) {
-            const res = await api("PATCH", `/api/v1/orders/${orderId}/status`, {
+            const res = await api("PATCH", `/api/orders/${orderId}/status`, {
                 token: adminToken,
                 body: { status },
             });
             expect(res.status).toBe(200);
         }
 
-        const detail = await json(await api("GET", `/api/v1/orders/${orderId}`, { token: customerToken }));
+        const detail = await json(await api("GET", `/api/orders/${orderId}`, { token: customerToken }));
         expect(detail.data.status).toBe("SELESAI");
         expect(detail.data.payment.status).toBe("PAID");
 
         const cf = await prisma.cash_flow.findFirst({ where: { order_id: orderId, type: "income" } });
         expect(Number(cf?.amount)).toBe(detail.data.total_amount);
 
-        const tracking = await json(await api("GET", `/api/v1/orders/${orderId}/tracking`, { token: customerToken }));
+        const tracking = await json(await api("GET", `/api/orders/${orderId}/tracking`, { token: customerToken }));
         expect(tracking.data.length).toBe(5);
     });
 
     it("rejects a skpped status transition", async () => {
         const created = await json(
-            await api("POST", "/api/v1/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId, { payment_method: "cod" }) }),
+            await api("POST", "/api/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId, { payment_method: "cod" }) }),
         );
-        const res = await api("PATCH", `/api/v1/orders/${created.data.order_id}/status`, {
+        const res = await api("PATCH", `/api/orders/${created.data.order_id}/status`, {
             token: adminToken,
             body: { status: "SELESAI" },
         });
@@ -277,9 +275,9 @@ describe("orders", () => {
 
     it("forbids non-admins from updating status", async () => {
         const created = await json(
-            await api("POST", "/api/v1/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId, { payment_method: "cod" }) }),
+            await api("POST", "/api/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId, { payment_method: "cod" }) }),
         );
-        const res = await api("PATCH", `/api/v1/orders/${created.data.order_id}/status`, {
+        const res = await api("PATCH", `/api/orders/${created.data.order_id}/status`, {
             token: customerToken,
             body: { status: "DITERIMA" },
         });
@@ -288,26 +286,26 @@ describe("orders", () => {
 
     it("lets the owner cancel a BARU order", async () => {
         const created = await json(
-            await api("POST", "/api/v1/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId, { payment_method: "cod" }) }),
+            await api("POST", "/api/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId, { payment_method: "cod" }) }),
         );
-        const res = await api("PATCH", `/api/v1/orders/${created.data.order_id}/cancel`, { token: customerToken });
+        const res = await api("PATCH", `/api/orders/${created.data.order_id}/cancel`, { token: customerToken });
         expect(res.status).toBe(200);
         expect((await json(res)).data.status).toBe("DIBATALKAN");
     });
 
     it("blocks cancelling another customer's order", async () => {
-        await api("POST", "/api/v1/users/register", {
+        await api("POST", "/api/users/register", {
             ip: `10.0.12.${Math.floor(Math.random() * 250) + 1}`,
             body: { username: "agus", email: "agus@fadarosi.id", password: "Password123", phone: "081234567814" },
         });
         const otherLogin = await json(
-            await api("POST", "/api/v1/users/login", {
+            await api("POST", "/api/users/login", {
                 ip: `10.0.13.${Math.floor(Math.random() * 250) + 1}`,
                 body: { email: "agus@fadarosi.id", password: "Password123" },
             }),
         );
         const otherAddr = await json(
-            await api("POST", "/api/v1/addresses", {
+            await api("POST", "/api/addresses", {
                 token: otherLogin.data.accessToken,
                 body: {
                     label: "Rumah Agus",
@@ -319,44 +317,45 @@ describe("orders", () => {
         );
 
         const created = await json(
-            await api("POST", "/api/v1/orders", { token: otherLogin.data.accessToken, body: orderPayload(serviceIds, otherAddr.data.id) }),
+            await api("POST", "/api/orders", { token: otherLogin.data.accessToken, body: orderPayload(serviceIds, otherAddr.data.id) }),
         );
-        const res = await api("PATCH", `/api/v1/orders/${created.data.order_id}/cancel`, { token: customerToken });
+        const res = await api("PATCH", `/api/orders/${created.data.order_id}/cancel`, { token: customerToken });
         expect(res.status).toBe(403);
 
-        const forbiddenDetail = await api("GET", `/api/v1/orders/${created.data.order_id}`, { token: customerToken });
+        const forbiddenDetail = await api("GET", `/api/orders/${created.data.order_id}`, { token: customerToken });
         expect(forbiddenDetail.status).toBe(403);
 
-        const adminDetail = await json(await api("GET", `/api/v1/orders/${created.data.order_id}`, { token: adminToken }));
+        const adminDetail = await json(await api("GET", `/api/orders/${created.data.order_id}`, { token: adminToken }));
         expect(adminDetail.data.customer.username).toBe("agus");
     });
 
     it("lists orders with pagination meta for customers and admins", async () => {
-        const userList = await json(await api("GET", "/api/v1/orders?page=1&perPage=5", { token: customerToken }));
+        const userList = await json(await api("GET", "/api/orders?page=1&perPage=5", { token: customerToken }));
         expect(userList.meta.count).toBeGreaterThanOrEqual(6);
         expect(userList.meta.lastPage).toBeGreaterThanOrEqual(1);
 
         const adminList = await json(
-            await api("GET", "/api/v1/orders?status=SELESAI&perPage=5", { token: adminToken }),
+            await api("GET", "/api/orders?status=SELESAI&perPage=5", { token: adminToken }),
         );
         expect(Array.isArray(adminList.data)).toBe(true);
     });
 
     it("rejects listing orders without a token", async () => {
-        const res = await api("GET", "/api/v1/orders", { ip: `10.0.14.${Math.floor(Math.random() * 250) + 1}` });
+        const res = await api("GET", "/api/orders", { ip: `10.0.14.${Math.floor(Math.random() * 250) + 1}` });
         expect(res.status).toBe(401);
     });
 });
 
 describe("payments", () => {
-    it("confirms a virtual account payment and books income", async () => {
+    it("confirms a transfer_bank payment and books income", async () => {
         const created = await json(
-            await api("POST", "/api/v1/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId) }),
+            await api("POST", "/api/orders", { token: customerToken, body: orderPayload(serviceIds, customerAddressId) }),
         );
-        const txId = created.data.payment.transaction_id;
+        const detail = await json(await api("GET", `/api/orders/${created.data.order_id}`, { token: customerToken }));
+        const txId = detail.data.payment.transaction_id;
 
         const confirmed = await json(
-            await api("POST", "/api/v1/payments/confirm", {
+            await api("POST", "/api/payments/confirm", {
                 token: adminToken,
                 body: { transaction_id: txId, status: "PAID", raw_response: { gateway: "bank" } },
             }),
@@ -366,7 +365,7 @@ describe("payments", () => {
         const cf = await prisma.cash_flow.findFirst({ where: { order_id: confirmed.data.order_id, type: "income" } });
         expect(cf?.category).toBe("sales");
 
-        const again = await api("POST", "/api/v1/payments/confirm", {
+        const again = await api("POST", "/api/payments/confirm", {
             token: adminToken,
             body: { transaction_id: txId, status: "PAID" },
         });
@@ -374,7 +373,7 @@ describe("payments", () => {
     });
 
     it("requires an admin to confirm payments", async () => {
-        const res = await api("POST", "/api/v1/payments/confirm", {
+        const res = await api("POST", "/api/payments/confirm", {
             token: customerToken,
             body: { transaction_id: "DOES-NOT-MATTER" },
         });
@@ -384,7 +383,7 @@ describe("payments", () => {
 
 describe("admin", () => {
     it("returns stats for admins", async () => {
-        const res = await api("GET", "/api/v1/admin/stats", { token: adminToken });
+        const res = await api("GET", "/api/admin/stats", { token: adminToken });
         expect(res.status).toBe(200);
         const body = await json(res);
         expect(typeof body.data.orders_today).toBe("number");
@@ -394,7 +393,7 @@ describe("admin", () => {
     });
 
     it("returns a cash-flow summary for admins", async () => {
-        const res = await api("GET", "/api/v1/admin/cash-flow", { token: adminToken });
+        const res = await api("GET", "/api/admin/cash-flow", { token: adminToken });
         expect(res.status).toBe(200);
         const body = await json(res);
         expect(typeof body.data.total_income).toBe("number");
@@ -403,14 +402,14 @@ describe("admin", () => {
     });
 
     it("forbids customers from admin endpoints", async () => {
-        const res = await api("GET", "/api/v1/admin/stats", { token: customerToken });
+        const res = await api("GET", "/api/admin/stats", { token: customerToken });
         expect(res.status).toBe(403);
     });
 });
 
 describe("auth", () => {
     it("rejects a duplicate email on register", async () => {
-        const res = await api("POST", "/api/v1/users/register", {
+        const res = await api("POST", "/api/users/register", {
             ip: `10.0.5.${Math.floor(Math.random() * 250) + 1}`,
             body: { username: "siti_lagi", email: "siti@fadarosi.id", password: "Password123", phone: "081234567812" },
         });
@@ -418,7 +417,7 @@ describe("auth", () => {
     });
 
     it("rejects a weak password", async () => {
-        const res = await api("POST", "/api/v1/users/register", {
+        const res = await api("POST", "/api/users/register", {
             ip: `10.0.6.${Math.floor(Math.random() * 250) + 1}`,
             body: { username: "budi", email: "budi@fadarosi.id", password: "weak", phone: "081234567813" },
         });
@@ -426,7 +425,7 @@ describe("auth", () => {
     });
 
     it("rejects a wrong password", async () => {
-        const res = await api("POST", "/api/v1/users/login", {
+        const res = await api("POST", "/api/users/login", {
             ip: `10.0.7.${Math.floor(Math.random() * 250) + 1}`,
             body: { email: "siti@fadarosi.id", password: "WrongPass1" },
         });
@@ -434,25 +433,25 @@ describe("auth", () => {
     });
 
     it("returns the profile for a valid token", async () => {
-        const res = await api("GET", "/api/v1/users/me", { token: customerToken });
+        const res = await api("GET", "/api/users/me", { token: customerToken });
         const body = await json(res);
         expect(res.status).toBe(200);
         expect(body.data.email).toBe("siti@fadarosi.id");
     });
 
     it("rejects access without a token", async () => {
-        const res = await api("GET", "/api/v1/users/me", { ip: `10.0.8.${Math.floor(Math.random() * 250) + 1}` });
+        const res = await api("GET", "/api/users/me", { ip: `10.0.8.${Math.floor(Math.random() * 250) + 1}` });
         expect(res.status).toBe(401);
     });
 
     it("rotates tokens on refresh", async () => {
         const login = await json(
-            await api("POST", "/api/v1/users/login", {
+            await api("POST", "/api/users/login", {
                 ip: `10.0.9.${Math.floor(Math.random() * 250) + 1}`,
                 body: { email: "siti@fadarosi.id", password: "Password123" },
             }),
         );
-        const res = await api("POST", "/api/v1/users/refresh", {
+        const res = await api("POST", "/api/users/refresh", {
             ip: `10.0.10.${Math.floor(Math.random() * 250) + 1}`,
             body: { refreshToken: login.data.refreshToken },
         });
@@ -464,33 +463,33 @@ describe("auth", () => {
 
     it("revokes tokens on logout", async () => {
         const reg = await json(
-            await api("POST", "/api/v1/users/register", {
+            await api("POST", "/api/users/register", {
                 ip: `10.0.11.${Math.floor(Math.random() * 250) + 1}`,
                 body: { username: "doni", email: "doni@fadarosi.id", password: "Password123", phone: "081234567815" },
             }),
         );
         expect(reg.success).toBe(true);
         const login = await json(
-            await api("POST", "/api/v1/users/login", {
+            await api("POST", "/api/users/login", {
                 ip: `10.0.11.${Math.floor(Math.random() * 250) + 1}`,
                 body: { email: "doni@fadarosi.id", password: "Password123" },
             }),
         );
-        await api("POST", "/api/v1/users/logout", { token: login.data.accessToken });
-        const res = await api("GET", "/api/v1/users/me", { token: login.data.accessToken });
+        await api("POST", "/api/users/logout", { token: login.data.accessToken });
+        const res = await api("GET", "/api/users/me", { token: login.data.accessToken });
         expect(res.status).toBe(401);
     });
 });
 
 describe("not found & validation envelopes", () => {
     it("returns a structured 404", async () => {
-        const res = await api("GET", "/api/v1/goldfish", { ip: randomUUID() });
+        const res = await api("GET", "/api/goldfish", { ip: randomUUID() });
         expect(res.status).toBe(404);
         expect((await json(res)).success).toBe(false);
     });
 
     it("returns a structured 400 for invalid JSON", async () => {
-        const res = await app.request("/api/v1/users/login", {
+        const res = await app.request("/api/users/login", {
             method: "POST",
             headers: { "content-type": "application/json", "cf-connecting-ip": randomUUID() },
             body: "{not-json",

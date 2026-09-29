@@ -20,6 +20,10 @@ body {
   font-family: var(--font-sans);
 }
 
+body button{
+    @apply cursor-pointer;
+}
+
 #root {
   min-height: 100vh;
 }
@@ -40,4 +44,43 @@ input[type="number"]::-webkit-inner-spin-button {
 ::-webkit-scrollbar-thumb {
   background: #d1d5db;
   border-radius: 9999px;
+}
+
+/* ===== Print: halaman cetak untuk Nota / export PDF ===== */
+@media print {
+  /* Set kertas A4 potret dengan margin standar untuk hasil cetak yang presisi */
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+  /* Putihkan latar agar Nota terlihat seperti kertas saat dicetak */
+  body {
+    background: #fff !important;
+  }
+  /* Sembunyikan seluruh elemen aplikasi kecuali area Nota (class .print-area) */
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  /* Jadikan area Nota mengikuti alur halaman cetak tanpa margin/border/shadow */
+  .print-area {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Sembunyikan elemen toolbar/navigasi yang tidak perlu ikut tercetak */
+  .print-hidden {
+    display: none !important;
+  }
 }

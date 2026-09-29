@@ -13,6 +13,11 @@ import DeletePopup from "../../components/deletePopUp"
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"]
 
+// Helper: resolusi URL gambar produk (path relatif /uploads ditangani proxy & serveStatic backend)
+function resolveAssetUrl(image: string | undefined): string {
+  return image && !image.startsWith("http") ? image : (image ?? "")
+}
+
 interface ProductCard {
   id: number
   name: string

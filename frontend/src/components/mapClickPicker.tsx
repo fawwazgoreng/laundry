@@ -34,7 +34,7 @@ export function MapClickPicker({
 
   return (
     <div className="space-y-2">
-      <div className="h-72 w-full overflow-hidden rounded-2xl border border-gray-200">
+      <div className="h-80 w-full overflow-hidden rounded-2xl border border-gray-200">
         <MapContainer
           center={[defaultCenter.lat, defaultCenter.lng]}
           zoom={14}

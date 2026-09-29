@@ -21,7 +21,7 @@ export function Topbar({ items }: { items: NavItem[] }) {
     }
 
     return (
-        <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur">
+        <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur print:hidden">
             <div className="mx-auto grid grid-cols-3 h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
                 <div className="flex items-center gap-8 col-span-1">
                     <Link to={user ? (user.role === "admin" ? "/admin" : "/dashboard") : "/"} className="flex items-center gap-2">

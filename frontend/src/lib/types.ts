@@ -105,6 +105,8 @@ export type OutletInput = {
     max_coverage_km?: number
     min_order_amount?: number
     weekly_hours?: string
+    latitude?: number
+    longitude?: number
 }
 
 export type OrderStatus =
@@ -184,6 +186,12 @@ export interface OrderDetail {
     products: ProductOrderItem[]
     payment: Payment | null
     trackings: OrderTracking[]
+}
+
+export interface PaymentGate {
+    order_id: string
+    token: string
+    redirect_url: string
 }
 
 export interface OrderListItem {

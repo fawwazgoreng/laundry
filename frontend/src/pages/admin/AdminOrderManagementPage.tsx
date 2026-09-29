@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ChevronLeft, ChevronRight, Eye, Pencil, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, CreditCard, Eye, MapPin, Receipt, Search } from "lucide-react"
 import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
 import type { OrderListItem, OrderStatus } from "../../lib/types"
@@ -7,6 +7,7 @@ import { orderApi } from "../../services/api"
 import { ApiError } from "../../services/apiClient"
 import { useToast } from "../../components/Toast"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
+import { Link } from "react-router-dom"
 
 const tabs = [
   { key: "semua", label: "Semua" },
@@ -124,8 +125,8 @@ export function AdminOrderManagementPage() {
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
               className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${isActive
-                  ? "border-primary bg-primary text-white"
-                  : "border-gray-200 bg-white text-ink hover:bg-gray-50"
+                ? "border-primary bg-primary text-white"
+                : "border-gray-200 bg-white text-ink hover:bg-gray-50"
                 }`}
             >
               {tab.label}
@@ -187,9 +188,18 @@ export function AdminOrderManagementPage() {
                   </td>
                   <td className="px-2 py-4">
                     <div className="flex items-center justify-end gap-2">
-                      <button className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
-                        {order.status === "DIPROSES" ? <Eye size={14} /> : <Pencil size={14} />}
-                      </button>
+                      <Link to={"/admin/riwayat/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
+                        <Eye size={14} />
+                      </Link>
+                      <Link to={"/admin/tracking/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
+                        <MapPin size={14} />
+                      </Link>
+                      <Link to={"/payment/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
+                        <CreditCard size={14} />
+                      </Link>
+                      <Link to={"/nota/" + order.id} target="blank" className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
+                        <Receipt size={14} />
+                      </Link>
                       {statusOrder.indexOf(order.status) < statusOrder.length - 1 ? (
                         <button
                           onClick={() => handleAdvance(order)}

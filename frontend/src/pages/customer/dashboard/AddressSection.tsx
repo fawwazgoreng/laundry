@@ -194,7 +194,7 @@ export const AddressSection = () => {
   return (
     <>
       <div className="mt-20 mb-10">
-        <p className="text-lg text-primary font-semibold">Lokais</p>
+        <p className="text-lg text-primary font-semibold">Lokasi</p>
         <h1 className="text-2xl font-bold text-ink-strong">Alamat &amp; Titik penjemputan</h1>
         <p className="text-sm text-gray-500">Atur lokasi rumah dan kantor untuk penjemputan laundry.</p>
       </div>
