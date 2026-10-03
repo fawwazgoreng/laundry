@@ -151,6 +151,9 @@ export class CreateOrderUseCase {
                     "last_name": "",
                     "email": order.customer.email ?? "",
                     "phone": order.customer.phone ?? ""
+                },
+                  "callbacks": {
+                    "finish": `${env.CORS_ORIGIN}/payment/${order.order_id}`
                 }
             };
 

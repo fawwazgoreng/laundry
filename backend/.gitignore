@@ -3,6 +3,8 @@ node_modules/
 
 /src/infrastructure/database/migrations
 
+public/uploads
+
 # runtime logs (file-based history)
 logs/
 
