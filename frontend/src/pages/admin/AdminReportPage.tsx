@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
-import { CalendarDays, PackageOpen, Printer, ShoppingBag, TrendingDown, TrendingUp, Wallet } from "lucide-react"
+import { PackageOpen, Printer, ShoppingBag, TrendingDown, TrendingUp, Wallet } from "lucide-react"
 import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
+import { buildMonthlySeries, filterByRange, formatShortDate, resolveReportRange, summarizeCashflow, toDateInputValue } from "../../lib/report"
+import type { LowStockItem, MonthlyPoint, ReportRangeMode } from "../../lib/report"
 import { formatIDR } from "../../lib/format"
 import type { CashflowItem, OrderListItem, OrderStatus } from "../../lib/types"
 import { adminApi, orderApi } from "../../services/api"
@@ -14,15 +16,6 @@ const RANGE_PRESETS = [
   { months: 6, label: "6 Bulan" },
   { months: 12, label: "1 Tahun" },
 ]
-
-const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
-
-interface MonthlyPoint {
-  key: string
-  label: string
-  income: number
-  expense: number
-}
 
 interface StatCardData {
   label: string
@@ -40,28 +33,10 @@ interface CashflowRow {
   amount: number
 }
 
-function formatShortDate(value: string | Date): string {
-  return new Date(value).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })
-}
-
-// Helper: nilai untuk input date (YYYY-MM-DD) berdasarkan zona waktu lokal
-function toDateInputValue(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, "0")
-  const d = String(date.getDate()).padStart(2, "0")
-  return `${y}-${m}-${d}`
-}
-
-// Helper: ubah tanggal menjadi key bulan "YYYY-MM" untuk pengelompokan grafik
-function monthKey(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`
-}
-
-type RangeMode = "preset" | "custom"
-
 export function AdminReportPage() {
+  const navigate = useNavigate()
   const [months, setMonths] = useState<number>(1)
-  const [rangeMode, setRangeMode] = useState<RangeMode>("preset")
+  const [rangeMode, setRangeMode] = useState<ReportRangeMode>("preset")
   const [customStart, setCustomStart] = useState<string>(() => {
     const d = new Date()
     d.setMonth(d.getMonth() - 1)
@@ -71,7 +46,8 @@ export function AdminReportPage() {
 
   const [cashflowItems, setCashflowItems] = useState<CashflowItem[]>([])
   const [orders, setOrders] = useState<OrderListItem[]>([])
-  const [lowStock, setLowStock] = useState<Array<{ name: string; stock: number }>>([])
+  const [lowStock, setLowStock] = useState<LowStockItem[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     Promise.all([adminApi.cashflow(), orderApi.list({ perPage: 200 }), adminApi.stats()])
@@ -79,67 +55,27 @@ export function AdminReportPage() {
         setCashflowItems(cash.items)
         setOrders(orderPage.data)
         setLowStock(adminStats.low_stock_products.slice(0, 5))
+        setLoading(false)
       })
-      .catch(() => undefined)
+      .catch(() => setLoading(false))
   }, [months])
 
   // Rentang waktu aktif: preset bulan terakhir, atau pilihan custom dari/sampai
-  const windowRange = useMemo(() => {
-    if (rangeMode === "preset") {
-      const end = new Date()
-      const start = new Date()
-      start.setMonth(start.getMonth() - months)
-      start.setHours(0, 0, 0, 0)
-      return { start, end }
-    }
-    let start = customStart ? new Date(`${customStart}T00:00:00`) : new Date(2000, 0, 1, 0, 0, 0)
-    let end = customEnd ? new Date(`${customEnd}T23:59:59.999`) : new Date()
-    if (!Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && start.getTime() > end.getTime()) {
-      const tmp = start
-      start = end
-      end = tmp
-    }
-    return { start, end }
-  }, [rangeMode, months, customStart, customEnd])
-
-  const periodCashflow = useMemo(
-    () =>
-      cashflowItems.filter((it) => {
-        const t = new Date(it.created_at).getTime()
-        return t >= windowRange.start.getTime() && t <= windowRange.end.getTime()
-      }),
-    [cashflowItems, windowRange],
+  const windowRange = useMemo(
+    () => resolveReportRange(rangeMode, months, customStart, customEnd),
+    [rangeMode, months, customStart, customEnd],
   )
-  const totalIncome = periodCashflow.filter((it) => it.type === "income").reduce((sum, it) => sum + it.amount, 0)
-  const totalExpense = periodCashflow.filter((it) => it.type === "expense").reduce((sum, it) => sum + it.amount, 0)
-  const netBalance = totalIncome - totalExpense
-  const periodOrders = orders.filter((o) => {
-    const t = new Date(o.created_at).getTime()
-    return t >= windowRange.start.getTime() && t <= windowRange.end.getTime()
-  })
-  const monthlyData: MonthlyPoint[] = useMemo(() => {
-    const buckets = new Map<string, MonthlyPoint>()
-    const cur = new Date(windowRange.start.getFullYear(), windowRange.start.getMonth(), 1)
-    const lastYear = windowRange.end.getFullYear()
-    const lastMonth = windowRange.end.getMonth()
-    let guard = 0
-    while (
-      guard < 120 &&
-      (cur.getFullYear() < lastYear || (cur.getFullYear() === lastYear && cur.getMonth() <= lastMonth))
-    ) {
-      const key = monthKey(cur)
-      buckets.set(key, { key, label: MONTH_SHORT[cur.getMonth()], income: 0, expense: 0 })
-      cur.setMonth(cur.getMonth() + 1)
-      guard += 1
-    }
-    for (const it of periodCashflow) {
-      const bucket = buckets.get(monthKey(new Date(it.created_at)))
-      if (!bucket) continue
-      if (it.type === "income") bucket.income += it.amount
-      else bucket.expense += it.amount
-    }
-    return Array.from(buckets.values())
-  }, [periodCashflow, windowRange])
+
+  const periodCashflow = useMemo(() => filterByRange(cashflowItems, windowRange), [cashflowItems, windowRange])
+  const { income: totalIncome, expense: totalExpense, balance: netBalance } = useMemo(
+    () => summarizeCashflow(periodCashflow),
+    [periodCashflow],
+  )
+  const periodOrders = useMemo(() => filterByRange(orders, windowRange), [orders, windowRange])
+  const monthlyData: MonthlyPoint[] = useMemo(
+    () => buildMonthlySeries(periodCashflow, windowRange),
+    [periodCashflow, windowRange],
+  )
 
   const statCards: StatCardData[] = [
     { label: "Pendapatan", value: `+ ${formatIDR(totalIncome)}`, icon: TrendingUp, colorClass: "bg-red-100 text-red-600" },
@@ -162,7 +98,19 @@ export function AdminReportPage() {
       amount: it.amount,
     }))
 
-  const handlePrint = () => window.print()
+  // Cetak diarahkan ke halaman Nota Laporan (/laporan/nota) yang membawa data hasil filter ini,
+  // supaya yang tercetak adalah dokumen lengkap, bukan sekadar potongan tabel di layar.
+  const handlePrint = () => {
+    navigate("/laporan/nota", {
+      state: {
+        periodStart: windowRange.start.getTime(),
+        periodEnd: windowRange.end.getTime(),
+        cashflow: periodCashflow,
+        lowStock,
+        autoPrint: true,
+      },
+    })
+  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-2 py-8 sm:px-6">
@@ -229,8 +177,9 @@ export function AdminReportPage() {
           </div>
           <button
             onClick={handlePrint}
-            className="cursor-pointer rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-ink-strong"
-            title="Cetak / simpan laporan sebagai PDF"
+            disabled={loading}
+            className="rounded-lg bg-ink px-4 py-2 text-sm font-semibold text-white transition-colors enabled:cursor-pointer enabled:hover:bg-ink-strong disabled:cursor-not-allowed disabled:opacity-50"
+            title={loading ? "Memuat data laporan..." : "Cetak / simpan laporan sebagai PDF"}
           >
             <span className="inline-flex items-center gap-1.5">
               <Printer size={15} />

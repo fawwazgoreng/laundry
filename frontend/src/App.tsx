@@ -21,6 +21,7 @@ import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage"
 import { UserOrderHistory } from "./pages/customer/HistoryPage"
 import { AdminReportPage } from "./pages/admin/AdminReportPage"
 import { ReceiptPage } from "./pages/public/ReceiptPage"
+import { ReportNotaPage } from "./pages/public/ReportReceives"
 
 function NotFound() {
     const { user } = useAuth()
@@ -47,6 +48,7 @@ export default function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/nota/:notaId" element={<ReceiptPage />} />
+                <Route path="/laporan/nota" element={<ReportNotaPage />} />
             </Route>
 
             {/* Customer (logged in) */}
@@ -55,7 +57,7 @@ export default function App() {
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/history" element={<UserOrderHistory />} />
                     <Route path="/layanan" element={<LaundryWizardPage />} />
-                    <Route path="/toko" element={<ShopPage />} />
+                    <Route path="/produk" element={<ShopPage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
                     <Route path="/riwayat/:orderId" element={<OrderDetailPage />} />
                     <Route path="/tracking/:orderId" element={<OrderTrackingPage />} />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Check, Minus, Plus, Trash2, Wallet, Landmark, WashingMachine, Box } from "lucide-react"
+import { Check, Minus, Plus, Trash2, Wallet, Landmark, WashingMachine } from "lucide-react"
 import { formatIDR } from "../../lib/format"
 import type { Address, Outlet, User, PaymentGate } from "../../lib/types"
 import { addressApi, authApi, orderApi, outletApi, paymentApi } from "../../services/api"
@@ -162,18 +162,18 @@ export function CheckoutPage() {
           window.snap.pay(snapToken, {
             onSuccess: (result: SnapResult) => {
               console.log('Success:', result);
-              navigate(`/riwayat/${order.order_id}`);
+              navigate(`/payment/${order.order_id}`);
             },
             onPending: (result: SnapResult) => {
               console.log('Pending:', result);
-              navigate(`/riwayat/${order.order_id}`);
+              navigate(`/payment/${order.order_id}`);
             },
             onError: (result: SnapResult) => {
               console.error('Error:', result);
               setError('Pembayaran gagal, silakan coba lagi.');
             },
             onClose: () => {
-              navigate(`/riwayat/${order.order_id}`);
+              navigate(`/payment/${order.order_id}`);
             },
           });
         } else {
@@ -221,41 +221,46 @@ export function CheckoutPage() {
               <h2 className="text-sm font-semibold text-ink-strong">Layanan &amp; Produk Terpilih</h2>
               <div className="flex gap-4 text-xs font-semibold text-primary">
                 <Link to={"/layanan"}>+ Tambah Layanan</Link>
-                <Link to={"/toko"}>+ Tambah Barang</Link>
+                <Link to={"/produk"}>+ Tambah Barang</Link>
               </div>
             </div>
             <div className="divide-y divide-gray-100">
               {cart.map((line) => (
-                <div key={line.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className=" w-16 h-16 flex items-center justify-center">
-                      <span className="bg-primary-light w-full overflow-hidden h-full flex items-center justify-center text-6xl rounded-xl">
-                          {line.tag == "Layanan Laundry" ? (
-                            <WashingMachine></WashingMachine>
-                          ) : (
-                            <img src={line.image} className="w-full h-full" alt="" />
-                          )}
-                      </span>
-                  </div>
-                  <div>
-                    <span className="rounded bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
-                      {line.tag}
+                <div key={line.id} className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <span className="bg-primary-light w-16 h-16 shrink-0 overflow-hidden flex items-center justify-center text-4xl rounded-xl">
+                      {line.tag === "Layanan Laundry" ? (
+                        <WashingMachine className="w-8 h-8 text-primary" />
+                      ) : (
+                        <img src={line.image} className="w-full h-full block object-cover" alt="" />
+                      )}
                     </span>
-                    <p className="mt-1 text-sm font-semibold text-ink-strong">{line.name}</p>
-                    <p className="text-xs text-gray-400">{line.desc}</p>
+
+                    <div className="min-w-0 flex-1">
+                      <span className="inline-block rounded bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        {line.tag}
+                      </span>
+                      <p className="mt-1 text-sm font-semibold text-ink-strong truncate">{line.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{line.desc}</p>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-6">
-                    <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-1.5">
-                      <button onClick={() => updateQty(line.id, line.unit === "Kg" ? -0.1 : -1)}>
-                        <Minus size={14} className="text-gray-400" />
+
+                  <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
+                    {/* Tombol Qty */}
+                    <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-1.5 bg-white">
+                      <button onClick={() => updateQty(line.id, line.unit === "Kg" ? -0.1 : -1)} className="cursor-pointer">
+                        <Minus size={14} className="text-gray-400 hover:text-ink-strong" />
                       </button>
-                      <span className="w-14 text-center text-sm font-medium">
+                      <span className="w-14 text-center text-sm font-medium select-none">
                         {line.qty.toFixed(line.unit === "Kg" ? 1 : 0)} {line.unit}
                       </span>
-                      <button onClick={() => updateQty(line.id, line.unit === "Kg" ? 0.1 : 1)}>
-                        <Plus size={14} className="text-gray-400" />
+                      <button onClick={() => updateQty(line.id, line.unit === "Kg" ? 0.1 : 1)} className="cursor-pointer">
+                        <Plus size={14} className="text-gray-400 hover:text-ink-strong" />
                       </button>
                     </div>
-                    <div className="text-right">
+
+                    {/* Harga */}
+                    <div className="text-right min-w-20">
                       <p className="text-xs text-gray-400">
                         {formatIDR(line.pricePerUnit)} / {line.unit === "Kg" ? "Kg" : "unit"}
                       </p>
@@ -263,7 +268,8 @@ export function CheckoutPage() {
                         {formatIDR(line.qty * line.pricePerUnit)}
                       </p>
                     </div>
-                    <button onClick={() => removeLine(line.id)} className="text-gray-300 hover:text-primary cursor-pointer">
+
+                    <button onClick={() => removeLine(line.id)} className="text-gray-300 hover:text-primary cursor-pointer transition-colors">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -275,6 +281,7 @@ export function CheckoutPage() {
                 </p>
               )}
             </div>
+
           </div>
 
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
