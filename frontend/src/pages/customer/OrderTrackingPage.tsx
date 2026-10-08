@@ -102,7 +102,7 @@ export function OrderTrackingPage() {
             {orderTrackingSteps.map((step, idx) => (
               <li key={step.id} className="relative flex gap-4 pl-1">
                 {idx < orderTrackingSteps.length - 1 && (
-                  <span className="absolute left-[7px] top-4 h-full w-px bg-gray-200" />
+                  <span className="absolute left-1.75 top-4 h-full w-px bg-gray-200" />
                 )}
                 <span
                   className={`z-10 mt-1 h-3.5 w-3.5 shrink-0 rounded-full ${
