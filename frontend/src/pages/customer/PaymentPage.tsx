@@ -51,7 +51,7 @@ export function PaymentPage() {
     if (!orderId) return
     Promise.all([paymentApi.byOrder(orderId), orderApi.get(orderId)])
       .then(([payment, order]) => {
-        setVaNumber(payment.transaction_id)
+        setVaNumber(payment.va_number ?? payment.transaction_id)
         setPaymentLabel(paymentMethodLabel[order.payment_method] ?? "Transfer Bank")
         setCreatedAt(
           new Date(order.created_at).toLocaleDateString("id-ID", {

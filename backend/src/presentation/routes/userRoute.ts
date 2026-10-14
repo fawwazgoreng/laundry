@@ -19,9 +19,9 @@ const controller = new userController(
 
 const userRouter = new Hono<{ Variables: AppVariables }>();
 
-userRouter.use("/register", authRateLimiter);
-userRouter.use("/login", authRateLimiter);
-userRouter.use("/refresh", authRateLimiter);
+// userRouter.use("/register", authRateLimiter);
+// userRouter.use("/login", authRateLimiter);
+// userRouter.use("/refresh", authRateLimiter);
 
 userRouter.post("/register", (c) => controller.register(c));
 userRouter.post("/login", (c) => controller.login(c));

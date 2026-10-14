@@ -5,12 +5,14 @@ export const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 
 export class ApiError extends Error {
     status: number
     code?: string
+    details?: any
 
-    constructor(message: string, status: number, code?: string) {
+    constructor(message: string, status: number, code?: string, details?: any) {
         super(message)
         this.name = "ApiError"
         this.status = status
         this.code = code
+        this.details = details
     }
 }
 
@@ -82,6 +84,7 @@ async function request<T>(
             body?.message ?? "Terjadi kesalahan pada server",
             res.status,
             typeof body?.status === "number" ? String(body.status) : undefined,
+            body?.details
         )
     }
 

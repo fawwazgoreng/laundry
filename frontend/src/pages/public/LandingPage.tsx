@@ -55,7 +55,7 @@ export default function LandingPage() {
     useEffect(() => {
         const res = async () => {
             const service = await serviceApi.list()
-            const product = await productApi.list();
+            const product = await productApi.list({ inStockOnly: true });
             setLayanan(service);
             setProducts(product.data);
             setLoading(false)

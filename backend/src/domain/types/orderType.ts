@@ -34,6 +34,7 @@ export type orderCreateType = {
     distance_km: number
     delivery_fee?: number
     payment_method: paymentMethod
+    bank?: "bca" | "bni" | "bri" | "permata"
     notes?: string
 }
 
@@ -82,6 +83,7 @@ export interface paymentSummaryType {
     payment_type: paymentMethod
     gross_amount: number
     status: string
+    va_number?: string | null
     paid_at: string | null
     created_at: string
     raw_response?: Record<string, unknown> | null
@@ -124,9 +126,10 @@ export interface orderDetailType {
 }
 
 export interface paymentGate {
-    redirect_url: string
-    token: string
+    redirect_url?: string
+    token?: string
     order_id: string
+    va_number?: string
 }
 
 export type orderListFilters = {

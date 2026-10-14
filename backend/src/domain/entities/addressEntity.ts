@@ -23,7 +23,7 @@ export class addressEntity {
     private static parse<TSchema extends z.ZodTypeAny>(schema: TSchema, input: unknown): z.output<TSchema> {
         const result = schema.safeParse(input);
         if (!result.success) {
-            throw AppError.validation(result.error.flatten() as unknown as Record<string, unknown>);
+            throw AppError.fromZod(result.error);
         }
         return result.data;
     }

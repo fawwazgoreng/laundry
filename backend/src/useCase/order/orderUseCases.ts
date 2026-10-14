@@ -38,19 +38,40 @@ function isDuplicateOrderId(error: unknown): boolean {
     );
 }
 
-export type snapTransaction = { token: string; redirect_url: string };
+export type coreChargeResponse = {
+    transaction_id?: string
+    order_id?: string
+    gross_amount?: string
+    payment_type?: string
+    transaction_time?: string
+    transaction_status?: string
+    va_numbers?: Array<{ bank: string; va_number: string }>
+    permata_va_number?: string
+    bill_key?: string
+    biller_code?: string
+    [key: string]: unknown
+};
 
-export interface midtransSnapClient {
-    createTransaction(parameter: Record<string, unknown>): Promise<snapTransaction>
+export interface midtransCoreApiClient {
+    charge(parameter: Record<string, unknown>): Promise<coreChargeResponse>
+    cancelTransaction(orderId: string): Promise<Record<string, unknown>>
 }
 
-export function defaultMidtransSnap(): midtransSnapClient {
-    return new midtransClient.Snap({
+export function defaultMidtransCoreApi(): midtransCoreApiClient {
+    return new midtransClient.CoreApi({
         clientKey: env.MIDTRANS_CLIENT_KEY,
         isProduction: env.NODE_ENV === "production",
         serverKey: env.MIDTRANS_SERVER_KEY,
-    }) as unknown as midtransSnapClient;
+    }) as unknown as midtransCoreApiClient;
 }
+
+export type gatewayCharge = {
+    transaction_id?: string
+    va_number?: string
+    raw_response?: Record<string, unknown>
+};
+
+export const ACTIVE_PAYMENT_WINDOW_HOURS = 24;
 
 export class CreateOrderUseCase {
     constructor(
@@ -61,11 +82,12 @@ export class CreateOrderUseCase {
         private readonly outletRepository: outletRepository,
         private readonly paymentRepository: paymentRepository,
         private readonly cashflowRepository: cashflowRepository,
-        private readonly snap: midtransSnapClient = defaultMidtransSnap(),
+        private readonly coreApi: midtransCoreApiClient = defaultMidtransCoreApi(),
     ) { }
 
     async execute(userId: string, input: unknown): Promise<paymentGate> {
         const dto = orderEntity.validateCreate(input);
+        await this.assertNoActivePending(userId);
 
         const address = await this.addressRepository.findById(userId, dto.user_address_id);
         if (!address) throw AppError.notFound("Alamat pengiriman tidak ditemukan");
@@ -136,31 +158,12 @@ export class CreateOrderUseCase {
 
         if (!order) throw new Error("failed to create order");
 
-        let snapToken: snapTransaction | null = null;
+        let gateway: gatewayCharge | null = null;
         if (dto.payment_method === "transfer_bank") {
-            const parameter = {
-                "transaction_details": {
-                    "order_id": order.order_id,
-                    "gross_amount": order.total_amount
-                },
-                "credit_card": {
-                    "secure": true
-                },
-                "customer_details": {
-                    "first_name": order.customer.username,
-                    "last_name": "",
-                    "email": order.customer.email ?? "",
-                    "phone": order.customer.phone ?? ""
-                },
-                  "callbacks": {
-                    "finish": `${env.CORS_ORIGIN}/payment/${order.order_id}`
-                }
-            };
-
-            snapToken = await this.snap.createTransaction(parameter);
+            gateway = await this.chargeBankTransfer(order, dto.bank!);
         }
 
-        await this.issuePayment(order, dto.payment_method, totals.total_amount, snapToken?.token);
+        await this.issuePayment(order, dto.payment_method, totals.total_amount, gateway);
 
         logger.info("order created", {
             requestUserId: userId,
@@ -171,13 +174,71 @@ export class CreateOrderUseCase {
             productCount: products.length,
         });
         return {
-            redirect_url: snapToken?.redirect_url ?? "",
-            token: snapToken?.token ?? "",
+            redirect_url: "",
+            token: "",
             order_id: orderId,
+            va_number: gateway?.va_number,
         }
     }
 
-    private async issuePayment(order: orderDetailType, method: string, amount: number, transactionToken?: string): Promise<paymentType | null> {
+    private async assertNoActivePending(userId: string): Promise<void> {
+        const active = await this.paymentRepository.findActivePendingByUser(userId);
+        if (!active || !active.created_at) return;
+
+        const createdAt = new Date(active.created_at);
+        const expiresAt = new Date(createdAt.getTime() + ACTIVE_PAYMENT_WINDOW_HOURS * 60 * 60 * 1000);
+        const remainingSeconds = Math.max(0, Math.floor((expiresAt.getTime() - Date.now()) / 1000));
+        if (remainingSeconds <= 0) return;
+
+        throw AppError.conflict(
+            `Anda masih memiliki pesanan ${active.order_id} yang menunggu pembayaran. Selesaikan atau tunggu batas waktunya.`,
+            {
+                order_id: active.order_id,
+                created_at: createdAt.toISOString(),
+                expires_at: expiresAt.toISOString(),
+                remaining_seconds: remainingSeconds,
+            },
+        );
+    }
+
+    private async chargeBankTransfer(order: orderDetailType, bank: string): Promise<gatewayCharge> {
+        const response = await this.coreApi.charge({
+            transaction_details: {
+                order_id: order.order_id,
+                gross_amount: order.total_amount,
+            },
+            payment_type: "bank_transfer",
+            bank_transfer: { bank },
+            customer_details: {
+                first_name: order.customer.username,
+                last_name: "",
+                email: order.customer.email ?? "",
+                phone: order.customer.phone ?? "",
+            },
+        });
+
+        const vaNumber = response.permata_va_number ?? response.va_numbers?.[0]?.va_number ?? "";
+        logger.info("midtrans bank transfer charged", {
+            orderId: order.order_id,
+            bank,
+            transactionId: response.transaction_id,
+            hasVaNumber: Boolean(vaNumber),
+            expiresInHours: ACTIVE_PAYMENT_WINDOW_HOURS,
+        });
+
+        return {
+            transaction_id: response.transaction_id,
+            va_number: vaNumber,
+            raw_response: response as Record<string, unknown>,
+        };
+    }
+
+    private async issuePayment(
+        order: orderDetailType,
+        method: string,
+        amount: number,
+        gateway?: gatewayCharge | null,
+    ): Promise<paymentType | null> {
         if (method === "fadarosipay") {
             const payment = await this.paymentRepository.create({
                 order_id: order.order_id,
@@ -202,17 +263,17 @@ export class CreateOrderUseCase {
         }
 
         if (method === "transfer_bank") {
-            const payment = await this.paymentRepository.create({
+            let payment = await this.paymentRepository.create({
                 order_id: order.order_id,
                 payment_type: method,
                 gross_amount: amount,
-                transaction_id: transactionToken,
+                transaction_id: gateway?.transaction_id,
+                va_number: gateway?.va_number,
             });
-            logger.warn("midtrans snap transaction issued", {
-                orderId: order.order_id,
-                snapToken: transactionToken,
-                expiresInHours: 24,
-            });
+            if (gateway?.raw_response) {
+                const saved = await this.paymentRepository.saveRawResponse(payment.id, gateway.raw_response);
+                if (saved) payment = saved;
+            }
             return payment;
         }
 

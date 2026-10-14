@@ -229,6 +229,7 @@ export const PaymentsScalarFieldEnum = {
   payment_type: 'payment_type',
   gross_amount: 'gross_amount',
   status: 'status',
+  va_number: 'va_number',
   paid_at: 'paid_at',
   raw_response: 'raw_response',
   created_at: 'created_at'

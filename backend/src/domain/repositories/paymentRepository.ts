@@ -6,4 +6,8 @@ export interface paymentRepository {
     findByOrderId(orderId: string): Promise<paymentType | null>
     confirm(input: paymentConfirmInput): Promise<paymentType | null>
     listByUser(userId: string): Promise<paymentType[]>
+    findActivePendingByUser(userId: string): Promise<paymentType | null>
+    listPendingOlderThan(hours: number): Promise<paymentType[]>
+    updateStatus(id: string, status: string): Promise<paymentType | null>
+    saveRawResponse(id: string, rawResponse: Record<string, unknown>): Promise<paymentType | null>
 }

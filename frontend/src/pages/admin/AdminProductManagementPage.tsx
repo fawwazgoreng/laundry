@@ -152,14 +152,14 @@ export function AdminProductManagementPage() {
       }
       if (editingId === null) {
         const created = await productApi.create(payload)
-        toastSuccess("Produk berhasil ditambahkan")
+        toastSuccess("[Produk] berhasil ditambahkan.")
         if (pendingImage && created.id) {
           await productApi.uploadImage(created.id, pendingImage)
           toastSuccess("Foto produk berhasil diunggah")
         }
       } else {
         await productApi.update(editingId, payload)
-        toastSuccess("Produk berhasil diperbarui")
+        toastSuccess("[Produk] berhasil diperbarui.")
         if (pendingImage) {
           await productApi.uploadImage(editingId, pendingImage)
           toastSuccess("Foto produk berhasil diunggah")
@@ -180,7 +180,7 @@ export function AdminProductManagementPage() {
     setDeleting(true)
     try {
       await productApi.remove(deleteTarget.id)
-      toastSuccess("Produk berhasil dihapus")
+      toastSuccess("[Produk] berhasil dihapus.")
       setDeleteTarget(null)
       if (editingId === deleteTarget.id) handleReset()
       await load()

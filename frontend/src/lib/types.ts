@@ -3,6 +3,7 @@ export interface ApiEnvelope<T = unknown> {
     status: number
     message: string
     data: T
+    details?: any
     meta?: Meta
 }
 
@@ -160,6 +161,7 @@ export interface Payment {
     paid_at: string | null
     raw_response: Record<string, unknown> | null
     created_at: string
+    va_number?: string
 }
 
 export interface OrderDetail {
@@ -192,6 +194,7 @@ export interface PaymentGate {
     order_id: string
     token: string
     redirect_url: string
+    va_number?: string | null
 }
 
 export interface OrderListItem {
@@ -217,6 +220,7 @@ export type OrderCreateInput = {
     discount_member?: number
     discount_voucher?: number
     pickup_schedule: string
+    bank?: "bca" | "mandiri" | "bni" | "bri"
     estimated_delivery: string
     notes?: string
 }

@@ -12,6 +12,8 @@ import { pgTokenRepository } from "../../infrastructure/repository/pgTokenReposi
 import { pgUserRepository } from "../../infrastructure/repository/pgUserRepository";
 import { AuthUseCase } from "../../useCase/user/authUseCase";
 import { HandleMidtransNotificationUseCase } from "../../useCase/payment/midtransNotificationUseCase";
+import { ExpirePendingPaymentsUseCase } from "../../useCase/payment/expirePendingPaymentsUseCase";
+import { defaultMidtransCoreApi } from "../../useCase/order/orderUseCases";
 import { createAdminMiddleware } from "../middleware/adminMiddleware";
 import { createAuthMiddleware } from "../middleware/authMiddleware";
 
@@ -39,4 +41,11 @@ export const handleMidtransNotificationUseCase = new HandleMidtransNotificationU
     paymentRepository,
     orderRepository,
     cashflowRepository,
+);
+
+export const midtransCoreApi = defaultMidtransCoreApi();
+export const expirePendingPaymentsUseCase = new ExpirePendingPaymentsUseCase(
+    paymentRepository,
+    orderRepository,
+    midtransCoreApi,
 );

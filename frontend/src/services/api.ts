@@ -54,7 +54,8 @@ export const productApi = {
         sort?: string
         page?: number
         perPage?: number
-    }) => api.page<Product[]>("/products", params),
+        inStockOnly?: boolean | string
+    }) => api.page<Product[]>("/products", params as Record<string, string | number | undefined>),
     get: (id: number) => api.get<Product>(`/products/${id}`),
     create: (data: ProductInput) => api.post<Product>("/products", data),
     update: (id: number, data: Partial<ProductInput>) => api.put<Product>(`/products/${id}`, data),

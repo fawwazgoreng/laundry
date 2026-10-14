@@ -6,7 +6,7 @@ export function mapToAppError(error: unknown): AppError {
     if (error instanceof AppError) return error;
 
     if (error instanceof ZodError) {
-        return AppError.validation(error.flatten() as unknown as Record<string, unknown>);
+        return AppError.fromZod(error);
     }
 
     if (error instanceof SyntaxError) {

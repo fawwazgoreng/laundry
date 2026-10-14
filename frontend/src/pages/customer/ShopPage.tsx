@@ -25,7 +25,7 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
 
   useEffect(() => {
     productApi
-      .list({ perPage: 100 })
+      .list({ perPage: 100, inStockOnly: true })
       .then((page) => {
         setProducts(
           page.data.map((p: Product) => ({

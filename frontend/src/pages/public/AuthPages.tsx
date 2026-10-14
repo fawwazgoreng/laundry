@@ -5,6 +5,7 @@ import { Shirt, Eye, EyeClosed } from "lucide-react"
 import { useAuth } from "../../context/AuthContext"
 import { ApiError } from "../../services/apiClient"
 import { Button, Input } from "../../components/ui"
+import { formatFormError } from "../../lib/format"
 
 function AuthSidebar() {
     return (
@@ -138,7 +139,7 @@ export function RegisterPage() {
             await register(form)
             navigate("/login", { state: { registered: true } })
         } catch (err) {
-            setError(err instanceof ApiError ? err.message : "Terjadi kesalahan, coba lagi")
+            setError(err instanceof ApiError ? formatFormError(err.details) : "Terjadi kesalahan, coba lagi")
         } finally {
             setLoading(false)
         }

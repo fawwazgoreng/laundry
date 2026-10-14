@@ -7,8 +7,10 @@ export interface paymentType {
     payment_type: string
     gross_amount: number
     status: paymentStatus
+    va_number?: string | null
     paid_at: string | null
     raw_response?: Record<string, unknown> | null
+    created_at?: string
 }
 
 export type paymentCreateInput = {
@@ -16,6 +18,7 @@ export type paymentCreateInput = {
     payment_type: string
     gross_amount: number
     transaction_id?: string
+    va_number?: string
 }
 
 export type paymentConfirmInput = {

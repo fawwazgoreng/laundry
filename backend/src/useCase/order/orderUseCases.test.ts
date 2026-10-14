@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import { CreateOrderUseCase, UpdateOrderStatusUseCase, CancelOrderUseCase, DeleteOrderUseCase, type midtransSnapClient } from "./orderUseCases";
+import { CreateOrderUseCase, UpdateOrderStatusUseCase, CancelOrderUseCase, DeleteOrderUseCase, type midtransCoreApiClient } from "./orderUseCases";
 import type { addressRepository } from "../../domain/repositories/addressRepository";
 import type { cashflowRepository } from "../../domain/repositories/cashflowRepository";
 import type { orderRepository } from "../../domain/repositories/orderRepository";
@@ -113,6 +113,7 @@ describe("CreateOrderUseCase", () => {
                 paid_at: new Date().toISOString(),
                 raw_response: { gateway: "fadarosipay", method: "wallet" },
             })),
+            findActivePendingByUser: mock(() => null),
         } as unknown as paymentRepository;
         const cashflowRepo = { create: mock(async () => ({})) } as unknown as cashflowRepository;
 
@@ -142,6 +143,53 @@ describe("CreateOrderUseCase", () => {
         expect(cf.category).toBe("sales");
     });
 
+    it("rejects a new order while an active pending payment exists and reports remaining time", async () => {
+        const order = makeOrder();
+        const createdNearlyNow = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        const orderRepo = {
+            countByDatePrefix: mock(() => 0),
+            create: mock(() => order),
+            findByOrderId: mock(() => order),
+        } as unknown as orderRepository;
+        const paymentRepo = {
+            findActivePendingByUser: mock(() => ({
+                id: "pay-a",
+                order_id: "CLN-20260908-009",
+                transaction_id: "TRX-1",
+                payment_type: "transfer_bank",
+                gross_amount: 50000,
+                status: "PENDING" as const,
+                va_number: "7001",
+                paid_at: null,
+                created_at: createdNearlyNow,
+            })),
+            create: mock(),
+            confirm: mock(),
+        } as unknown as paymentRepository;
+
+        const uc = new CreateOrderUseCase(
+            orderRepo,
+            { findById: mock(() => svc), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
+            { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
+            { findById: mock(() => address) } as unknown as addressRepository,
+            { findById: mock(() => outlet) } as unknown as outletRepository,
+            paymentRepo,
+            { create: mock(async () => ({})) } as unknown as cashflowRepository,
+        );
+
+        try {
+            await uc.execute("u-1", validInput());
+            expect.unreachable("expected conflict error");
+        } catch (error) {
+            const appError = error as { statusCode: number; details?: Record<string, unknown> };
+            expect(appError.statusCode).toBe(409);
+            expect(appError.details?.["order_id"]).toBe("CLN-20260908-009");
+            expect(appError.details?.["expires_at"]).toBeDefined();
+            expect(appError.details?.["remaining_seconds"]).toBeGreaterThan(0);
+        }
+        expect(orderRepo.create).not.toHaveBeenCalled();
+    });
+
     it("caps the member discount at 15% of subtotal", async () => {
         const order = makeOrder();
         const orderRepo = {
@@ -149,7 +197,7 @@ describe("CreateOrderUseCase", () => {
             create: mock(() => order),
             findByOrderId: mock(() => order),
         } as unknown as orderRepository;
-        const paymentRepo = { create: mock(() => ({})), confirm: mock(() => null) } as unknown as paymentRepository;
+        const paymentRepo = { create: mock(() => ({})), confirm: mock(() => null), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository;
 
         const uc = new CreateOrderUseCase(
             orderRepo,
@@ -177,7 +225,7 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => ({ ...prod, stock: 1 })), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
             { findById: mock(() => outlet) } as unknown as outletRepository,
-            { create: mock(), confirm: mock() } as unknown as paymentRepository,
+            { create: mock(), confirm: mock(), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository,
             { create: mock() } as unknown as cashflowRepository,
         );
 
@@ -197,14 +245,14 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
             { findById: mock(() => outlet) } as unknown as outletRepository,
-            { create: mock(), confirm: mock() } as unknown as paymentRepository,
+            { create: mock(), confirm: mock(), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository,
             { create: mock() } as unknown as cashflowRepository,
         );
 
         await expect(uc.execute("u-1", validInput())).rejects.toMatchObject({ statusCode: 409 });
     });
 
-    it("issues a midtrans snap transaction for transfer_bank", async () => {
+    it("charges a bank transfer VA via midtrans core api for transfer_bank", async () => {
         const order = makeOrder();
         const orderRepo = {
             countByDatePrefix: mock(() => 0),
@@ -212,7 +260,7 @@ describe("CreateOrderUseCase", () => {
             findByOrderId: mock(() => order),
         } as unknown as orderRepository;
         const paymentRepo = {
-            create: mock((input: { transaction_id?: string }) => ({
+            create: mock((input: { transaction_id?: string; va_number?: string }) => ({
                 id: "pay-1",
                 order_id: order.order_id,
                 transaction_id: input.transaction_id ?? "",
@@ -220,15 +268,18 @@ describe("CreateOrderUseCase", () => {
                 gross_amount: 19000,
                 status: "PENDING",
                 paid_at: null,
+                va_number: input.va_number ?? null,
             })),
+            saveRawResponse: mock((id: string, raw: Record<string, unknown>) => ({})),
             confirm: mock(() => null),
+            findActivePendingByUser: mock(() => null),
         } as unknown as paymentRepository;
-        const snapFake = {
-            createTransaction: mock(async () => ({
-                token: "snap-token-1",
-                redirect_url: "https://app.sandbox.midtrans.com/snap/v3/redirect",
+        const coreApiFake = {
+            charge: mock(async () => ({
+                transaction_id: "TRX-123456",
+                va_numbers: [{ bank: "bca", va_number: "7001212345678901" }],
             })),
-        } as midtransSnapClient;
+        } as unknown as midtransCoreApiClient;
 
         const uc = new CreateOrderUseCase(
             orderRepo,
@@ -238,16 +289,41 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => outlet) } as unknown as outletRepository,
             paymentRepo,
             { create: mock(async () => ({})) } as unknown as cashflowRepository,
-            snapFake,
+            coreApiFake,
         );
 
-        const result = await uc.execute("u-1", { ...validInput(), payment_method: "transfer_bank" });
+        const result = await uc.execute("u-1", { ...validInput(), payment_method: "transfer_bank", bank: "bca" });
 
-        expect(snapFake.createTransaction).toHaveBeenCalled();
+        expect(coreApiFake.charge).toHaveBeenCalled();
+        const chargeParams = (coreApiFake.charge as ReturnType<typeof mock>).mock.calls[0][0];
+        expect(chargeParams.payment_type).toBe("bank_transfer");
+        expect(chargeParams.bank_transfer.bank).toBe("bca");
         const payment = (paymentRepo.create as ReturnType<typeof mock>).mock.calls[0][0];
-        expect(payment.transaction_id).toBe("snap-token-1");
-        expect(result.token).toBe("snap-token-1");
+        expect(payment.transaction_id).toBe("TRX-123456");
+        expect(payment.va_number).toBe("7001212345678901");
+        expect(result.va_number).toBe("7001212345678901");
         expect(result.order_id).toBe(orderEntity.generateOrderId(1));
+    });
+
+    it("rejects transfer_bank when no bank is chosen", async () => {
+        const order = makeOrder();
+        const orderRepo = {
+            countByDatePrefix: mock(() => 0),
+            create: mock(() => order),
+        } as unknown as orderRepository;
+        const uc = new CreateOrderUseCase(
+            orderRepo,
+            { findById: mock(() => svc), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
+            { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
+            { findById: mock(() => address) } as unknown as addressRepository,
+            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { create: mock(), confirm: mock(), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository,
+            { create: mock() } as unknown as cashflowRepository,
+        );
+
+        await expect(
+            uc.execute("u-1", { ...validInput(), payment_method: "transfer_bank" }),
+        ).rejects.toMatchObject({ statusCode: 422 });
     });
 
     it("retries on duplicate order id collisions", async () => {
@@ -263,7 +339,7 @@ describe("CreateOrderUseCase", () => {
             }),
             findByOrderId: mock((id: string) => ({ ...order, order_id: id })),
         } as unknown as orderRepository;
-        const paymentRepo = { create: mock(() => ({ id: "p", order_id: order.order_id, transaction_id: "T", payment_type: "fadarosipay", gross_amount: 1, status: "PENDING", paid_at: null })), confirm: mock(() => null) } as unknown as paymentRepository;
+        const paymentRepo = { create: mock(() => ({ id: "p", order_id: order.order_id, transaction_id: "T", payment_type: "fadarosipay", gross_amount: 1, status: "PENDING", paid_at: null })), confirm: mock(() => null), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository;
 
         const uc = new CreateOrderUseCase(
             orderRepo,

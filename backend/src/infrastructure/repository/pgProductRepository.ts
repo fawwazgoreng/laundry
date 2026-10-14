@@ -35,10 +35,12 @@ export class pgProductRepository implements productRepository {
             sort = "terbaru",
             page = 1,
             perPage = 12,
+            inStockOnly = false,
         } = opts;
 
         const where = {
             is_active: true,
+            ...(inStockOnly ? { stock: { gt: 0 } } : {}),
             ...(category !== "all" ? { category } : {}),
             ...(search ? { name: { contains: search, mode: "insensitive" as const } } : {}),
         };

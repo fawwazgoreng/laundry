@@ -96,18 +96,15 @@ export const AddressSection = () => {
     }
   }, [])
 
-  // Perbarui titik peta & alamat ketika koordinat GPS sudah diterima
   useEffect(() => {
     if (!gpsResult) return
     const { lat, lng } = gpsResult
-    // penundaan di microtask agar update state tidak sinkron saat render effect
     queueMicrotask(() => {
       setForm((prev) => ({ ...prev, lat, lng }))
       lookupAddress(lat, lng)
     })
   }, [gpsResult, lookupAddress])
 
-  // Gestur ketika pengguna mengklik peta: simpan koordinat lalu cari alamat
   const handleMapPick = useCallback(
     (coords: { lat: number; lng: number }) => {
       setForm((prev) => ({ ...prev, lat: coords.lat, lng: coords.lng }))
@@ -116,12 +113,16 @@ export const AddressSection = () => {
     [lookupAddress],
   )
 
-  // Minta koordinat dari GPS perangkat pengguna
   const handleUseMyLocation = () => {
     locate()
   }
 
-  // Isi form dengan data alamat yang akan diedit
+  const handleAddNew = () => {
+    setEditingId(null)
+    setError(null)
+    setForm(emptyForm())
+  }
+
   const handleEdit = (addr: CustomerAddress) => {
     setEditingId(addr.id)
     setError(null)
@@ -133,14 +134,12 @@ export const AddressSection = () => {
     })
   }
 
-  // Batalkan mode edit dan kosongkan form
   const handleCancelEdit = () => {
     setEditingId(null)
     setError(null)
     setForm(emptyForm())
   }
 
-  // Simpan alamat baru (create) atau perbarui alamat yang sedang diedit
   const handleSave = async () => {
     const invalid = validateForm(form)
     if (invalid) {
@@ -157,10 +156,10 @@ export const AddressSection = () => {
     try {
       if (editingId === null) {
         await addressApi.create(payload)
-        toastSuccess("Alamat berhasil ditambahkan")
+        toastSuccess("[Alamat] berhasil ditambahkan.")
       } else {
         await addressApi.update(editingId, payload)
-        toastSuccess("Alamat berhasil diperbarui")
+        toastSuccess("[Alamat] berhasil diperbarui.")
       }
       setForm(emptyForm())
       setEditingId(null)
@@ -171,7 +170,6 @@ export const AddressSection = () => {
     }
   }
 
-  // Hapus alamat setelah dikonfirmasi lewat pop-up
   const handleDelete = async (id: number) => {
     setDeleting(true)
     try {
@@ -182,7 +180,7 @@ export const AddressSection = () => {
         setForm(emptyForm())
       }
       setDeleteTarget(null)
-      toastSuccess("Alamat berhasil dihapus")
+      toastSuccess("[Alamat] berhasil dihapus.")
     } catch {
       setDeleteTarget(null)
       toastError("Gagal menghapus alamat")
@@ -200,6 +198,11 @@ export const AddressSection = () => {
       </div>
 
       <div className="rounded-2xl" id="alamat">
+        <div className="mb-4 flex justify-end">
+          <button onClick={handleAddNew} className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-primary-dark">
+            + Tambah Alamat Baru
+          </button>
+        </div>
         <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2">
           {addresses.map((addr) => (
             <div
@@ -265,9 +268,9 @@ export const AddressSection = () => {
                   <textarea
                     id="Detail"
                     placeholder=" "
+                    value={form.detail}
                     className={`peer w-full col-span-2 rounded-lg border border-gray-200 bg-white px-3 pb-2 pt-4 text-sm font-medium text-ink-strong outline-none transition-colors focus:border-primary`}
                     onChange={(e) => setForm((prev) => ({ ...prev, detail: e.target.value }))} >
-                    {form.detail}
                   </textarea>
                   <label
                     htmlFor={"Detail"}
@@ -301,6 +304,7 @@ export const AddressSection = () => {
       </div>
 
       {/* Pop-up konfirmasi penghapusan alamat */}
+      <div className="z-999999 relative">
       <DeletePopup
         open={deleteTarget !== null}
         dataName={deleteTarget?.label}
@@ -308,8 +312,9 @@ export const AddressSection = () => {
         onCancel={() => setDeleteTarget(null)}
         onConfirm={() => {
           if (deleteTarget) handleDelete(deleteTarget.id)
-        }}
-      />
+          }}
+        />
+        </div>
     </>
   )
 }

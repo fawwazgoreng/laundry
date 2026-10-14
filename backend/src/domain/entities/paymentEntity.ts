@@ -27,6 +27,7 @@ export class paymentEntity {
         payment_type: z.string().min(1).max(20),
         gross_amount: z.coerce.number().nonnegative(),
         transaction_id: z.string().optional(),
+        va_number: z.string().optional(),
     });
 
     private static readonly confirmSchema = z.object({
@@ -98,7 +99,7 @@ export class paymentEntity {
     private static parse<TSchema extends z.ZodTypeAny>(schema: TSchema, input: unknown): z.output<TSchema> {
         const result = schema.safeParse(input);
         if (!result.success) {
-            throw AppError.validation(result.error.flatten() as unknown as Record<string, unknown>);
+            throw AppError.fromZod(result.error);
         }
         return result.data;
     }

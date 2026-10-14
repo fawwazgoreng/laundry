@@ -13,6 +13,7 @@ export function FloatingInput({ label, id, className, ...props }: FloatingInputP
         id={inputId}
         placeholder=" "
         {...props}
+        value={props.value ?? ""}
         className={`peer w-full rounded-lg border border-gray-200 bg-white px-3 pb-2 pt-4 text-sm font-medium text-ink-strong outline-none transition-colors focus:border-primary ${className ?? ""}`}
       />
       <label

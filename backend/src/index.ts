@@ -18,6 +18,8 @@ import productRouter from "./presentation/routes/productRoute";
 import serviceRouter from "./presentation/routes/serviceRoute";
 import userRouter from "./presentation/routes/userRoute";
 import midtransRouter from "./presentation/routes/midtransRouter";
+import { expirePendingPaymentsUseCase } from "./presentation/routes/container";
+import { startPaymentExpiryWorker } from "./infrastructure/jobs/paymentExpiryWorker";
 import type { AppVariables } from "./presentation/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
@@ -73,5 +75,9 @@ app.route("/api/orders", orderRouter);
 app.route("/api/payments", paymentRouter);
 app.route("/api/admin", adminRouter);
 app.route("/api/midtrans", midtransRouter);
+
+if (import.meta.main) {
+    startPaymentExpiryWorker(() => expirePendingPaymentsUseCase.execute());
+}
 
 export default app;

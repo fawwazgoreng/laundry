@@ -24,13 +24,22 @@ export class orderEntity {
         distance_km: z.coerce.number().nonnegative().default(0),
         delivery_fee: z.coerce.number().nonnegative().optional(),
         payment_method: z.enum(PAYMENT_METHODS, { message: "Invalid payment method" }),
+        bank: z.enum(["bca", "bni", "bri", "permata"]).optional(),
         notes: z.string().optional(),
+    }).superRefine((value, ctx) => {
+        if (value.payment_method === "transfer_bank" && !value.bank) {
+            ctx.addIssue({
+                code: "custom",
+                path: ["bank"],
+                message: "Pilih bank untuk metode transfer",
+            });
+        }
     });
 
     static validateCreate(input: unknown): orderCreateType {
         const result = this.createSchema.safeParse(input);
         if (!result.success) {
-            throw AppError.validation(result.error.flatten() as unknown as Record<string, unknown>);
+            throw AppError.fromZod(result.error);
         }
         const data = result.data as orderCreateType;
         if (!data.services.length && !data.products.length) {

@@ -60,6 +60,7 @@ function toPayment(row: OrderRow["payments"][number] | undefined): paymentSummar
         payment_type: row.payment_type as paymentSummaryType["payment_type"],
         gross_amount: Number(row.gross_amount),
         status: row.status,
+        va_number: row.va_number,
         paid_at: row.paid_at ? row.paid_at.toISOString() : null,
         created_at: row.created_at.toISOString(),
         raw_response: row.raw_response as Record<string, unknown> | null,

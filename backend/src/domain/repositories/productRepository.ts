@@ -6,6 +6,7 @@ export type productListOptions = {
     sort?: "terbaru" | "terlama" | "termahal" | "termurah"
     page?: number
     perPage?: number
+    inStockOnly?: boolean
 }
 
 export interface productRepository {

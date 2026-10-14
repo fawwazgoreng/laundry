@@ -30,6 +30,7 @@ export class productController {
             sort: (c.req.query("sort") as productListOptions["sort"]) ?? "terbaru",
             page: c.req.query("page") ? Number(c.req.query("page")) : 1,
             perPage: c.req.query("perPage") ? Number(c.req.query("perPage")) : 12,
+            inStockOnly: c.req.query("inStockOnly") === "true",
         };
         const data = await this.listUseCase.execute(opts);
         return ok(c, data.data, "Daftar produk", {

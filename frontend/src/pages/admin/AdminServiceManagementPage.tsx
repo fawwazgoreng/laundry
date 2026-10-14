@@ -90,10 +90,10 @@ export function AdminServiceManagementPage() {
       }
       if (editingId === null) {
         await serviceApi.create(payload)
-        toastSuccess("Layanan berhasil ditambahkan")
+        toastSuccess("[Layanan] berhasil ditambahkan.")
       } else {
         await serviceApi.update(editingId, payload)
-        toastSuccess("Layanan berhasil diperbarui")
+        toastSuccess("[Layanan] berhasil diperbarui.")
       }
       handleReset()
       await load()
@@ -110,7 +110,7 @@ export function AdminServiceManagementPage() {
     setDeleting(true)
     try {
       await serviceApi.remove(deleteTarget.id)
-      toastSuccess("Layanan berhasil dihapus")
+      toastSuccess("[Layanan] berhasil dihapus.")
       setDeleteTarget(null)
       if (editingId === deleteTarget.id) handleReset()
       await load()

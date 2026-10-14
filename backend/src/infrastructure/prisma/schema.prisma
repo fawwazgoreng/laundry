@@ -156,6 +156,7 @@ model Payments {
     payment_type   String   @db.VarChar(20)
     gross_amount   Decimal
     status         String   @db.VarChar(30)
+    va_number      String?
     paid_at        DateTime?
     raw_response   Json?
     created_at     DateTime @default(now())
