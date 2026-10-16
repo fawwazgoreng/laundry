@@ -125,6 +125,12 @@ export class CreateOrderUseCase {
             deliveryFee,
         });
 
+        const initialStatus: orderStatus = dto.payment_method === "cod" ? "DITERIMA" : "BARU";
+        const initialTrackingNote =
+            initialStatus === "DITERIMA"
+                ? "Pakaian telah diterima staf di outlet."
+                : "Pesanan diterima. Menunggu konfirmasi outlet.";
+
         let orderId = "";
         let order: orderDetailType | null = null;
         for (let attempt = 0; attempt < 3; attempt++) {
@@ -143,8 +149,8 @@ export class CreateOrderUseCase {
                     services,
                     products,
                     totals,
-                    status: "BARU",
-                    tracking: { status: "BARU", notes: "Pesanan diterima. Menunggu konfirmasi outlet." },
+                    status: initialStatus,
+                    tracking: { status: initialStatus, notes: initialTrackingNote },
                 });
                 break;
             } catch (error) {

@@ -143,6 +143,45 @@ describe("CreateOrderUseCase", () => {
         expect(cf.category).toBe("sales");
     });
 
+    it("creates a COD order already accepted (DITERIMA)", async () => {
+        const order = makeOrder();
+        const orderRepo = {
+            countByDatePrefix: mock(() => 0),
+            create: mock(() => order),
+            findByOrderId: mock(() => order),
+        } as unknown as orderRepository;
+        const paymentRepo = {
+            create: mock(() => ({
+                id: "pay-1",
+                order_id: order.order_id,
+                transaction_id: "TRX-PAY-COD",
+                payment_type: "cod",
+                gross_amount: 19000,
+                status: "PENDING",
+                paid_at: null,
+                va_number: null,
+            })),
+            confirm: mock(() => null),
+            findActivePendingByUser: mock(() => null),
+        } as unknown as paymentRepository;
+
+        const uc = new CreateOrderUseCase(
+            orderRepo,
+            { findById: mock(() => svc), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
+            { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
+            { findById: mock(() => address) } as unknown as addressRepository,
+            { findById: mock(() => outlet) } as unknown as outletRepository,
+            paymentRepo,
+            { create: mock(async () => ({})) } as unknown as cashflowRepository,
+        );
+
+        await uc.execute("u-1", { ...validInput(), payment_method: "cod" });
+
+        const created = (orderRepo.create as ReturnType<typeof mock>).mock.calls[0][0];
+        expect(created.status).toBe("DITERIMA");
+        expect(created.tracking.status).toBe("DITERIMA");
+    });
+
     it("rejects a new order while an active pending payment exists and reports remaining time", async () => {
         const order = makeOrder();
         const createdNearlyNow = new Date(Date.now() - 60 * 60 * 1000).toISOString();

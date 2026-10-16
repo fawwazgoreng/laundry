@@ -83,15 +83,15 @@ export default function LandingPage() {
                 </div>
                 <div className="flex items-center gap-2">
                     {user ? (
-                        <Button onClick={() => (window.location.href = startTo)}>Buka Aplikasi</Button>
+                        <Link to={startTo}>Buka Aplikasi</Link>
                     ) : (
                         <>
-                            <Button variant="ghost" size="md" onClick={() => (window.location.href = "/login")}>
+                            <Link to={"/login"}>
                                 Masuk
-                            </Button>
-                            <Button onClick={() => (window.location.href = "/register")}>
+                            </Link>
+                            <Link to={"/register"}>
                                 Daftar Gratis
-                            </Button>
+                            </Link>
                         </>
                     )}
                 </div>
