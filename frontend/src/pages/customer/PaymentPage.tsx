@@ -4,6 +4,8 @@ import { AlertTriangle, Box, Check, Copy, Hash, Info, RefreshCcw, ShieldCheck, T
 import { formatIDR } from "../../lib/format"
 import { orderApi, paymentApi } from "../../services/api"
 
+const PAYMENT_WINDOW_HOURS = 24
+
 const terms = [
   {
     icon: Timer,
@@ -44,7 +46,7 @@ export function PaymentPage() {
   const [vaNumber, setVaNumber] = useState("")
   const [paymentLabel, setPaymentLabel] = useState("Bank BRI - akun virtual")
   const [createdAt, setCreatedAt] = useState("")
-  const [secondsLeft, setSecondsLeft] = useState(24 * 60 * 60)
+  const [secondsLeft, setSecondsLeft] = useState(PAYMENT_WINDOW_HOURS * 60 * 60)
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -68,6 +70,8 @@ export function PaymentPage() {
           { label: "Biaya Pengiriman", value: order.delivery_fee },
         ]
         setSummary(rows)
+        const expiresAt = new Date(payment.created_at).getTime() + PAYMENT_WINDOW_HOURS * 60 * 60 * 1000
+        setSecondsLeft(Math.max(0, Math.floor((expiresAt - Date.now()) / 1000)))
       })
       .catch(() => undefined)
   }, [orderId])

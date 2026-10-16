@@ -2,9 +2,17 @@ import { useEffect, useMemo, useState } from "react"
 import { ChevronLeft, ChevronRight, CreditCard, Eye, MapPin, Receipt, Search } from "lucide-react"
 import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
-import type { OrderListItem, OrderStatus } from "../../lib/types"
-import { orderApi } from "../../services/api"
-import { Link } from "react-router-dom"
+import type { OrderListItem, OrderStatus, Payment } from "../../lib/types"
+import { orderApi, paymentApi } from "../../services/api"
+import { useToast } from "../../components/Toast"
+import { Link, useNavigate } from "react-router-dom"
+
+const PAYMENT_WINDOW_HOURS = 24
+
+function hasActivePayment(payment: Payment): boolean {
+  const expiresAt = new Date(payment.created_at).getTime() + PAYMENT_WINDOW_HOURS * 60 * 60 * 1000
+  return payment.status === "PENDING" && expiresAt > Date.now()
+}
 
 const tabs = [
   { key: "semua", label: "Semua" },
@@ -25,9 +33,12 @@ interface AdminOrderRow {
 }
 
 export function UserOrderHistory() {
+  const navigate = useNavigate()
+  const { error: toastError } = useToast()
   const [activeTab, setActiveTab] = useState("semua")
   const [search, setSearch] = useState("")
   const [orders, setOrders] = useState<AdminOrderRow[]>([])
+  const [checkingPayment, setCheckingPayment] = useState<string | null>(null)
 
   const load = () =>
     orderApi
@@ -50,6 +61,24 @@ export function UserOrderHistory() {
   useEffect(() => {
     load()
   }, [])
+
+  // Buka halaman pembayaran hanya bila pesanan masih punya pembayaran yang belum kedaluwarsa
+  async function handlePaymentClick(orderId: string) {
+    if (checkingPayment) return
+    setCheckingPayment(orderId)
+    try {
+      const payment = await paymentApi.byOrder(orderId)
+      if (hasActivePayment(payment)) {
+        navigate(`/payment/${orderId}`)
+      } else {
+        toastError("Pembayaran pesanan ini sudah tidak berlaku.")
+      }
+    } catch {
+      toastError("Pembayaran pesanan ini tidak ditemukan.")
+    } finally {
+      setCheckingPayment(null)
+    }
+  }
 
   const counts = useMemo(() => {
     const c: Record<string, number> = { semua: orders.length }
@@ -160,9 +189,15 @@ export function UserOrderHistory() {
                       <Link to={"/tracking/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
                         <MapPin size={14} />
                       </Link>
-                      <Link to={"/payment/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
+                      <button
+                        type="button"
+                        onClick={() => handlePaymentClick(order.id)}
+                        disabled={checkingPayment === order.id}
+                        aria-label="Buka halaman pembayaran"
+                        className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary disabled:opacity-50"
+                      >
                         <CreditCard size={14} />
-                      </Link>
+                      </button>
                       <Link to={"/nota/" + order.id} target="blank" className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
                         <Receipt size={14} />
                       </Link>
