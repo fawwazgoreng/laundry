@@ -2,18 +2,17 @@
   "name": "backend",
   "scripts": {
     "dev": "bun run --hot src/index.ts",
-    "prod" : "bun run src/index.ts",
-    "typecheck": "./node_modules/.bin/tsc --noEmit -p tsconfig.json",
+    "prod": "bun run src/index.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "bun test src/domain/entities src/useCase",
     "test:unit": "bun test src/domain/entities src/useCase",
     "test:integration": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/laundry_test\" bun test --timeout=30000 tests/integration",
-    "seed": "bun run src/infrastructure/seed/seed.ts"
+    "seed": "bun run src/infrastructure/seed/seed.ts",
+    "prisma:generate": "prisma contract emit"
   },
   "dependencies": {
-    "@prisma/adapter-pg": "^7.9.1",
-    "@prisma/client": "^7.9.1",
+    "@prisma/orm-postgres": "^8.0.0-rc.18",
     "@types/midtrans-client": "^1.4.0",
-    "dotenv": "^17.4.2",
     "hono": "^4.13.0",
     "hono-rate-limiter": "^0.5.3",
     "midtrans-client": "^1.4.3",
@@ -22,11 +21,9 @@
   },
   "devDependencies": {
     "@types/bun": "latest",
-    "@types/node": "^26.6.1",
     "@types/pg": "^8.20.4",
-    "prisma": "^7.9.1",
-    "prisma-json-types-generator": "^5.1.1",
-    "tsx": "^4.23.6"
+    "prisma": "8.0.0-rc.23",
+    "prisma-json-types-generator": "^5.1.1"
   },
   "module": "src/index.ts",
   "type": "module",

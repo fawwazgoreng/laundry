@@ -2,3 +2,5 @@ node_modules
 logs
 tests
 README.md
+/src/infrastructure/database
+migrations

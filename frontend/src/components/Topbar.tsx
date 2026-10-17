@@ -28,7 +28,7 @@ export function Topbar({ items }: { items: NavItem[] }) {
                         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
                             <img src="/components/shirt-icon.png" className="h-5 w-5" />
                         </span>
-                        <span className="text-lg font-extrabold tracking-tight text-primary">Fadarosi</span>
+                        <span className="font-extrabold tracking-tight text-primary text-[20px] uppercase">Fadarosi</span>
                     </Link>
                 </div>
 

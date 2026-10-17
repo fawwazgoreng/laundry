@@ -33,8 +33,8 @@ function isDuplicateOrderId(error: unknown): boolean {
     return (
         typeof error === "object" &&
         error !== null &&
-        "code" in error &&
-        error.code === "P2002"
+        (("code" in error && error.code === "P2002") ||
+            ("sqlState" in error && error.sqlState === "23505"))
     );
 }
 

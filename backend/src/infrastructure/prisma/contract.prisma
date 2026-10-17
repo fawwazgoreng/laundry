@@ -1,0 +1,169 @@
+// use prisma-8
+
+model User {
+    id              Uuid           @id @default(uuid())
+    role            VarChar(10)
+    username        VarChar(150)
+    email           String         @unique
+    password        String
+    phone           VarChar(20)
+    is_verified     Boolean        @default(true)
+    verified_at     DateTime       @default(now())
+    created_at      DateTime       @default(now())
+    user_address    User_address[]
+    refreshToken    Refresh_token? @relation(fields: [refresh_tokenId], references: [id])
+    refresh_tokenId Uuid?
+    accessToken     Access_token?  @relation(fields: [access_tokenId], references: [id])
+    access_tokenId  Uuid?
+    orders          Orders[]
+}
+
+model Refresh_token {
+    id         Uuid     @id @default(uuid())
+    user_id    Uuid
+    token      String
+    expired_at DateTime
+    created_at DateTime @default(now())
+    user       User[]
+}
+
+model Access_token {
+    id         Uuid     @id @default(uuid())
+    user_id    Uuid
+    token      String
+    expired_at DateTime
+    created_at DateTime @default(now())
+    user       User[]
+}
+
+model User_address {
+    id           Int      @id @default(autoincrement())
+    label        VarChar(30)
+    address_text String
+    latitude     Numeric(10, 8)
+    longitude    Numeric(11, 8)
+    is_primary   Boolean  @default(false)
+    user_id      Uuid
+    user         User     @relation(fields: [user_id], references: [id])
+    orders       Orders[]
+}
+
+model Outlets {
+    id               Int      @id @default(autoincrement())
+    name             String
+    phone            VarChar(20)?
+    address_text     String?
+    latitude         Numeric(10, 8)
+    longitude        Numeric(11, 8)
+    max_coverage_km  Numeric(5, 2)
+    min_order_amount Numeric(12, 2)
+    open_hours       String?
+    slot_date        String?
+    weekly_hours     String?
+    orders           Orders[]
+}
+
+model Laundry_services {
+    id                       Int                  @id @default(autoincrement())
+    name                     VarChar(30)
+    unit                     VarChar(10)
+    price_per_unit           Numeric(12, 2)
+    description              String
+    estimated_duration_hours Int
+    is_active                Boolean
+    serviceOrderItems        Service_order_item[]
+}
+
+model Products {
+    id                Int                  @id @default(autoincrement())
+    name              VarChar(30)               
+    category          VarChar(30)
+    price             Numeric(12, 2)
+    size              VarChar(10)
+    stock             Int
+    is_active         Boolean
+    image             String
+    productOrderItems Product_order_item[]
+}
+
+model Orders {
+    id                Uuid                 @id @default(uuid())
+    order_id          String               @unique
+    user_id           Uuid
+    outlet_id         Int
+    user_address_id   Int
+    distance_km       Numeric(6, 2)
+    delivery_fee      Numeric(10, 2)
+    total_laundry     Numeric(12, 2)
+    total_product     Numeric(12, 2)
+    total_amount      Int
+    status            VarChar(20)
+    payment_method    VarChar(20)
+    notes             String?
+    created_at        DateTime             @default(now())
+    updated_at        temporal.updatedAt() // Menggunakan standar pelacakan waktu mutakhir aplikasi Prisma 8
+    user              User                 @relation(fields: [user_id], references: [id])
+    outlet            Outlets              @relation(fields: [outlet_id], references: [id])
+    address           User_address         @relation(fields: [user_address_id], references: [id])
+    serviceOrderItems Service_order_item[]
+    productOrderItems Product_order_item[]
+    payments          Payments[]
+    orderTrackings    Order_trackings[]
+    cashFlows         Cash_flow[]
+}
+
+model Service_order_item {
+    id                 Uuid             @id @default(uuid())
+    order_id           String
+    laundry_service_id Int
+    qty                Numeric(6, 2)    // Kiloan laundry menggunakan pecahan desimal biner
+    subtotal           Numeric(12, 2)
+    notes              String
+    service            Laundry_services @relation(fields: [laundry_service_id], references: [id])
+    order              Orders           @relation(fields: [order_id], references: [order_id])
+}
+
+model Product_order_item {
+    id         Uuid     @id @default(uuid())
+    order_id   String
+    product_id Int
+    qty        Int
+    subtotal   Int
+    product    Products @relation(fields: [product_id], references: [id])
+    order      Orders   @relation(fields: [order_id], references: [order_id])
+}
+
+model Payments {
+    id             Uuid      @id @default(uuid())
+    order_id       String
+    transaction_id String
+    payment_type   VarChar(20)
+    gross_amount   Numeric(12, 2)
+    status         VarChar(30)
+    va_number      String?
+    paid_at        DateTime?
+    raw_response   Json?
+    created_at     DateTime  @default(now())
+    order          Orders    @relation(fields: [order_id], references: [order_id])
+}
+
+model Order_trackings {
+    id                        Uuid     @id @default(uuid())
+    order_id                  String
+    status                    VarChar(20)
+    estimated_completion_time DateTime @default(now())
+    notes                     String
+    created_at                DateTime @default(now())
+    order                     Orders   @relation(fields: [order_id], references: [order_id])
+}
+
+model Cash_flow {
+    id          Int      @id @default(autoincrement())
+    order_id    String?
+    type        VarChar(20)
+    category    VarChar(40)
+    amount      Numeric(12, 2)
+    description String
+    created_at  DateTime @default(now())
+    order       Orders?  @relation(fields: [order_id], references: [order_id])
+}

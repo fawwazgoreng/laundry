@@ -40,7 +40,7 @@ app.use("/uploads/*", serveStatic({ root: "./public" }));
 
 app.get("/health", async (c) => {
     try {
-        await prisma.$queryRaw`SELECT 1`;
+        await prisma.raw.sql.arguments("SELECT 1");
         return c.json({ success: true, status: "ok", database: "up" });
     } catch (error) {
         logger.error("health check failed", {

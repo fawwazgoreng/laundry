@@ -1,5 +1,5 @@
-import type { Prisma } from "../src/generated/prisma/client";
 import { prisma } from "../prisma/prisma";
+import { fromInstant, numeric, varchar } from "../prisma/scalars";
 import type { orderRepository } from "../../domain/repositories/orderRepository";
 import type {
     orderDetailType,
@@ -13,46 +13,148 @@ import type {
     orderTrackingType,
 } from "../../domain/types/orderType";
 
-type OrderRow = Prisma.OrdersGetPayload<{
-    include: {
-        user: { select: { id: true; username: true; phone: true; email: true } }
-        address: { select: { id: true; label: true; address_text: true } }
-        outlet: { select: { id: true; name: true; latitude: true; longitude: true } }
-        payments: true
-        serviceOrderItems: { include: { service: true } }
-        productOrderItems: { include: { product: true } }
-        orderTrackings: true
-    }
-}>;
+type ServiceItemRow = {
+    id: string
+    laundry_service_id: number
+    qty: unknown
+    subtotal: unknown
+    notes: string
+    service: {
+        name: string
+        unit: string
+        price_per_unit: unknown
+    } | null
+};
 
-function toServiceItem(row: OrderRow["serviceOrderItems"][number]): serviceOrderItemType {
+type ProductItemRow = {
+    id: string
+    product_id: number
+    qty: number
+    subtotal: number
+    product: {
+        name: string
+        category: string
+        size: string
+        image: string
+        price: unknown
+    } | null
+};
+
+type PaymentRow = {
+    id: string
+    transaction_id: string
+    payment_type: string
+    gross_amount: unknown
+    status: string
+    va_number: string | null
+    paid_at: Temporal.Instant | null
+    created_at: Temporal.Instant
+    raw_response: unknown
+};
+
+type TrackingRow = {
+    id: string
+    status: string
+    notes: string
+    estimated_completion_time: Temporal.Instant
+    created_at: Temporal.Instant
+};
+
+type OrderDetailRow = {
+    id: string
+    order_id: string
+    status: string
+    payment_method: string
+    total_laundry: unknown
+    total_product: unknown
+    delivery_fee: unknown
+    total_amount: number
+    distance_km: unknown
+    notes: string | null
+    created_at: Temporal.Instant
+    updated_at: Temporal.Instant
+    user: {
+        id: string
+        username: string
+        phone: string
+        email: string
+    } | null
+    address: {
+        id: number
+        label: string
+        address_text: string
+    } | null
+    outlet: {
+        id: number
+        name: string
+        latitude: unknown
+        longitude: unknown
+    } | null
+    serviceOrderItems: ServiceItemRow[]
+    productOrderItems: ProductItemRow[]
+    payments: PaymentRow[]
+    orderTrackings: TrackingRow[]
+};
+
+type OrderListRow = {
+    id: string
+    order_id: string
+    status: string
+    total_amount: number
+    payment_method: string
+    created_at: Temporal.Instant
+    user: {
+        username: string
+        phone: string
+    } | null
+    serviceOrderItems: {
+        qty: unknown
+        service: {
+            name: string
+            unit: string
+        } | null
+    }[]
+    productOrderItems: {
+        qty: number
+        product: {
+            name: string
+            size: string
+        } | null
+    }[]
+};
+
+function toServiceItem(row: ServiceItemRow): serviceOrderItemType {
+    const service = row.service;
+    if (!service) throw new Error("service order item missing service");
     return {
         id: row.id,
         service_id: row.laundry_service_id,
-        service_name: row.service.name,
-        unit: row.service.unit,
+        service_name: service.name,
+        unit: service.unit,
         qty: Number(row.qty),
-        price_per_unit: Number(row.service.price_per_unit),
+        price_per_unit: Number(service.price_per_unit),
         subtotal: Number(row.subtotal),
         notes: row.notes,
     };
 }
 
-function toProductItem(row: OrderRow["productOrderItems"][number]): productOrderItemType {
+function toProductItem(row: ProductItemRow): productOrderItemType {
+    const product = row.product;
+    if (!product) throw new Error("product order item missing product");
     return {
         id: row.id,
         product_id: row.product_id,
-        product_name: row.product.name,
-        category: row.product.category,
-        size: row.product.size,
-        image: row.product.image,
+        product_name: product.name,
+        category: product.category,
+        size: product.size,
+        image: product.image,
         qty: row.qty,
-        price: Number(row.product.price),
+        price: Number(product.price),
         subtotal: row.subtotal,
     };
 }
 
-function toPayment(row: OrderRow["payments"][number] | undefined): paymentSummaryType | null {
+function toPayment(row: PaymentRow | undefined): paymentSummaryType | null {
     if (!row) return null;
     return {
         id: row.id,
@@ -61,24 +163,26 @@ function toPayment(row: OrderRow["payments"][number] | undefined): paymentSummar
         gross_amount: Number(row.gross_amount),
         status: row.status,
         va_number: row.va_number,
-        paid_at: row.paid_at ? row.paid_at.toISOString() : null,
-        created_at: row.created_at.toISOString(),
+        paid_at: row.paid_at ? fromInstant(row.paid_at).toISOString() : null,
+        created_at: fromInstant(row.created_at).toISOString(),
         raw_response: row.raw_response as Record<string, unknown> | null,
     };
 }
 
-function toTracking(row: OrderRow["orderTrackings"][number]): orderTrackingType {
+function toTracking(row: TrackingRow): orderTrackingType {
     return {
         id: row.id,
         status: row.status as orderStatus,
         notes: row.notes,
-        estimated_completion_time: row.estimated_completion_time.toISOString(),
-        created_at: row.created_at.toISOString(),
+        estimated_completion_time: fromInstant(row.estimated_completion_time).toISOString(),
+        created_at: fromInstant(row.created_at).toISOString(),
     };
 }
 
-function toOrderDetail(row: OrderRow): orderDetailType {
+function toOrderDetail(row: OrderDetailRow): orderDetailType {
     const payment = toPayment(row.payments[0]);
+    const user = row.user;
+    if (!user) throw new Error("order missing customer");
     return {
         id: row.id,
         order_id: row.order_id,
@@ -90,13 +194,13 @@ function toOrderDetail(row: OrderRow): orderDetailType {
         total_amount: row.total_amount,
         distance_km: Number(row.distance_km),
         notes: row.notes,
-        created_at: row.created_at.toISOString(),
-        updated_at: row.updated_at.toISOString(),
+        created_at: fromInstant(row.created_at).toISOString(),
+        updated_at: fromInstant(row.updated_at).toISOString(),
         customer: {
-            id: row.user.id,
-            username: row.user.username,
-            phone: row.user.phone,
-            email: row.user.email,
+            id: user.id,
+            username: user.username,
+            phone: user.phone,
+            email: user.email,
         },
         address: row.address
             ? { id: row.address.id, label: row.address.label, address_text: row.address.address_text }
@@ -109,66 +213,66 @@ function toOrderDetail(row: OrderRow): orderDetailType {
         payment,
         trackings: row.orderTrackings
             .slice()
-            .sort((a, b) => a.created_at.getTime() - b.created_at.getTime())
+            .sort((a, b) => a.created_at.epochMilliseconds - b.created_at.epochMilliseconds)
             .map(toTracking),
     };
 }
 
-const orderInclude = {
-    user: { select: { id: true, username: true, phone: true, email: true } },
-    address: { select: { id: true, label: true, address_text: true } },
-    outlet: { select: { id: true, name: true, latitude: true, longitude: true } },
-    payments: { orderBy: { created_at: "desc" as const }, take: 1 },
-    serviceOrderItems: { include: { service: true } },
-    productOrderItems: { include: { product: true } },
-    orderTrackings: true,
-} satisfies Prisma.OrdersInclude;
+const orderDetailQuery = () =>
+    prisma.orm.public.Orders
+        .include("user", (u) => u.select("id", "username", "phone", "email"))
+        .include("address", (a) => a.select("id", "label", "address_text"))
+        .include("outlet", (o) => o.select("id", "name", "latitude", "longitude"))
+        .include("payments", (p) => p.orderBy((r) => r.created_at.desc()).limit(1))
+        .include("serviceOrderItems", (s) => s.include("service"))
+        .include("productOrderItems", (p) => p.include("product"))
+        .include("orderTrackings");
+
+const orderListQuery = () =>
+    prisma.orm.public.Orders
+        .include("user", (u) => u.select("id", "username", "phone"))
+        .include("serviceOrderItems", (s) => s.include("service"))
+        .include("productOrderItems", (p) => p.include("product"));
 
 export class pgOrderRepository implements orderRepository {
     async create(input: orderNewRecordType): Promise<orderDetailType> {
-        await prisma.$transaction(async (tx) => {
-            await tx.orders.create({
-                data: {
-                    order_id: input.order_id,
-                    user_id: input.user_id,
-                    outlet_id: input.outlet_id,
-                    user_address_id: input.user_address_id,
-                    distance_km: input.distance_km,
-                    delivery_fee: input.delivery_fee,
-                    total_laundry: input.totals.total_laundry,
-                    total_product: input.totals.total_product,
-                    total_amount: input.totals.total_amount,
-                    status: input.status,
-                    payment_method: input.payment_method,
-                    notes: input.notes ?? null,
-                    serviceOrderItems: {
-                        create: input.services.map((s) => ({
-                            service: { connect: { id: s.laundry_service_id } },
-                            qty: s.qty,
-                            subtotal: s.subtotal,
-                            notes: s.notes ?? "",
-                        })),
-                    },
-                    productOrderItems: {
-                        create: input.products.map((p) => ({
-                            product: { connect: { id: p.product_id } },
-                            qty: p.qty,
-                            subtotal: p.subtotal,
-                        })),
-                    },
-                    orderTrackings: {
-                        create: {
-                            status: input.tracking.status,
-                            notes: input.tracking.notes,
-                        },
-                    },
-                },
+        await prisma.transaction(async (tx) => {
+            await tx.orm.public.Orders.create({
+                order_id: input.order_id,
+                user_id: input.user_id,
+                outlet_id: input.outlet_id,
+                user_address_id: input.user_address_id,
+                distance_km: numeric<6, 2>(input.distance_km),
+                delivery_fee: numeric<10, 2>(input.delivery_fee),
+                total_laundry: numeric<12, 2>(input.totals.total_laundry),
+                total_product: numeric<12, 2>(input.totals.total_product),
+                total_amount: input.totals.total_amount,
+                status: varchar<20>(input.status),
+                payment_method: varchar<20>(input.payment_method),
+                notes: input.notes ?? null,
+                serviceOrderItems: (items) => items.create(input.services.map((s) => ({
+                    laundry_service_id: s.laundry_service_id,
+                    qty: numeric<6, 2>(s.qty),
+                    subtotal: numeric<12, 2>(s.subtotal),
+                    notes: s.notes ?? "",
+                }))),
+                productOrderItems: (items) => items.create(input.products.map((p) => ({
+                    product_id: p.product_id,
+                    qty: p.qty,
+                    subtotal: p.subtotal,
+                }))),
+                orderTrackings: (trackings) => trackings.create({
+                    status: varchar<20>(input.tracking.status),
+                    notes: input.tracking.notes,
+                }),
             });
             for (const p of input.products) {
-                await tx.products.update({
-                    where: { id: p.product_id },
-                    data: { stock: { decrement: p.qty } },
-                });
+                const product = await tx.orm.public.Products.where({ id: p.product_id }).forUpdate().first();
+                if (product) {
+                    await tx.orm.public.Products.where({ id: p.product_id }).update({
+                        stock: product.stock - p.qty,
+                    });
+                }
             }
         });
         const fresh = await this.findByOrderId(input.order_id);
@@ -177,34 +281,28 @@ export class pgOrderRepository implements orderRepository {
     }
 
     async findByOrderId(orderId: string): Promise<orderDetailType | null> {
-        const row = await prisma.orders.findUnique({
-            where: { order_id: orderId },
-            include: orderInclude,
-        });
+        const row = await orderDetailQuery().where({ order_id: orderId }).first();
         return row ? toOrderDetail(row) : null;
     }
 
     async findById(id: string): Promise<orderDetailType | null> {
-        const row = await prisma.orders.findUnique({
-            where: { id },
-            include: orderInclude,
-        });
+        const row = await orderDetailQuery().where({ id }).first();
         return row ? toOrderDetail(row) : null;
     }
 
-    private async toListItems(
-        rows: Prisma.OrdersGetPayload<{ include: { user: { select: { id: true; username: true; phone: true } }; serviceOrderItems: { include: { service: true } }; productOrderItems: { include: { product: true } } } }>[],
-    ): Promise<orderListItemType[]> {
+    private async toListItems(rows: OrderListRow[]): Promise<orderListItemType[]> {
         return rows.map((row) => {
+            const user = row.user;
+            if (!user) throw new Error("order missing customer");
             const svc = row.serviceOrderItems[0];
             const prod = row.productOrderItems[0];
             let summary = "Layanan laundry";
             let unit = "-";
-            if (svc) {
+            if (svc && svc.service) {
                 const num = `${Number(svc.qty) % 1 === 0 ? Number(svc.qty).toFixed(0) : Number(svc.qty).toFixed(1)} ${svc.service.unit}`;
                 summary = `${svc.service.name} ${num}`;
                 unit = num;
-            } else if (prod) {
+            } else if (prod && prod.product) {
                 summary = `${prod.product.name} ${prod.qty} ${prod.product.size}`;
                 unit = `${prod.qty} ${prod.product.size}`;
             }
@@ -214,9 +312,9 @@ export class pgOrderRepository implements orderRepository {
                 status: row.status as orderStatus,
                 total_amount: row.total_amount,
                 payment_method: row.payment_method as orderListItemType["payment_method"],
-                created_at: row.created_at.toISOString(),
-                customer_name: row.user.username,
-                customer_phone: row.user.phone,
+                created_at: fromInstant(row.created_at).toISOString(),
+                customer_name: user.username,
+                customer_phone: user.phone,
                 items_summary: summary,
                 items_unit: unit,
             };
@@ -226,93 +324,93 @@ export class pgOrderRepository implements orderRepository {
     async listByUser(userId: string, filters: orderListFilters = {}): Promise<{ data: orderListItemType[]; count: number }> {
         const page = filters.page ?? 1;
         const perPage = filters.perPage ?? 10;
-        const where: Prisma.OrdersWhereInput = {
-            user_id: userId,
-        };
-        if (filters.status && filters.status !== "all") {
-            where.status = filters.status;
-        }
-        const [rows, count] = await Promise.all([
-            prisma.orders.findMany({
-                where,
-                include: {
-                    user: { select: { id: true, username: true, phone: true } },
-                    serviceOrderItems: { include: { service: true } },
-                    productOrderItems: { include: { product: true } },
-                },
-                orderBy: { created_at: "desc" },
-                skip: (page - 1) * perPage,
-                take: perPage,
-            }),
-            prisma.orders.count({ where }),
+        const base = orderListQuery().where((o, { fns }) => {
+            const conditions = [o.user_id.eq(userId)];
+            if (filters.status && filters.status !== "all") {
+                conditions.push(o.status.eq(varchar<20>(filters.status)));
+            }
+            return fns.and(...conditions);
+        });
+        const [rows, countAgg] = await Promise.all([
+            base.orderBy((o) => o.created_at.desc()).offset((page - 1) * perPage).limit(perPage).all(),
+            base.aggregate((agg) => ({ count: agg.count() })),
         ]);
-        return { data: await this.toListItems(rows), count };
+        return { data: await this.toListItems(rows), count: countAgg.count };
     }
 
     async listAll(filters: orderListFilters = {}): Promise<{ data: orderListItemType[]; count: number }> {
         const page = filters.page ?? 1;
         const perPage = filters.perPage ?? 10;
-        const where: Prisma.OrdersWhereInput = {};
-
-        if (filters.status && filters.status !== "all") {
-            where.status = filters.status;
-        }
-        if (filters.search) {
-            where.OR = [
-                { order_id: { contains: filters.search, mode: "insensitive" } },
-                { user: { username: { contains: filters.search, mode: "insensitive" } } },
-                { user: { phone: { contains: filters.search } } },
-            ];
-        }
-        if (filters.service) {
-            where.serviceOrderItems = {
-                some: { service: { name: { contains: filters.service, mode: "insensitive" } } },
-            };
-        }
-
-        const [rows, count] = await Promise.all([
-            prisma.orders.findMany({
-                where,
-                include: {
-                    user: { select: { id: true, username: true, phone: true } },
-                    serviceOrderItems: { include: { service: true } },
-                    productOrderItems: { include: { product: true } },
-                },
-                orderBy: { created_at: "desc" },
-                skip: (page - 1) * perPage,
-                take: perPage,
-            }),
-            prisma.orders.count({ where }),
+        const base = orderListQuery().where((o, { fns }) => {
+            const conditions = [];
+            if (filters.status && filters.status !== "all") {
+                conditions.push(o.status.eq(varchar<20>(filters.status)));
+            }
+            if (filters.search) {
+                const term = filters.search;
+                conditions.push(fns.or(
+                    o.order_id.ilike(`%${term}%`),
+                    o.user.some((u) => u.username.ilike(`%${term}%`)),
+                    o.user.some((u) => u.phone.like(`%${term}%`)),
+                ));
+            }
+            if (filters.service) {
+                const term = filters.service;
+                conditions.push(
+                    o.serviceOrderItems.some((s) => s.service.some((svc) => svc.name.ilike(`%${term}%`))),
+                );
+            }
+            return fns.and(...(conditions.length > 0 ? conditions : [o.id.isNotNull()]));
+        });
+        const [rows, countAgg] = await Promise.all([
+            base.orderBy((o) => o.created_at.desc()).offset((page - 1) * perPage).limit(perPage).all(),
+            base.aggregate((agg) => ({ count: agg.count() })),
         ]);
-        return { data: await this.toListItems(rows), count };
+        return { data: await this.toListItems(rows), count: countAgg.count };
     }
 
     async updateStatus(orderId: string, status: orderStatus): Promise<void> {
-        await prisma.$transaction(async (tx) => {
-            await tx.orders.update({ where: { order_id: orderId }, data: { status } });
+        await prisma.transaction(async (tx) => {
+            await tx.orm.public.Orders.where({ order_id: orderId }).update({
+                status: varchar<20>(status),
+            });
             if (status === "DIBATALKAN") {
-                const items = await tx.product_order_item.findMany({ where: { order_id: orderId } });
+                const items = await tx.orm.public.Product_order_item.where({ order_id: orderId }).all();
                 for (const item of items) {
-                    await tx.products.update({
-                        where: { id: item.product_id },
-                        data: { stock: { increment: item.qty } },
-                    });
+                    const product = await tx.orm.public.Products.where({ id: item.product_id }).forUpdate().first();
+                    if (product) {
+                        await tx.orm.public.Products.where({ id: item.product_id }).update({
+                            stock: product.stock + item.qty,
+                        });
+                    }
                 }
             }
         });
     }
 
     async addTracking(orderId: string, status: orderStatus, notes: string): Promise<void> {
-        await prisma.order_trackings.create({
-            data: { order_id: orderId, status, notes },
+        await prisma.orm.public.Order_trackings.create({
+            order_id: orderId,
+            status: varchar<20>(status),
+            notes,
         });
     }
 
     async countByDatePrefix(prefix: string): Promise<number> {
-        return prisma.orders.count({ where: { order_id: { startsWith: prefix } } });
+        const agg = await prisma.orm.public.Orders
+            .where((o) => o.order_id.like(`${prefix}%`))
+            .aggregate((a) => ({ count: a.count() }));
+        return agg.count;
     }
 
     async countByStatusUser(userId: string, status?: string): Promise<number> {
-        return prisma.orders.count({ where: { user_id: userId, ...(status ? { status } : {}) } });
+        const agg = await prisma.orm.public.Orders
+            .where((o, { fns }) => {
+                const conditions = [o.user_id.eq(userId)];
+                if (status) conditions.push(o.status.eq(varchar<20>(status)));
+                return fns.and(...conditions);
+            })
+            .aggregate((a) => ({ count: a.count() }));
+        return agg.count;
     }
 }

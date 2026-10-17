@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom"
+import { Link, Route, Routes } from "react-router-dom"
 import { useAuth } from "./context/AuthContext"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { GuestLayout } from "./layouts/GuestLayout"
@@ -30,11 +30,11 @@ function NotFound() {
             <p className="text-6xl font-black text-primary">404</p>
             <h1 className="mt-4 text-xl font-bold text-ink-strong">Halaman Tidak Ditemukan</h1>
             <p className="mt-2 text-sm text-gray-500">Halaman yang Anda cari mungkin telah dipindahkan atau dihapus.</p>
-            <a href={user ? (user.role === "admin" ? "/admin" : "/dashboard") : "/"} className="mt-6">
+            <Link to={user ? (user.role === "admin" ? "/admin" : "/dashboard") : "/"} className="mt-6">
                 <span className="rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">
                     Kembali ke Beranda
                 </span>
-            </a>
+            </Link>
         </div>
     )
 }

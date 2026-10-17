@@ -1,6 +1,7 @@
 import type { paymentRepository } from "../../domain/repositories/paymentRepository";
 import type { paymentConfirmInput, paymentCreateInput, paymentType } from "../../domain/types/paymentType";
 import { prisma } from "../prisma/prisma";
+import { fromInstant, instant, numeric, varchar } from "../prisma/scalars";
 
 type PaymentRow = {
     id: string
@@ -10,9 +11,9 @@ type PaymentRow = {
     gross_amount: unknown
     status: string
     va_number: string | null
-    paid_at: Date | null
+    paid_at: Temporal.Instant | null
     raw_response: unknown
-    created_at: Date
+    created_at: Temporal.Instant
 };
 
 function toPaymentType(row: PaymentRow): paymentType {
@@ -24,39 +25,37 @@ function toPaymentType(row: PaymentRow): paymentType {
         gross_amount: Number(row.gross_amount),
         status: row.status as paymentType["status"],
         va_number: row.va_number,
-        paid_at: row.paid_at ? row.paid_at.toISOString() : null,
+        paid_at: row.paid_at ? new Date(row.paid_at.epochMilliseconds).toISOString() : null,
         raw_response: row.raw_response as Record<string, unknown> | null,
-        created_at: row.created_at.toISOString(),
+        created_at: new Date(row.created_at.epochMilliseconds).toISOString(),
     };
 }
 
 export class pgPaymentRepository implements paymentRepository {
     async create(input: paymentCreateInput): Promise<paymentType> {
-        const row = await prisma.payments.create({
-            data: {
-                order_id: input.order_id,
-                transaction_id: input.transaction_id ?? `TRX-PAY-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
-                payment_type: input.payment_type,
-                gross_amount: input.gross_amount,
-                status: "PENDING",
-                va_number: input.va_number ?? null,
-                paid_at: null,
-                raw_response: null,
-            },
+        const row = await prisma.orm.public.Payments.create({
+            order_id: input.order_id,
+            transaction_id: input.transaction_id ?? `TRX-PAY-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+            payment_type: varchar<20>(input.payment_type),
+            gross_amount: numeric<12, 2>(input.gross_amount),
+            status: varchar<30>("PENDING"),
+            va_number: input.va_number ?? null,
+            paid_at: null,
+            raw_response: null,
         });
         return toPaymentType(row);
     }
 
     async findByTransactionId(transactionId: string): Promise<paymentType | null> {
-        const row = await prisma.payments.findFirst({ where: { transaction_id: transactionId } });
+        const row = await prisma.orm.public.Payments.where({ transaction_id: transactionId }).first();
         return row ? toPaymentType(row) : null;
     }
 
     async findByOrderId(orderId: string): Promise<paymentType | null> {
-        const row = await prisma.payments.findFirst({
-            where: { order_id: orderId },
-            orderBy: { created_at: "desc" },
-        });
+        const row = await prisma.orm.public.Payments
+            .where({ order_id: orderId })
+            .orderBy((r) => r.created_at.desc())
+            .first();
         return row ? toPaymentType(row) : null;
     }
 
@@ -65,57 +64,50 @@ export class pgPaymentRepository implements paymentRepository {
         if (!existing) return null;
         const status = input.status ?? "PAID";
         const paidAt = status === "PAID" ? new Date() : existing.paid_at ? new Date(existing.paid_at) : null;
-        const row = await prisma.payments.update({
-            where: { id: existing.id },
-            data: {
-                status,
-                paid_at: paidAt,
-                raw_response: input.raw_response ?? null,
-            },
-        });
-        return toPaymentType(row);
+        const row = await prisma.orm.public.Payments
+            .where({ id: existing.id })
+            .update({
+                status: varchar<30>(status),
+                paid_at: paidAt ? instant(paidAt) : null,
+                raw_response: (input.raw_response ?? null) as any,
+            });
+        return row ? toPaymentType(row) : null;
     }
 
     async listByUser(userId: string): Promise<paymentType[]> {
-        const rows = await prisma.payments.findMany({
-            where: { order: { user_id: userId } },
-            orderBy: { created_at: "desc" },
-        });
+        const rows = await prisma.orm.public.Payments
+            .where((p) => p.order.some((o) => o.user_id.eq(userId)))
+            .orderBy((p) => p.created_at.desc())
+            .all();
         return rows.map(toPaymentType);
     }
 
     async findActivePendingByUser(userId: string): Promise<paymentType | null> {
         const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
-        const rows = await prisma.payments.findMany({
-            where: {
-                status: "PENDING",
-                order: { user_id: userId },
-            },
-            orderBy: { created_at: "desc" },
-            take: 10,
-        });
-        const row = rows.find((r) => new Date(r.created_at) > cutoff);
+        const rows = await prisma.orm.public.Payments
+            .where({ status: varchar<30>("PENDING") })
+            .where((p) => p.order.some((o) => o.user_id.eq(userId)))
+            .orderBy((p) => p.created_at.desc())
+            .limit(10)
+            .all();
+        const row = rows.find((r) => fromInstant(r.created_at) > cutoff);
         return row ? toPaymentType(row) : null;
     }
 
     async listPendingOlderThan(hours: number): Promise<paymentType[]> {
         const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
-        const rows = await prisma.payments.findMany({
-            where: {
-                status: "PENDING",
-                created_at: { lt: cutoff },
-            },
-        });
+        const rows = await prisma.orm.public.Payments
+            .where((p, { fns }) => fns.and(p.status.eq(varchar<30>("PENDING")), p.created_at.lt(instant(cutoff))))
+            .all();
         return rows.map(toPaymentType);
     }
 
     async updateStatus(id: string, status: string): Promise<paymentType | null> {
         try {
-            const row = await prisma.payments.update({
-                where: { id },
-                data: { status },
-            });
-            return toPaymentType(row);
+            const row = await prisma.orm.public.Payments
+                .where({ id })
+                .update({ status: varchar<30>(status) });
+            return row ? toPaymentType(row) : null;
         } catch {
             return null;
         }
@@ -123,11 +115,10 @@ export class pgPaymentRepository implements paymentRepository {
 
     async saveRawResponse(id: string, rawResponse: Record<string, unknown>): Promise<paymentType | null> {
         try {
-            const row = await prisma.payments.update({
-                where: { id },
-                data: { raw_response: rawResponse },
-            });
-            return toPaymentType(row);
+            const row = await prisma.orm.public.Payments
+                .where({ id })
+                .update({ raw_response: rawResponse as any });
+            return row ? toPaymentType(row) : null;
         } catch {
             return null;
         }
