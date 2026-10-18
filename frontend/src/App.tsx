@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router-dom"
+import { Link, Route, Routes } from "react-router-dom"
 import { useAuth } from "./context/AuthContext"
 import { ProtectedRoute } from "./components/ProtectedRoute"
 import { GuestLayout } from "./layouts/GuestLayout"
@@ -22,6 +22,7 @@ import { UserOrderHistory } from "./pages/customer/HistoryPage"
 import { AdminReportPage } from "./pages/admin/AdminReportPage"
 import { ReceiptPage } from "./pages/public/ReceiptPage"
 import { ReportNotaPage } from "./pages/public/ReportReceives"
+import { ScrollBehavior } from "./lib/scrollBehavior"
 
 function NotFound() {
     const { user } = useAuth()
@@ -30,56 +31,59 @@ function NotFound() {
             <p className="text-6xl font-black text-primary">404</p>
             <h1 className="mt-4 text-xl font-bold text-ink-strong">Halaman Tidak Ditemukan</h1>
             <p className="mt-2 text-sm text-gray-500">Halaman yang Anda cari mungkin telah dipindahkan atau dihapus.</p>
-            <a href={user ? (user.role === "admin" ? "/admin" : "/dashboard") : "/"} className="mt-6">
+            <Link to={user ? (user.role === "admin" ? "/admin" : "/dashboard") : "/"} className="mt-6">
                 <span className="rounded-lg bg-primary px-6 py-2.5 text-sm font-bold text-white hover:bg-primary-dark">
                     Kembali ke Beranda
                 </span>
-            </a>
+            </Link>
         </div>
     )
 }
 
 export default function App() {
     return (
-        <Routes>
-            {/* Public */}
-            <Route element={<GuestLayout />}>
-                <Route index element={<LandingPage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/nota/:notaId" element={<ReceiptPage />} />
-                <Route path="/laporan/nota" element={<ReportNotaPage />} />
-            </Route>
-
-            {/* Customer (logged in) */}
-            <Route element={<ProtectedRoute />}>
-                <Route element={<CustomerLayout />}>
-                    <Route path="/dashboard" element={<DashboardPage />} />
-                    <Route path="/history" element={<UserOrderHistory />} />
-                    <Route path="/layanan" element={<LaundryWizardPage />} />
-                    <Route path="/produk" element={<ShopPage />} />
-                    <Route path="/checkout" element={<CheckoutPage />} />
-                    <Route path="/riwayat/:orderId" element={<OrderDetailPage />} />
-                    <Route path="/tracking/:orderId" element={<OrderTrackingPage />} />
-                    <Route path="/payment/:orderId" element={<PaymentPage />} />
+        <>
+            <ScrollBehavior />
+            <Routes>
+                {/* Public */}
+                <Route element={<GuestLayout />}>
+                    <Route index element={<LandingPage />} />
+                    <Route path="/login" element={<LoginPage />} />
+                    <Route path="/register" element={<RegisterPage />} />
+                    <Route path="/nota/:notaId" element={<ReceiptPage />} />
+                    <Route path="/laporan/nota" element={<ReportNotaPage />} />
                 </Route>
-            </Route>
 
-            {/* Admin */}
-            <Route element={<ProtectedRoute adminOnly />}>
-                <Route element={<AdminLayout />}>
-                    <Route path="/admin" element={<AdminDashboardPage />} />
-                    <Route path="/admin/pesanan" element={<AdminOrderManagementPage />} />
-                    <Route path="/admin/layanan" element={<AdminServiceManagementPage />} />
-                    <Route path="/admin/laporan" element={<AdminReportPage />} />
-                    <Route path="/admin/produk" element={<AdminProductManagementPage />} />
-                    <Route path="/admin/riwayat/:orderId" element={<OrderDetailPage />} />
-                    <Route path="/admin/tracking/:orderId" element={<OrderTrackingPage />} />
-                    <Route path="/admin/pengaturan" element={<AdminSettingsPage />} />
+                {/* Customer (logged in) */}
+                <Route element={<ProtectedRoute />}>
+                    <Route element={<CustomerLayout />}>
+                        <Route path="/dashboard" element={<DashboardPage />} />
+                        <Route path="/history" element={<UserOrderHistory />} />
+                        <Route path="/layanan" element={<LaundryWizardPage />} />
+                        <Route path="/produk" element={<ShopPage />} />
+                        <Route path="/checkout" element={<CheckoutPage />} />
+                        <Route path="/riwayat/:orderId" element={<OrderDetailPage />} />
+                        <Route path="/tracking/:orderId" element={<OrderTrackingPage />} />
+                        <Route path="/payment/:orderId" element={<PaymentPage />} />
+                    </Route>
                 </Route>
-            </Route>
 
-            <Route path="*" element={<NotFound />} />
-        </Routes>
+                {/* Admin */}
+                <Route element={<ProtectedRoute adminOnly />}>
+                    <Route element={<AdminLayout />}>
+                        <Route path="/admin" element={<AdminDashboardPage />} />
+                        <Route path="/admin/pesanan" element={<AdminOrderManagementPage />} />
+                        <Route path="/admin/layanan" element={<AdminServiceManagementPage />} />
+                        <Route path="/admin/laporan" element={<AdminReportPage />} />
+                        <Route path="/admin/produk" element={<AdminProductManagementPage />} />
+                        <Route path="/admin/riwayat/:orderId" element={<OrderDetailPage />} />
+                        <Route path="/admin/tracking/:orderId" element={<OrderTrackingPage />} />
+                        <Route path="/admin/pengaturan" element={<AdminSettingsPage />} />
+                    </Route>
+                </Route>
+
+                <Route path="*" element={<NotFound />} />
+            </Routes>
+        </>
     )
 }

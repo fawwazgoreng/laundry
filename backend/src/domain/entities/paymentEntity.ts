@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { z } from "zod";
 import { AppError } from "../../helper/errorHandling/appError";
 import type { paymentConfirmInput, paymentCreateInput, paymentStatus } from "../types/paymentType";
@@ -68,8 +68,10 @@ export class paymentEntity {
     static isValidSignature(notification: midtransNotificationInput, serverKey: string): boolean {
         const expected = createHash("sha512")
             .update(`${notification.order_id}${notification.status_code}${notification.gross_amount}${serverKey}`)
-            .digest("hex");
-        return expected === notification.signature_key.toLowerCase();
+            .digest();
+        const provided = Buffer.from(notification.signature_key.toLowerCase(), "hex");
+        if (provided.length !== expected.length) return false;
+        return timingSafeEqual(expected, provided);
     }
 
     static mapMidtransStatus(transactionStatus: string): Exclude<paymentStatus, "PENDING"> | null {

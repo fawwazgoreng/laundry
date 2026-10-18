@@ -5,6 +5,7 @@ import type { Product } from "../../lib/types"
 import { productApi } from "../../services/api"
 import { useOrderDraft } from "../../context/OrderDraftContext"
 import { PRODUCT_CATEGORIES } from "../../lib/utils"
+import { ErrorState, LoadingState } from "../../components/ui"
 import { useNavigate } from "react-router-dom"
 
 interface CardProduct {
@@ -13,6 +14,7 @@ interface CardProduct {
   category: string
   price: number
   imageUrl: string
+  stock: number
 }
 
 export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) => void }) {
@@ -22,6 +24,8 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
   const [category, setCategory] = useState("Semua")
   const [search, setSearch] = useState("")
   const [sort, setSort] = useState<"terbaru" | "termurah" | "termahal">("terbaru")
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     productApi
@@ -34,10 +38,15 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
             category: p.category,
             price: p.price,
             imageUrl: p.image,
+            stock: p.stock
           })),
         )
+        setLoadError(null)
       })
-      .catch(() => undefined)
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Gagal memuat produk")
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   const productCategories = useMemo(() => {
@@ -125,33 +134,46 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((product) => (
-            <div key={product.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
-              <div className="aspect-4/3 w-full overflow-hidden bg-gray-100">
-                <img
-                  src={product.imageUrl}
-                  alt={product.name}
-                  className="h-full w-full object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <p className="text-[11px] font-semibold uppercase text-primary">{product.category}</p>
-                <p className="mt-1 text-sm font-semibold text-ink-strong">{product.name}</p>
-                <p className="mt-1 text-base font-bold text-ink-strong">{formatIDR(product.price)}</p>
-                <button
-                  onClick={() => handleAdd(product)}
-                  className="mt-3 w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
-                >
-                  Tambah Ke Order
-                </button>
-              </div>
+          {loading ? (
+            <div className="col-span-full">
+              <LoadingState message="Memuat produk..." />
             </div>
-          ))}
+          ) : loadError ? (
+            <div className="col-span-full">
+              <ErrorState message={loadError} />
+            </div>
+          ) : (
+            <>
+              {filtered.map((product) => (
+                <div key={product.id} className="overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                  <div className="aspect-4/3 w-full overflow-hidden bg-gray-100">
+                    <img
+                      src={product.imageUrl}
+                      alt={product.name}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="p-4">
+                    <p className="text-[11px] font-semibold uppercase text-primary">{product.category}</p>
+                    <p className="mt-1 text-md font-semibold text-ink-strong">{product.name}</p>
+                    <p className="mt-1 text-sm font-semibold text-primary">Stok Tersisa: {product.stock}</p>
+                    <p className="mt-1 text-base font-bold text-ink-strong">{formatIDR(product.price)}</p>
+                    <button
+                      onClick={() => handleAdd(product)}
+                      className="mt-3 w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
+                    >
+                      Tambah Ke Order
+                    </button>
+                  </div>
+                </div>
+              ))}
 
-          {filtered.length === 0 && (
-            <p className="col-span-full py-12 text-center text-sm text-gray-400">
-              Tidak ada produk yang cocok dengan pencarian Anda.
-            </p>
+              {filtered.length === 0 && (
+                <p className="col-span-full py-12 text-center text-sm text-gray-400">
+                  Tidak ada produk yang cocok dengan pencarian Anda.
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>

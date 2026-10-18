@@ -40,7 +40,7 @@ app.use("/uploads/*", serveStatic({ root: "./public" }));
 
 app.get("/health", async (c) => {
     try {
-        await prisma.$queryRaw`SELECT 1`;
+        await prisma.raw.sql.arguments("SELECT 1");
         return c.json({ success: true, status: "ok", database: "up" });
     } catch (error) {
         logger.error("health check failed", {
@@ -77,7 +77,35 @@ app.route("/api/admin", adminRouter);
 app.route("/api/midtrans", midtransRouter);
 
 if (import.meta.main) {
-    startPaymentExpiryWorker(() => expirePendingPaymentsUseCase.execute());
+    const stopPaymentExpiryWorker = startPaymentExpiryWorker(() => expirePendingPaymentsUseCase.execute());
+
+    let shuttingDown = false;
+    const shutdown = async (signal: string) => {
+        if (shuttingDown) return;
+        shuttingDown = true;
+        logger.info("shutting down", { signal });
+        stopPaymentExpiryWorker();
+        try {
+            await prisma.close();
+        } catch (error) {
+            logger.error("failed to close database pool", {
+                message: error instanceof Error ? error.message : String(error),
+            });
+        }
+        process.exit(0);
+    };
+
+    process.on("SIGTERM", () => void shutdown("SIGTERM"));
+    process.on("SIGINT", () => void shutdown("SIGINT"));
+    process.on("unhandledRejection", (reason) => {
+        logger.error("unhandled promise rejection", {
+            message: reason instanceof Error ? reason.message : String(reason),
+            stack: reason instanceof Error ? reason.stack : undefined,
+        });
+    });
+    process.on("uncaughtException", (error) => {
+        logger.error("uncaught exception", { message: error.message, stack: error.stack });
+    });
 }
 
 export default app;

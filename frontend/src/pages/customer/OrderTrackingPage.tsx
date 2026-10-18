@@ -4,6 +4,7 @@ import { Clock, Home, Warehouse } from "lucide-react"
 import { formatIDR } from "../../lib/format"
 import type { OrderDetail } from "../../lib/types"
 import { orderApi } from "../../services/api"
+import { ErrorState } from "../../components/ui"
 
 const stepMeta: Record<string, { label: string; description: string }> = {
   BARU: { label: "Pesanan Dibuat", description: "Pesanan diterima dan menunggu konfirmasi outlet." },
@@ -26,19 +27,32 @@ interface TrackingStep {
 export function OrderTrackingPage() {
   const { orderId } = useParams<{ orderId: string }>()
   const [order, setOrder] = useState<OrderDetail | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!orderId) return
     orderApi
       .get(orderId)
-      .then(setOrder)
-      .catch(() => undefined)
-  }, [orderId])
+      .then((data) => {
+        setOrder(data)
+        setLoadError(null)
+      })
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Gagal memuat status pengiriman")
+      })
+  }, [orderId, reloadKey])
 
   if (!order) {
     return (
       <div className="mx-auto max-w-7xl px-6 py-8">
-        <p className="py-16 text-center text-sm text-gray-400">Memuat status pengiriman...</p>
+        {loadError ? (
+          <ErrorState message={loadError} onRetry={() => setReloadKey((k) => k + 1)} />
+        ) : (
+          <p role="status" className="py-16 text-center text-sm text-gray-400">
+            Memuat status pengiriman...
+          </p>
+        )}
       </div>
     )
   }

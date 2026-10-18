@@ -87,7 +87,7 @@ describe("orderStatusLabel", () => {
     });
 });
 
-describe("cx / combineClass", () => {
+describe("cx", () => {
     it("joins truthy classes only", () => {
         expect(cx("a", false, "b", null, undefined, "c")).toBe("a b c");
     });

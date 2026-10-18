@@ -5,6 +5,7 @@ import { formatIDR } from "../../lib/format"
 import type { Service } from "../../lib/types"
 import { serviceApi } from "../../services/api"
 import { useOrderDraft } from "../../context/OrderDraftContext"
+import { ErrorState, LoadingState } from "../../components/ui"
 
 const wizardSteps = ["Jenis Cucian", "Detail & Berat", "Alamat & Jadwal", "Konfirmasi"]
 
@@ -40,6 +41,8 @@ export function LaundryWizardPage() {
   const { addService } = useOrderDraft()
   const [services, setServices] = useState<ServiceCard[]>([])
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     serviceApi
@@ -54,8 +57,12 @@ export function LaundryWizardPage() {
         }))
         setServices(cards)
         setSelectedServiceId((current) => current ?? cards[0]?.id ?? null)
+        setLoadError(null)
       })
-      .catch(() => undefined)
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Gagal memuat daftar layanan")
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   const selectedService = services.find((s) => s.id === selectedServiceId) ?? services[0]
@@ -112,36 +119,46 @@ export function LaundryWizardPage() {
             </p>
 
             <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {services.map((service) => {
-                const Icon = serviceIcons[service.slug] ?? Shirt
-                const isSelected = service.id === selectedServiceId
-                return (
-                  <button
-                    key={service.id}
-                    onClick={() => setSelectedServiceId(service.id)}
-                    className={`relative flex flex-col gap-3 rounded-2xl border-2 bg-white p-5 text-left transition-colors ${
-                      isSelected ? "border-primary" : "border-gray-200"
-                    }`}
-                  >
-                    {isSelected && (
-                      <span className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
-                        <Check size={12} />
-                      </span>
-                    )}
-                    <span
-                      className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                        isSelected ? "bg-primary-light text-primary" : "bg-gray-100 text-gray-500"
+              {loading ? (
+                <div className="col-span-full">
+                  <LoadingState message="Memuat layanan..." />
+                </div>
+              ) : loadError ? (
+                <div className="col-span-full">
+                  <ErrorState message={loadError} />
+                </div>
+              ) : (
+                services.map((service) => {
+                  const Icon = serviceIcons[service.slug] ?? Shirt
+                  const isSelected = service.id === selectedServiceId
+                  return (
+                    <button
+                      key={service.id}
+                      onClick={() => setSelectedServiceId(service.id)}
+                      className={`relative flex flex-col gap-3 rounded-2xl border-2 bg-white p-5 text-left transition-colors ${
+                        isSelected ? "border-primary" : "border-gray-200"
                       }`}
                     >
-                      <Icon size={18} />
-                    </span>
-                    <div>
-                      <p className="text-sm font-semibold text-ink-strong">{service.name}</p>
-                      <p className="mt-1 text-xs text-gray-400">{service.description}</p>
-                    </div>
-                  </button>
-                )
-              })}
+                      {isSelected && (
+                        <span className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
+                          <Check size={12} />
+                        </span>
+                      )}
+                      <span
+                        className={`flex h-10 w-10 items-center justify-center rounded-lg ${
+                          isSelected ? "bg-primary-light text-primary" : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        <Icon size={18} />
+                      </span>
+                      <div>
+                        <p className="text-sm font-semibold text-ink-strong">{service.name}</p>
+                        <p className="mt-1 text-xs text-gray-400">{service.description}</p>
+                      </div>
+                    </button>
+                  )
+                })
+              )}
             </div>
           </div>
         </div>

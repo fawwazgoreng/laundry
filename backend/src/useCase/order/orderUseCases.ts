@@ -10,11 +10,13 @@ import type {
     orderDetailType,
     orderListFilters,
     orderListItemType,
+    orderNewCashflowType,
+    orderNewPaymentType,
     orderStatus,
     paymentGate,
+    paymentMethod,
 } from "../../domain/types/orderType";
 import type { meta } from "../../domain/types/globalType";
-import type { paymentType } from "../../domain/types/paymentType";
 import { AppError } from "../../helper/errorHandling/appError";
 import { logger } from "../../helper/logging/logger";
 import { env } from "../../config/env";
@@ -33,8 +35,8 @@ function isDuplicateOrderId(error: unknown): boolean {
     return (
         typeof error === "object" &&
         error !== null &&
-        "code" in error &&
-        error.code === "P2002"
+        (("code" in error && error.code === "P2002") ||
+            ("sqlState" in error && error.sqlState === "23505"))
     );
 }
 
@@ -87,7 +89,9 @@ export class CreateOrderUseCase {
 
     async execute(userId: string, input: unknown): Promise<paymentGate> {
         const dto = orderEntity.validateCreate(input);
-        await this.assertNoActivePending(userId);
+        if (dto.payment_method == "transfer_bank") {
+            await this.assertNoActivePending(userId);
+        }
 
         const address = await this.addressRepository.findById(userId, dto.user_address_id);
         if (!address) throw AppError.notFound("Alamat pengiriman tidak ditemukan");
@@ -131,6 +135,8 @@ export class CreateOrderUseCase {
                 ? "Pakaian telah diterima staf di outlet."
                 : "Pesanan diterima. Menunggu konfirmasi outlet.";
 
+        const initialPayment = this.buildInitialPayment(dto.payment_method, totals.total_amount);
+
         let orderId = "";
         let order: orderDetailType | null = null;
         for (let attempt = 0; attempt < 3; attempt++) {
@@ -151,6 +157,8 @@ export class CreateOrderUseCase {
                     totals,
                     status: initialStatus,
                     tracking: { status: initialStatus, notes: initialTrackingNote },
+                    payment: initialPayment,
+                    cashflow: this.buildInitialCashflow(dto.payment_method, totals.total_amount, orderId),
                 });
                 break;
             } catch (error) {
@@ -162,14 +170,24 @@ export class CreateOrderUseCase {
             }
         }
 
-        if (!order) throw new Error("failed to create order");
+        if (!order) throw AppError.internal("Gagal membuat pesanan", { orderId });
 
         let gateway: gatewayCharge | null = null;
         if (dto.payment_method === "transfer_bank") {
-            gateway = await this.chargeBankTransfer(order, dto.bank!);
+            try {
+                gateway = await this.chargeBankTransfer(order, dto.bank!);
+                if (order.payment && gateway) {
+                    await this.paymentRepository.attachGatewayDetails(order.payment.id, {
+                        transaction_id: gateway.transaction_id,
+                        va_number: gateway.va_number ?? null,
+                        raw_response: gateway.raw_response ?? null,
+                    });
+                }
+            } catch (error) {
+                await this.compensateFailedCharge(order);
+                throw error;
+            }
         }
-
-        await this.issuePayment(order, dto.payment_method, totals.total_amount, gateway);
 
         logger.info("order created", {
             requestUserId: userId,
@@ -184,6 +202,52 @@ export class CreateOrderUseCase {
             token: "",
             order_id: orderId,
             va_number: gateway?.va_number,
+        }
+    }
+
+    private buildInitialPayment(method: paymentMethod, amount: number): orderNewPaymentType {
+        if (method === "fadarosipay" || method === "cod") {
+            return {
+                payment_type: method,
+                gross_amount: amount,
+                status: "PAID",
+                paid_at: new Date().toISOString(),
+                raw_response: { gateway: "fadarosipay", method: "wallet" },
+            };
+        }
+        return {
+            payment_type: method,
+            gross_amount: amount,
+            status: "PENDING",
+        };
+    }
+
+    private buildInitialCashflow(method: paymentMethod, amount: number, orderId: string): orderNewCashflowType | null {
+        if (method !== "fadarosipay") return null;
+        return {
+            type: "income",
+            category: "sales",
+            amount,
+            description: `Pembayaran FADAROSI Pay untuk order ${orderId}`,
+        };
+    }
+
+    private async compensateFailedCharge(order: orderDetailType): Promise<void> {
+        try {
+            if (order.payment) {
+                await this.paymentRepository.updateStatus(order.payment.id, "FAILED");
+            }
+            await this.orderRepository.updateStatus(order.order_id, "DIBATALKAN");
+            await this.orderRepository.addTracking(
+                order.order_id,
+                "DIBATALKAN",
+                "Pembayaran gagal dibuat, pesanan dibatalkan otomatis.",
+            );
+        } catch (error) {
+            logger.error("failed to compensate after gateway charge failure", {
+                orderId: order.order_id,
+                message: error instanceof Error ? error.message : String(error),
+            });
         }
     }
 
@@ -237,57 +301,6 @@ export class CreateOrderUseCase {
             va_number: vaNumber,
             raw_response: response as Record<string, unknown>,
         };
-    }
-
-    private async issuePayment(
-        order: orderDetailType,
-        method: string,
-        amount: number,
-        gateway?: gatewayCharge | null,
-    ): Promise<paymentType | null> {
-        if (method === "fadarosipay") {
-            const payment = await this.paymentRepository.create({
-                order_id: order.order_id,
-                payment_type: method,
-                gross_amount: amount,
-            });
-            const confirmed = await this.paymentRepository.confirm({
-                transaction_id: payment.transaction_id,
-                status: "PAID",
-                raw_response: { gateway: "fadarosipay", method: "wallet" },
-            });
-            if (confirmed) {
-                await this.cashflowRepository.create({
-                    order_id: order.order_id,
-                    type: "income",
-                    category: "sales",
-                    amount,
-                    description: `Pembayaran FADAROSI Pay untuk order ${order.order_id}`,
-                });
-            }
-            return confirmed;
-        }
-
-        if (method === "transfer_bank") {
-            let payment = await this.paymentRepository.create({
-                order_id: order.order_id,
-                payment_type: method,
-                gross_amount: amount,
-                transaction_id: gateway?.transaction_id,
-                va_number: gateway?.va_number,
-            });
-            if (gateway?.raw_response) {
-                const saved = await this.paymentRepository.saveRawResponse(payment.id, gateway.raw_response);
-                if (saved) payment = saved;
-            }
-            return payment;
-        }
-
-        return this.paymentRepository.create({
-            order_id: order.order_id,
-            payment_type: "cod",
-            gross_amount: amount,
-        });
     }
 }
 
@@ -396,6 +409,7 @@ export class CancelOrderUseCase {
     constructor(
         private readonly orderRepository: orderRepository,
         private readonly cashflowRepository: cashflowRepository,
+        private readonly paymentRepository: paymentRepository,
     ) { }
 
     async execute(orderId: string, userId: string): Promise<orderDetailType> {
@@ -404,6 +418,10 @@ export class CancelOrderUseCase {
         if (order.customer.id !== userId) throw AppError.forbidden("Anda tidak memiliki akses ke pesanan ini");
         if (!orderEntity.canCancel(order.status)) {
             throw AppError.conflict("Pesanan yang sedang berjalan tidak dapat dibatalkan");
+        }
+        if (order.payment_method == "transfer_bank" && order.payment) {
+            console.log(order.payment)
+            await this.paymentRepository.updateStatus(order.payment.id, "DIBATALKAN")
         }
         await this.orderRepository.updateStatus(orderId, "DIBATALKAN");
         await this.orderRepository.addTracking(orderId, "DIBATALKAN", "Pesanan dibatalkan oleh pelanggan.");

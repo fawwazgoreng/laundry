@@ -9,15 +9,15 @@ import { ToastProvider } from './components/Toast.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <OrderDraftProvider>
-          {/* Provider notifikasi toast global untuk semua halaman */}
-          <ToastProvider>
+    {/* ToastProvider di paling luar agar AuthProvider & semua modul bisa memicu notifikasi */}
+    <ToastProvider>
+      <BrowserRouter>
+        <AuthProvider>
+          <OrderDraftProvider>
             <App />
-          </ToastProvider>
-        </OrderDraftProvider>
-      </AuthProvider>
-    </BrowserRouter>
+          </OrderDraftProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ToastProvider>
   </StrictMode>,
 )

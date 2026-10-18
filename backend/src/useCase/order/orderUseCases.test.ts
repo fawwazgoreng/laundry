@@ -136,11 +136,11 @@ describe("CreateOrderUseCase", () => {
         const created = (orderRepo.create as ReturnType<typeof mock>).mock.calls[0][0];
         expect(created.status).toBe("BARU");
         expect(created.delivery_fee).toBe(4000);
-        expect(paymentRepo.confirm).toHaveBeenCalled();
-        expect(cashflowRepo.create).toHaveBeenCalledTimes(1);
-        const cf = (cashflowRepo.create as ReturnType<typeof mock>).mock.calls[0][0];
-        expect(cf.type).toBe("income");
-        expect(cf.category).toBe("sales");
+        expect(created.payment.payment_type).toBe("fadarosipay");
+        expect(created.payment.status).toBe("PAID");
+        expect(created.cashflow.type).toBe("income");
+        expect(created.cashflow.category).toBe("sales");
+        expect(paymentRepo.create).not.toHaveBeenCalled();
     });
 
     it("creates a COD order already accepted (DITERIMA)", async () => {
@@ -292,24 +292,35 @@ describe("CreateOrderUseCase", () => {
     });
 
     it("charges a bank transfer VA via midtrans core api for transfer_bank", async () => {
-        const order = makeOrder();
+        const order = makeOrder({
+            payment: {
+                id: "pay-1",
+                transaction_id: "TRX-PAY-TEMP",
+                payment_type: "transfer_bank",
+                gross_amount: 19000,
+                status: "PENDING",
+                paid_at: null,
+                created_at: new Date().toISOString(),
+            },
+        });
         const orderRepo = {
             countByDatePrefix: mock(() => 0),
             create: mock(() => order),
             findByOrderId: mock(() => order),
         } as unknown as orderRepository;
         const paymentRepo = {
-            create: mock((input: { transaction_id?: string; va_number?: string }) => ({
+            create: mock(),
+            attachGatewayDetails: mock((_id: string, details: { transaction_id?: string; va_number?: string | null }) => ({
                 id: "pay-1",
                 order_id: order.order_id,
-                transaction_id: input.transaction_id ?? "",
+                transaction_id: details.transaction_id ?? "",
                 payment_type: "transfer_bank",
                 gross_amount: 19000,
                 status: "PENDING",
                 paid_at: null,
-                va_number: input.va_number ?? null,
+                va_number: details.va_number ?? null,
             })),
-            saveRawResponse: mock((id: string, raw: Record<string, unknown>) => ({})),
+            saveRawResponse: mock((_id: string, _raw: Record<string, unknown>) => ({})),
             confirm: mock(() => null),
             findActivePendingByUser: mock(() => null),
         } as unknown as paymentRepository;
@@ -337,9 +348,12 @@ describe("CreateOrderUseCase", () => {
         const chargeParams = (coreApiFake.charge as ReturnType<typeof mock>).mock.calls[0][0];
         expect(chargeParams.payment_type).toBe("bank_transfer");
         expect(chargeParams.bank_transfer.bank).toBe("bca");
-        const payment = (paymentRepo.create as ReturnType<typeof mock>).mock.calls[0][0];
-        expect(payment.transaction_id).toBe("TRX-123456");
-        expect(payment.va_number).toBe("7001212345678901");
+        expect(paymentRepo.create).not.toHaveBeenCalled();
+        expect(paymentRepo.attachGatewayDetails).toHaveBeenCalled();
+        const attachArgs = (paymentRepo.attachGatewayDetails as ReturnType<typeof mock>).mock.calls[0];
+        expect(attachArgs[0]).toBe("pay-1");
+        expect(attachArgs[1].transaction_id).toBe("TRX-123456");
+        expect(attachArgs[1].va_number).toBe("7001212345678901");
         expect(result.va_number).toBe("7001212345678901");
         expect(result.order_id).toBe(orderEntity.generateOrderId(1));
     });

@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { ok } from "../../helper/response/apiResponse";
+import { parseIdParam } from "../../helper/http/queryParams";
 import { GetOutletUseCase, ListOutletsUseCase, UpdateOutletUseCase } from "../../useCase/outlet/outletUseCases";
 import type { AppVariables } from "../types";
 
@@ -18,7 +19,7 @@ export class outletController {
     }
 
     async get(c: Context): Promise<Response> {
-        const data = await this.getUseCase.execute(Number(c.req.param("id")));
+        const data = await this.getUseCase.execute(parseIdParam(c.req.param("id")));
         return ok(c, data, "Detail outlet");
     }
 
@@ -28,7 +29,7 @@ export class outletController {
     }
 
     async update(c: AuthContext): Promise<Response> {
-        const data = await this.updateUseCase.execute(Number(c.req.param("id")), await c.req.json());
+        const data = await this.updateUseCase.execute(parseIdParam(c.req.param("id")), await c.req.json());
         return ok(c, data, "Profil outlet diperbarui");
     }
 }

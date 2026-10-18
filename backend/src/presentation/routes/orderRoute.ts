@@ -34,7 +34,7 @@ const controller = new orderController(
     new ListOrdersUseCase(orderRepository),
     new GetOrderUseCase(orderRepository),
     new UpdateOrderStatusUseCase(orderRepository, paymentRepository, cashflowRepository),
-    new CancelOrderUseCase(orderRepository, cashflowRepository),
+    new CancelOrderUseCase(orderRepository, cashflowRepository, paymentRepository),
     new DeleteOrderUseCase(orderRepository, cashflowRepository),
 );
 

@@ -26,9 +26,9 @@ export function Topbar({ items }: { items: NavItem[] }) {
                 <div className="flex items-center gap-8 col-span-1">
                     <Link to={user ? (user.role === "admin" ? "/admin" : "/dashboard") : "/"} className="flex items-center gap-2">
                         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
-                            <img src="/components/shirt-icon.png" className="h-5 w-5" />
+                            <img src="/components/shirt-icon.png" alt="" className="h-5 w-5" />
                         </span>
-                        <span className="text-lg font-extrabold tracking-tight text-primary">Fadarosi</span>
+                        <span className="font-extrabold tracking-tight text-primary text-[20px] uppercase">Fadarosi</span>
                     </Link>
                 </div>
 

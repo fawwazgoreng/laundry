@@ -48,6 +48,7 @@ export function AdminReportPage() {
   const [orders, setOrders] = useState<OrderListItem[]>([])
   const [lowStock, setLowStock] = useState<LowStockItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([adminApi.cashflow(), orderApi.list({ perPage: 200 }), adminApi.stats()])
@@ -55,9 +56,12 @@ export function AdminReportPage() {
         setCashflowItems(cash.items)
         setOrders(orderPage.data)
         setLowStock(adminStats.low_stock_products.slice(0, 5))
-        setLoading(false)
+        setLoadError(null)
       })
-      .catch(() => setLoading(false))
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Gagal memuat data laporan")
+      })
+      .finally(() => setLoading(false))
   }, [months])
 
   // Rentang waktu aktif: preset bulan terakhir, atau pilihan custom dari/sampai
@@ -122,6 +126,12 @@ export function AdminReportPage() {
         </p>
         <p className="text-xs text-gray-400">Dicetak pada {formatShortDate(new Date())}</p>
       </div>
+
+      {loadError && (
+        <div role="alert" className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+          {loadError}
+        </div>
+      )}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between print:hidden">
         <div>

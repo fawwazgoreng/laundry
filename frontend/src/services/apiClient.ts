@@ -5,9 +5,9 @@ export const API_BASE = (import.meta.env.VITE_API_URL as string | undefined) ?? 
 export class ApiError extends Error {
     status: number
     code?: string
-    details?: any
+    details?: Record<string, unknown>
 
-    constructor(message: string, status: number, code?: string, details?: any) {
+    constructor(message: string, status: number, code?: string, details?: Record<string, unknown>) {
         super(message)
         this.name = "ApiError"
         this.status = status
@@ -18,6 +18,8 @@ export class ApiError extends Error {
 
 const ACCESS_KEY = "fadarosi_access_token"
 const REFRESH_KEY = "fadarosi_refresh_token"
+
+const REQUEST_TIMEOUT_MS = 15000
 
 export const tokenStore = {
     getAccess: () => localStorage.getItem(ACCESS_KEY),
@@ -37,12 +39,24 @@ let refreshPromise: Promise<string | null> | null = null
 async function refreshAccessToken(): Promise<string | null> {
     const refreshToken = tokenStore.getRefresh()
     if (!refreshToken) return null
-    const res = await fetch(`${API_BASE}/users/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
-    })
-    const body = (await res.json()) as ApiEnvelope<AuthPayload>
+    let res: Response
+    try {
+        res = await fetch(`${API_BASE}/users/refresh`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refreshToken }),
+            signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+        })
+    } catch {
+        return null
+    }
+    let body: ApiEnvelope<AuthPayload>
+    try {
+        body = (await res.json()) as ApiEnvelope<AuthPayload>
+    } catch {
+        tokenStore.clear()
+        return null
+    }
     if (!res.ok || !body.success) {
         tokenStore.clear()
         return null
@@ -64,16 +78,30 @@ async function request<T>(
             headers.set('Content-Type', 'application/json');
         }
         if (token) headers.set("Authorization", `Bearer ${token}`)
-        return { ...options, headers }
+        const signal = options.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS)
+        return { ...options, headers, signal }
     }
 
-    let res = await fetch(`${API_BASE}${path}`, build(tokenStore.getAccess()))
+    const doFetch = async (init: RequestInit): Promise<Response> => {
+        try {
+            return await fetch(`${API_BASE}${path}`, init)
+        } catch (error) {
+            const isTimeout = error instanceof DOMException && error.name === "TimeoutError"
+            throw new ApiError(
+                isTimeout ? "Server tidak merespons tepat waktu" : "Tidak dapat terhubung ke server",
+                0,
+                isTimeout ? "TIMEOUT" : "NETWORK_ERROR",
+            )
+        }
+    }
+
+    let res = await doFetch(build(tokenStore.getAccess()))
     if (res.status === 401 && retry) {
         refreshPromise = refreshPromise ?? refreshAccessToken()
         const fresh = await refreshPromise
         refreshPromise = null
         if (fresh) {
-            res = await fetch(`${API_BASE}${path}`, build(fresh))
+            res = await doFetch(build(fresh))
         }
     }
 
@@ -83,13 +111,13 @@ async function request<T>(
         throw new ApiError(
             body?.message ?? "Terjadi kesalahan pada server",
             res.status,
-            typeof body?.status === "number" ? String(body.status) : undefined,
+            body?.code,
             body?.details
         )
     }
 
     if (body && !body.success) {
-        throw new ApiError(body.message ?? "Terjadi kesalahan", res.status)
+        throw new ApiError(body.message ?? "Terjadi kesalahan", res.status, body.code, body.details)
     }
 
     return { data: (body?.data as T) ?? (body as unknown as T), meta: body?.meta }

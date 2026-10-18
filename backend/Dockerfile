@@ -13,11 +13,7 @@ ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 RUN --mount=type=cache,target=/root/.bun/install/cache \
     bun install --ignore-scripts --trusted-dependency @prisma/engines --trusted-dependency prisma
 
-COPY prisma ./prisma/
-
-RUN bunx prisma generate
-
 COPY . .
 
 EXPOSE 3000
-CMD ["bun", "run", "start"]
+CMD ["bun", "run", "dev"]

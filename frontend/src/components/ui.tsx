@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from "react"
 import { useId } from "react"
-import { Loader2, X } from "lucide-react"
+import { AlertCircle, Loader2, X } from "lucide-react"
 import { cx } from "../lib/utils"
 
 export function Spinner({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
@@ -226,6 +226,31 @@ export function EmptyState({ message, action }: { message: string; action?: Reac
             </div>
             <p className="text-sm text-gray-500">{message}</p>
             {action}
+        </div>
+    )
+}
+
+export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+    return (
+        <div role="alert" className="flex flex-col items-center gap-3 py-12 text-center">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-50">
+                <AlertCircle className="h-6 w-6 text-red-500" />
+            </div>
+            <p className="text-sm text-red-600">{message}</p>
+            {onRetry && (
+                <Button variant="secondary" size="sm" onClick={onRetry}>
+                    Coba Lagi
+                </Button>
+            )}
+        </div>
+    )
+}
+
+export function LoadingState({ message = "Memuat data..." }: { message?: string }) {
+    return (
+        <div role="status" className="flex flex-col items-center gap-3 py-12 text-center">
+            <Spinner size="lg" />
+            <p className="text-sm text-gray-500">{message}</p>
         </div>
     )
 }

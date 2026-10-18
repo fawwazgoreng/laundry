@@ -10,4 +10,9 @@ export interface paymentRepository {
     listPendingOlderThan(hours: number): Promise<paymentType[]>
     updateStatus(id: string, status: string): Promise<paymentType | null>
     saveRawResponse(id: string, rawResponse: Record<string, unknown>): Promise<paymentType | null>
+    attachGatewayDetails(id: string, details: {
+        transaction_id?: string
+        va_number?: string | null
+        raw_response?: Record<string, unknown> | null
+    }): Promise<paymentType | null>
 }

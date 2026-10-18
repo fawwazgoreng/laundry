@@ -1,6 +1,7 @@
 import type { cashflowRepository, cashflowInput } from "../../domain/repositories/cashflowRepository";
 import type { cashflowSummaryType, cashflowType } from "../../domain/types/adminType";
 import { prisma } from "../prisma/prisma";
+import { numeric, varchar } from "../prisma/scalars";
 
 function toCashflowType(row: {
     id: number
@@ -9,7 +10,7 @@ function toCashflowType(row: {
     category: string
     amount: unknown
     description: string
-    created_at: Date
+    created_at: Temporal.Instant
 }): cashflowType {
     return {
         id: row.id,
@@ -18,38 +19,34 @@ function toCashflowType(row: {
         category: row.category,
         amount: Number(row.amount),
         description: row.description,
-        created_at: row.created_at.toISOString(),
+        created_at: new Date(row.created_at.epochMilliseconds).toISOString(),
     };
 }
 
 export class pgCashflowRepository implements cashflowRepository {
     async create(input: cashflowInput): Promise<cashflowType> {
-        const row = await prisma.cash_flow.create({
-            data: {
-                order_id: input.order_id ?? null,
-                type: input.type,
-                category: input.category,
-                amount: input.amount,
-                description: input.description,
-            },
+        const row = await prisma.orm.public.Cash_flow.create({
+            order_id: input.order_id ?? null,
+            type: varchar(input.type),
+            category: varchar(input.category),
+            amount: numeric(input.amount),
+            description: input.description,
         });
         return toCashflowType(row);
     }
 
     async summary(): Promise<cashflowSummaryType> {
         const [incomeAgg, expenseAgg, rows] = await Promise.all([
-            prisma.cash_flow.aggregate({
-                where: { type: "income" },
-                _sum: { amount: true },
-            }),
-            prisma.cash_flow.aggregate({
-                where: { type: "expense" },
-                _sum: { amount: true },
-            }),
-            prisma.cash_flow.findMany({ orderBy: { created_at: "desc" }, take: 50 }),
+            prisma.orm.public.Cash_flow
+                .where({ type: varchar<20>("income") })
+                .aggregate((agg) => ({ sum: agg.sum("amount") })),
+            prisma.orm.public.Cash_flow
+                .where({ type: varchar<20>("expense") })
+                .aggregate((agg) => ({ sum: agg.sum("amount") })),
+            prisma.orm.public.Cash_flow.orderBy((r) => r.created_at.desc()).limit(50).all(),
         ]);
-        const totalIncome = Number(incomeAgg._sum.amount ?? 0);
-        const totalExpense = Number(expenseAgg._sum.amount ?? 0);
+        const totalIncome = Number(incomeAgg.sum ?? 0);
+        const totalExpense = Number(expenseAgg.sum ?? 0);
         return {
             total_income: totalIncome,
             total_expense: totalExpense,

@@ -10,12 +10,12 @@ import { formatFormError } from "../../lib/format"
 function AuthSidebar() {
     return (
         <div className="relative hidden overflow-hidden bg-primary px-24 py-16 text-white lg:flex lg:flex-col lg:justify-between col-span-4">
-            <div className="relative flex items-center">
+            <Link to={"/"} className="relative flex items-center">
                 <span className="flex h-12 w-12 items-center justify-center rounded-2xl text-primary">
                     <img src="/components/shirt-icon.png" alt="" />
                 </span>
                 <span className="text-2xl font-extrabold tracking-tight">Fadarosi</span>
-            </div>
+            </Link>
             <div className="relative">
                 <h2 className="text-[40px] font-extrabold leading-tight tracking-tight">
                     Kembalikan Kesegaran Pakaian Anda Bersama Kami

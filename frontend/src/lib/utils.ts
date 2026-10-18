@@ -108,8 +108,3 @@ export const SORT_OPTIONS = [
     { value: "termahal", label: "Termahal" },
     { value: "termurah", label: "Termurah" },
 ];
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function combineClass(...classes: any[]): string {
-    return cx(...classes);
-}

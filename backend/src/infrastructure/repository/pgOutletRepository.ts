@@ -1,6 +1,7 @@
 import type { outletRepository } from "../../domain/repositories/outletRepository";
 import type { outletType, outletUpdateType } from "../../domain/types/outletType";
 import { prisma } from "../prisma/prisma";
+import { numeric, varchar } from "../prisma/scalars";
 
 type OutletRow = {
     id: number
@@ -30,37 +31,33 @@ function toOutletType(row: OutletRow): outletType {
 
 export class pgOutletRepository implements outletRepository {
     async list(): Promise<outletType[]> {
-        const rows = await prisma.outlets.findMany({ orderBy: { id: "asc" } });
+        const rows = await prisma.orm.public.Outlets.orderBy((o) => o.id.asc()).all();
         return rows.map(toOutletType);
     }
 
     async findById(id: number): Promise<outletType | null> {
-        const row = await prisma.outlets.findUnique({ where: { id } });
+        const row = await prisma.orm.public.Outlets.where({ id }).first();
         return row ? toOutletType(row) : null;
     }
 
     async findFirst(): Promise<outletType | null> {
-        const row = await prisma.outlets.findFirst({ orderBy: { id: "asc" } });
+        const row = await prisma.orm.public.Outlets.orderBy((o) => o.id.asc()).first();
         return row ? toOutletType(row) : null;
     }
 
     async update(id: number, data: outletUpdateType): Promise<outletType | null> {
-        const existing = await prisma.outlets.findUnique({ where: { id } });
+        const existing = await prisma.orm.public.Outlets.where({ id }).first();
         if (!existing) return null;
-        const row = await prisma.outlets.update({
-            where: { id },
-            data: {
-                ...(data.name !== undefined ? { name: data.name } : {}),
-                ...(data.phone !== undefined ? { phone: data.phone } : {}),
-                ...(data.address_text !== undefined ? { address_text: data.address_text } : {}),
-                ...(data.max_coverage_km !== undefined ? { max_coverage_km: data.max_coverage_km } : {}),
-                ...(data.min_order_amount !== undefined ? { min_order_amount: data.min_order_amount } : {}),
-                ...(data.weekly_hours !== undefined ? { weekly_hours: data.weekly_hours } : {}),
-                ...(data.latitude !== undefined ? { latitude: data.latitude } : {}),
-                ...(data.longitude !== undefined ? { longitude: data.longitude } : {}),
-            
-            },
+        const row = await prisma.orm.public.Outlets.where({ id }).update({
+            ...(data.name !== undefined ? { name: data.name } : {}),
+            ...(data.phone !== undefined ? { phone: varchar(data.phone) } : {}),
+            ...(data.address_text !== undefined ? { address_text: data.address_text } : {}),
+            ...(data.max_coverage_km !== undefined ? { max_coverage_km: numeric(data.max_coverage_km) } : {}),
+            ...(data.min_order_amount !== undefined ? { min_order_amount: numeric(data.min_order_amount) } : {}),
+            ...(data.weekly_hours !== undefined ? { weekly_hours: data.weekly_hours } : {}),
+            ...(data.latitude !== undefined ? { latitude: numeric(data.latitude) } : {}),
+            ...(data.longitude !== undefined ? { longitude: numeric(data.longitude) } : {}),
         });
-        return toOutletType(row);
+        return row ? toOutletType(row) : null;
     }
 }

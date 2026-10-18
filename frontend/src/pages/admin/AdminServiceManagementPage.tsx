@@ -4,6 +4,7 @@ import type { Service } from "../../lib/types"
 import { serviceApi } from "../../services/api"
 import { ApiError } from "../../services/apiClient"
 import { useToast } from "../../components/Toast"
+import { ErrorState, LoadingState } from "../../components/ui"
 import DeletePopup from "../../components/deletePopUp"
 
 interface ServiceRow {
@@ -27,6 +28,8 @@ export function AdminServiceManagementPage() {
   const [price, setPrice] = useState("")
   const [eta, setEta] = useState("")
   const [loading, setLoading] = useState(false)
+  const [listLoading, setListLoading] = useState(true)
+  const [listError, setListError] = useState<string | null>(null)
 
   // State pop-up konfirmasi hapus
   const [deleteTarget, setDeleteTarget] = useState<ServiceRow | null>(null)
@@ -36,7 +39,7 @@ export function AdminServiceManagementPage() {
   const load = () =>
     serviceApi
       .list()
-      .then((list) =>
+      .then((list) => {
         setServices(
           list.map((s: Service) => ({
             id: s.id,
@@ -47,9 +50,13 @@ export function AdminServiceManagementPage() {
             etaHours: s.estimated_duration_hours,
             is_active: s.is_active,
           })),
-        ),
-      )
-      .catch(() => undefined)
+        )
+        setListError(null)
+      })
+      .catch((err) => {
+        setListError(err instanceof Error ? err.message : "Gagal memuat daftar layanan")
+      })
+      .finally(() => setListLoading(false))
 
   useEffect(() => {
     load()
@@ -129,34 +136,44 @@ export function AdminServiceManagementPage() {
         <p className="mb-5 text-sm text-gray-500">Kelola Layanan</p>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {services.map((service) => (
-            <div key={service.id} className="rounded-2xl border border-gray-200 bg-white p-5">
-              <div className="flex items-start justify-between">
-                <p className="text-base font-semibold text-ink-strong">{service.name}</p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setDeleteTarget(service)}
-                    className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:text-primary"
-                    aria-label={`Hapus ${service.name}`}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                  <button
-                    onClick={() => handleEdit(service)}
-                    className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:text-primary"
-                    aria-label={`Edit ${service.name}`}
-                  >
-                    <Pencil size={14} />
-                  </button>
-                </div>
-              </div>
-              <p className="mt-2 text-sm text-gray-500">{service.description}</p>
-              <p className="mt-2 text-sm text-gray-500">
-                {service.pricePerUnit.toLocaleString("id-ID")} per 1 unit ( {service.unit} )
-              </p>
-              <p className="text-sm text-gray-500">estimasi selesai {service.etaHours} jam</p>
+          {listLoading ? (
+            <div className="col-span-full">
+              <LoadingState message="Memuat layanan..." />
             </div>
-          ))}
+          ) : listError ? (
+            <div className="col-span-full">
+              <ErrorState message={listError} onRetry={() => { setListLoading(true); load() }} />
+            </div>
+          ) : (
+            services.map((service) => (
+              <div key={service.id} className="rounded-2xl border border-gray-200 bg-white p-5">
+                <div className="flex items-start justify-between">
+                  <p className="text-base font-semibold text-ink-strong">{service.name}</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setDeleteTarget(service)}
+                      className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:text-primary"
+                      aria-label={`Hapus ${service.name}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                    <button
+                      onClick={() => handleEdit(service)}
+                      className="rounded-lg bg-gray-100 p-2 text-gray-500 hover:text-primary"
+                      aria-label={`Edit ${service.name}`}
+                    >
+                      <Pencil size={14} />
+                    </button>
+                  </div>
+                </div>
+                <p className="mt-2 text-sm text-gray-500">{service.description}</p>
+                <p className="mt-2 text-sm text-gray-500">
+                  {service.pricePerUnit.toLocaleString("id-ID")} per 1 unit ( {service.unit} )
+                </p>
+                <p className="text-sm text-gray-500">estimasi selesai {service.etaHours} jam</p>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
@@ -166,8 +183,9 @@ export function AdminServiceManagementPage() {
           {editingId === null ? "Tambah Layanan Baru" : "Edit Layanan"}
         </h2>
 
-        <label className="mb-1 block text-xs font-medium text-gray-500">Nama Layanan</label>
+        <label htmlFor="service-name" className="mb-1 block text-xs font-medium text-gray-500">Nama Layanan</label>
         <input
+          id="service-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Masukkan nama Layanan..."
@@ -176,8 +194,9 @@ export function AdminServiceManagementPage() {
 
         <div className="mb-4 grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Unit</label>
+            <label htmlFor="service-unit" className="mb-1 block text-xs font-medium text-gray-500">Unit</label>
             <input
+              id="service-unit"
               value={unit}
               onChange={(e) => setUnit(e.target.value)}
               placeholder="Kg"
@@ -185,8 +204,9 @@ export function AdminServiceManagementPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Harga Per unit (RP)</label>
+            <label htmlFor="service-price" className="mb-1 block text-xs font-medium text-gray-500">Harga Per unit (RP)</label>
             <input
+              id="service-price"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="0"
@@ -196,8 +216,9 @@ export function AdminServiceManagementPage() {
           </div>
         </div>
 
-        <label className="mb-1 block text-xs font-medium text-gray-500">Estimasi selesai (Jam)</label>
+        <label htmlFor="service-eta" className="mb-1 block text-xs font-medium text-gray-500">Estimasi selesai (Jam)</label>
         <input
+          id="service-eta"
           value={eta}
           onChange={(e) => setEta(e.target.value)}
           placeholder="12"

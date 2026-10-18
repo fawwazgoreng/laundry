@@ -5,6 +5,7 @@ import { formatIDR } from "../../lib/format"
 import type { OrderListItem, OrderStatus, Payment } from "../../lib/types"
 import { orderApi, paymentApi } from "../../services/api"
 import { useToast } from "../../components/Toast"
+import { ErrorState, LoadingState } from "../../components/ui"
 import { Link, useNavigate } from "react-router-dom"
 
 const PAYMENT_WINDOW_HOURS = 24
@@ -39,11 +40,13 @@ export function UserOrderHistory() {
   const [search, setSearch] = useState("")
   const [orders, setOrders] = useState<AdminOrderRow[]>([])
   const [checkingPayment, setCheckingPayment] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const load = () =>
     orderApi
       .list({ perPage: 100 })
-      .then((page) =>
+      .then((page) => {
         setOrders(
           page.data.map((o: OrderListItem) => ({
             id: o.order_id,
@@ -54,9 +57,13 @@ export function UserOrderHistory() {
             status: o.status,
             total: o.total_amount,
           })),
-        ),
-      )
-      .catch(() => undefined)
+        )
+        setLoadError(null)
+      })
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Gagal memuat riwayat pesanan")
+      })
+      .finally(() => setLoading(false))
 
   useEffect(() => {
     load()
@@ -149,6 +156,12 @@ export function UserOrderHistory() {
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-4">
+        {loading ? (
+          <LoadingState message="Memuat riwayat pesanan..." />
+        ) : loadError ? (
+          <ErrorState message={loadError} onRetry={() => { setLoading(true); load() }} />
+        ) : (
+        <>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-left text-sm">
             <thead>
@@ -228,6 +241,8 @@ export function UserOrderHistory() {
             </button>
           </div>
         </div>
+        </>
+        )}
       </div>
 
     </div>

@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { created, ok } from "../../helper/response/apiResponse";
+import { parsePage, parsePerPage } from "../../helper/http/queryParams";
 import {
     CancelOrderUseCase,
     CreateOrderUseCase,
@@ -34,8 +35,8 @@ export class orderController {
             search: c.req.query("search"),
             status: (c.req.query("status") ?? "all") as orderListFilters["status"],
             service: c.req.query("service"),
-            page: c.req.query("page") ? Number(c.req.query("page")) : 1,
-            perPage: c.req.query("perPage") ? Number(c.req.query("perPage")) : 10,
+            page: parsePage(c.req.query("page")),
+            perPage: parsePerPage(c.req.query("perPage"), 10, 100),
         };
         const { data, meta } = await this.listUseCase.execute(c.get("userId"), user.role, filters);
         return ok(c, data, "Daftar pesanan", meta);

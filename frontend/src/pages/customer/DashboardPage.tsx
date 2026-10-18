@@ -4,6 +4,7 @@ import { formatIDR } from "../../lib/format"
 import type { OrderListItem, OrderStatus, User } from "../../lib/types"
 import { authApi, orderApi } from "../../services/api"
 import { formatDateLong } from "../../lib/utils"
+import { ErrorState, LoadingState } from "../../components/ui"
 import { DashboardTabs } from "./dashboard/DashboardTabs"
 import { StatsCards } from "./dashboard/StatsCards"
 import { SpendingTrend } from "./dashboard/SpendingTrend"
@@ -48,6 +49,8 @@ export const DashboardPage = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [orderHistory, setOrderHistory] = useState<HistoryRow[]>([])
   const [spendingTrend, setSpendingTrend] = useState<Array<{ month: string; value: number }>>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   // Muat profil pengguna & riwayat order dari backend saat halaman dibuka
   useEffect(() => {
@@ -68,7 +71,13 @@ export const DashboardPage = () => {
         )
         setSpendingTrend(buildSpendingTrend(orderPage.data))
       })
-      .catch(() => undefined)
+      .catch((err) => {
+        if (!mounted) return
+        setLoadError(err instanceof Error ? err.message : "Gagal memuat data")
+      })
+      .finally(() => {
+        if (mounted) setLoading(false)
+      })
     return () => {
       mounted = false
     }
@@ -114,9 +123,17 @@ export const DashboardPage = () => {
       </div>
 
       <DashboardTabs active={activeTab} onSelect={setActiveTab} />
-      <StatsCards stats={stats} />
-      <SpendingTrend data={spendingTrend} />
-      <RecentActivity items={recentActivity} />
+      {loading ? (
+        <LoadingState />
+      ) : loadError ? (
+        <ErrorState message={loadError} />
+      ) : (
+        <>
+          <StatsCards stats={stats} />
+          <SpendingTrend data={spendingTrend} />
+          <RecentActivity items={recentActivity} />
+        </>
+      )}
 
       <div className="mt-20 mb-10">
         <h1 className="text-2xl font-bold text-ink-strong">Profil &amp; Keamanan akun</h1>
