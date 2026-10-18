@@ -1,5 +1,6 @@
 import { prisma } from "../prisma/prisma";
-import { fromInstant, numeric, varchar } from "../prisma/scalars";
+import { fromInstant, instant, numeric, varchar } from "../prisma/scalars";
+import { AppError } from "../../helper/errorHandling/appError";
 import type { orderRepository } from "../../domain/repositories/orderRepository";
 import type {
     orderDetailType,
@@ -268,15 +269,36 @@ export class pgOrderRepository implements orderRepository {
             });
             for (const p of input.products) {
                 const product = await tx.orm.public.Products.where({ id: p.product_id }).forUpdate().first();
-                if (product) {
-                    await tx.orm.public.Products.where({ id: p.product_id }).update({
-                        stock: product.stock - p.qty,
-                    });
-                }
+                if (!product) throw AppError.conflict(`Produk id ${p.product_id} tidak ditemukan`);
+                if (product.stock < p.qty) throw AppError.conflict(`Stok ${product.name} tidak mencukupi`);
+                await tx.orm.public.Products.where({ id: p.product_id }).update({
+                    stock: product.stock - p.qty,
+                });
+            }
+
+            await tx.orm.public.Payments.create({
+                order_id: input.order_id,
+                transaction_id: input.payment.transaction_id ?? `TRX-PAY-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
+                payment_type: varchar<20>(input.payment.payment_type),
+                gross_amount: numeric<12, 2>(input.payment.gross_amount),
+                status: varchar<30>(input.payment.status),
+                va_number: input.payment.va_number ?? null,
+                paid_at: input.payment.paid_at ? instant(new Date(input.payment.paid_at)) : null,
+                raw_response: (input.payment.raw_response ?? null) as any,
+            });
+
+            if (input.cashflow) {
+                await tx.orm.public.Cash_flow.create({
+                    order_id: input.order_id,
+                    type: varchar<20>(input.cashflow.type),
+                    category: varchar<40>(input.cashflow.category),
+                    amount: numeric<12, 2>(input.cashflow.amount),
+                    description: input.cashflow.description,
+                });
             }
         });
         const fresh = await this.findByOrderId(input.order_id);
-        if (!fresh) throw new Error("order created but not found");
+        if (!fresh) throw AppError.internal("Pesanan dibuat namun tidak ditemukan", { orderId: input.order_id });
         return fresh;
     }
 

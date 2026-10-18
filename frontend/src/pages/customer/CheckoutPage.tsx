@@ -5,6 +5,7 @@ import { formatIDR } from "../../lib/format"
 import type { Address, Outlet, User, PaymentGate } from "../../lib/types"
 import { addressApi, authApi, orderApi, outletApi } from "../../services/api"
 import { useOrderDraft } from "../../context/OrderDraftContext"
+import { ErrorState, LoadingState } from "../../components/ui"
 import { ApiError } from "../../services/apiClient"
 
 const progressSteps = ["Pilih Layanan", "Detail & Berat", "Jadwal & Alamat", "Konfirmasi & Bayar"]
@@ -64,6 +65,8 @@ export function CheckoutPage() {
     })),
   ])
   const [addresses, setAddresses] = useState<DeliverAddress[]>([])
+  const [addressLoading, setAddressLoading] = useState(true)
+  const [addressError, setAddressError] = useState<string | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<"transfer" | "cod">("transfer")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -90,9 +93,16 @@ export function CheckoutPage() {
         // Tandai alamat utama (atau alamat pertama) sebagai pilihan bawaan
         const primary = mapped.find((a) => a.isPrimary) ?? mapped[0]
         if (primary) setChoiceAddress(primary.id)
+        setAddressError(null)
       })
+      .catch((err) => {
+        setAddressError(err instanceof Error ? err.message : "Gagal memuat daftar alamat")
+      })
+      .finally(() => setAddressLoading(false))
+    authApi
+      .me()
+      .then((user) => setCurrentUser(user))
       .catch(() => undefined)
-    authApi.me().then((user) => setCurrentUser(user))
   }, [])
 
   const primaryAddress = addresses.find((a) => a.isPrimary) ?? addresses[0]
@@ -297,39 +307,49 @@ export function CheckoutPage() {
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="text-sm font-semibold text-ink-strong">Alamat Pengiriman &amp; Penjemputan</h2>
-              <Link to={"/produk"} className="text-xs font-semibold text-primary">
+              <Link to={"/dashboard#alamat"} className="text-xs font-semibold text-primary">
                 + Tambah Alamat
               </Link>
             </div>
-            {addresses.map((addr) => (
-              <div
-                key={addr.id}
-                onClick={() => setChoiceAddress(addr.id)}
-                className={`mb-3 flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 sm:flex-row sm:items-center sm:gap-6 ${
-                  addr.id == choiceAddress ? "border-primary" : "border-gray-200"
-                }`}
-              >
-                <span
-                  className={`h-6 w-6 shrink-0 rounded-full border-2 ${
-                    choiceAddress === addr.id ? "border-primary bg-primary" : "border-gray-300"
+            {addressLoading ? (
+              <LoadingState message="Memuat daftar alamat..." />
+            ) : addressError ? (
+              <ErrorState message={addressError} />
+            ) : addresses.length === 0 ? (
+              <p className="py-6 text-center text-sm text-gray-400">
+                Belum ada alamat tersimpan. Tambahkan alamat terlebih dahulu.
+              </p>
+            ) : (
+              addresses.map((addr) => (
+                <div
+                  key={addr.id}
+                  onClick={() => setChoiceAddress(addr.id)}
+                  className={`mb-3 flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 sm:flex-row sm:items-center sm:gap-6 ${
+                    addr.id == choiceAddress ? "border-primary" : "border-gray-200"
                   }`}
-                />
-                <span>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-semibold text-ink-strong">{addr.label}</p>
-                    {addr.isPrimary && (
-                      <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
-                        Utama
-                      </span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-sm text-gray-500">
-                    {addr.recipientName} • {currentUser?.phone || "-"}
-                  </p>
-                  <p className="text-sm text-gray-500">{addr.fullAddress}</p>
-                </span>
-              </div>
-            ))}
+                >
+                  <span
+                    className={`h-6 w-6 shrink-0 rounded-full border-2 ${
+                      choiceAddress === addr.id ? "border-primary bg-primary" : "border-gray-300"
+                    }`}
+                  />
+                  <span>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-ink-strong">{addr.label}</p>
+                      {addr.isPrimary && (
+                        <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          Utama
+                        </span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {addr.recipientName} • {currentUser?.phone || "-"}
+                    </p>
+                    <p className="text-sm text-gray-500">{addr.fullAddress}</p>
+                  </span>
+                </div>
+              ))
+            )}
           </div>
 
           {/* Jadwal */}

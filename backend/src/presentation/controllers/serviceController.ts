@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { created, noContent, ok } from "../../helper/response/apiResponse";
+import { parseIdParam } from "../../helper/http/queryParams";
 import {
     CreateServiceUseCase,
     DeleteServiceUseCase,
@@ -24,7 +25,7 @@ export class serviceController {
     }
 
     async get(c: Context): Promise<Response> {
-        const data = await this.getUseCase.execute(Number(c.req.param("id")));
+        const data = await this.getUseCase.execute(parseIdParam(c.req.param("id")));
         return ok(c, data, "Detail layanan");
     }
 
@@ -34,12 +35,12 @@ export class serviceController {
     }
 
     async update(c: Context): Promise<Response> {
-        const data = await this.updateUseCase.execute(Number(c.req.param("id")), await c.req.json());
+        const data = await this.updateUseCase.execute(parseIdParam(c.req.param("id")), await c.req.json());
         return ok(c, data, "Layanan berhasil diperbarui");
     }
 
     async remove(c: Context): Promise<Response> {
-        await this.deleteUseCase.execute(Number(c.req.param("id")));
+        await this.deleteUseCase.execute(parseIdParam(c.req.param("id")));
         return noContent(c);
     }
 }

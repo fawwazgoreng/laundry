@@ -7,6 +7,7 @@ import type { Product } from "../../lib/types"
 import { productApi } from "../../services/api"
 import { ApiError } from "../../services/apiClient"
 import { useToast } from "../../components/Toast"
+import { ErrorState, LoadingState } from "../../components/ui"
 import DeletePopup from "../../components/deletePopUp"
 
 // Batas ukuran & format foto sesuai aturan backend (maksimal 2MB, JPG/PNG/WEBP)
@@ -35,6 +36,8 @@ export function AdminProductManagementPage() {
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("Semua")
   const [loading, setLoading] = useState(false)
+  const [listLoading, setListLoading] = useState(true)
+  const [listError, setListError] = useState<string | null>(null)
 
   // State form produk (dipakai untuk Tambah maupun Edit)
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -53,7 +56,7 @@ export function AdminProductManagementPage() {
   const load = () =>
     productApi
       .list({ perPage: 100 })
-      .then((page) =>
+      .then((page) => {
         setProducts(
           page.data.map((p: Product) => ({
             id: p.id,
@@ -63,9 +66,13 @@ export function AdminProductManagementPage() {
             stock: p.stock,
             image: p.image || undefined,
           })),
-        ),
-      )
-      .catch(() => undefined)
+        )
+        setListError(null)
+      })
+      .catch((err) => {
+        setListError(err instanceof Error ? err.message : "Gagal memuat daftar produk")
+      })
+      .finally(() => setListLoading(false))
 
   useEffect(() => {
     load()
@@ -222,42 +229,54 @@ export function AdminProductManagementPage() {
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((product) => (
-            <div key={product.id} className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white">
-              <div className="aspect-square w-full overflow-hidden bg-gray-100">
-                {product.image ? (
-                  <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-sm text-gray-400">Gambar</div>
-                )}
-              </div>
-              <div className="flex flex-1 flex-col p-4">
-                <p className="text-[11px] font-semibold uppercase text-primary">{product.category}</p>
-                <p className="mt-1 text-sm font-semibold text-ink-strong">{product.name}</p>
-                <p className="text-xs text-gray-400">Stok: {product.stock} Pcs</p>
-                <p className="mt-1 text-base font-bold text-ink-strong">{formatIDR(product.price)}</p>
-                <div className="mt-3 flex gap-2">
-                  <button
-                    onClick={() => handleEdit(product)}
-                    className="flex-1 rounded-lg border border-gray-200 py-2 text-xs font-semibold text-ink hover:bg-gray-50"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => setDeleteTarget(product)}
-                    className="flex-1 rounded-lg border border-primary py-2 text-xs font-semibold text-primary hover:bg-primary-light"
-                  >
-                    Hapus
-                  </button>
-                </div>
-              </div>
+          {listLoading ? (
+            <div className="col-span-full">
+              <LoadingState message="Memuat produk..." />
             </div>
-          ))}
+          ) : listError ? (
+            <div className="col-span-full">
+              <ErrorState message={listError} onRetry={() => { setListLoading(true); load() }} />
+            </div>
+          ) : (
+            <>
+              {filtered.map((product) => (
+                <div key={product.id} className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white">
+                  <div className="aspect-square w-full overflow-hidden bg-gray-100">
+                    {product.image ? (
+                      <img src={product.image} alt={product.name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-sm text-gray-400">Gambar</div>
+                    )}
+                  </div>
+                  <div className="flex flex-1 flex-col p-4">
+                    <p className="text-[11px] font-semibold uppercase text-primary">{product.category}</p>
+                    <p className="mt-1 text-sm font-semibold text-ink-strong">{product.name}</p>
+                    <p className="text-xs text-gray-400">Stok: {product.stock} Pcs</p>
+                    <p className="mt-1 text-base font-bold text-ink-strong">{formatIDR(product.price)}</p>
+                    <div className="mt-3 flex gap-2">
+                      <button
+                        onClick={() => handleEdit(product)}
+                        className="flex-1 rounded-lg border border-gray-200 py-2 text-xs font-semibold text-ink hover:bg-gray-50"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => setDeleteTarget(product)}
+                        className="flex-1 rounded-lg border border-primary py-2 text-xs font-semibold text-primary hover:bg-primary-light"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
 
-          {filtered.length === 0 && (
-            <p className="col-span-full py-12 text-center text-sm text-gray-400">
-              Tidak ada produk pada kategori ini.
-            </p>
+              {filtered.length === 0 && (
+                <p className="col-span-full py-12 text-center text-sm text-gray-400">
+                  Tidak ada produk pada kategori ini.
+                </p>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -268,16 +287,18 @@ export function AdminProductManagementPage() {
           {editingId === null ? "Tambah Produk Baru" : "Edit Produk"}
         </h2>
 
-        <label className="mb-1 block text-xs font-medium text-gray-500">Nama Produk</label>
+        <label htmlFor="product-name" className="mb-1 block text-xs font-medium text-gray-500">Nama Produk</label>
         <input
+          id="product-name"
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Masukkan nama produk..."
           className="mb-4 w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-primary"
         />
 
-        <label className="mb-1 block text-xs font-medium text-gray-500">Kategori</label>
+        <label htmlFor="product-category" className="mb-1 block text-xs font-medium text-gray-500">Kategori</label>
         <select
+          id="product-category"
           value={formCategory}
           onChange={(e) => setFormCategory(e.target.value)}
           className="mb-4 w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm text-ink outline-none focus:border-primary"
@@ -290,8 +311,9 @@ export function AdminProductManagementPage() {
 
         <div className="mb-4 grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Harga (Rp)</label>
+            <label htmlFor="product-price" className="mb-1 block text-xs font-medium text-gray-500">Harga (Rp)</label>
             <input
+              id="product-price"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="0"
@@ -300,8 +322,9 @@ export function AdminProductManagementPage() {
             />
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Jumlah Stok</label>
+            <label htmlFor="product-stock" className="mb-1 block text-xs font-medium text-gray-500">Jumlah Stok</label>
             <input
+              id="product-stock"
               value={stock}
               onChange={(e) => setStock(e.target.value)}
               placeholder="0"
@@ -311,8 +334,9 @@ export function AdminProductManagementPage() {
           </div>
         </div>
 
-        <label className="mb-1 block text-xs font-medium text-gray-500">Deskripsi Produk</label>
+        <label htmlFor="product-description" className="mb-1 block text-xs font-medium text-gray-500">Deskripsi Produk</label>
         <textarea
+          id="product-description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Jelaskan manfaat & info produk..."

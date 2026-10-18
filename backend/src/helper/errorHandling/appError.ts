@@ -41,8 +41,8 @@ export class AppError extends Error {
         return new AppError(429, "RATE_LIMITED", message);
     }
 
-    static internal(message = "Internal server error"): AppError {
-        return new AppError(500, "INTERNAL_SERVER_ERROR", message);
+    static internal(message = "Internal server error", details?: ErrorDetails): AppError {
+        return new AppError(500, "INTERNAL_SERVER_ERROR", message, details);
     }
 
     static fromZod(error: z.ZodError, details?: ErrorDetails): AppError {

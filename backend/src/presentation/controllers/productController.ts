@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { created, noContent, ok } from "../../helper/response/apiResponse";
+import { parseIdParam, parsePage, parsePerPage } from "../../helper/http/queryParams";
 import imageEntity from "../../domain/entities/imageEntity";
 import {
     CreateProductUseCase,
@@ -28,8 +29,8 @@ export class productController {
             category: (c.req.query("category") as productListOptions["category"]) ?? "all",
             search: c.req.query("search"),
             sort: (c.req.query("sort") as productListOptions["sort"]) ?? "terbaru",
-            page: c.req.query("page") ? Number(c.req.query("page")) : 1,
-            perPage: c.req.query("perPage") ? Number(c.req.query("perPage")) : 12,
+            page: parsePage(c.req.query("page")),
+            perPage: parsePerPage(c.req.query("perPage"), 12, 100),
             inStockOnly: c.req.query("inStockOnly") === "true",
         };
         const data = await this.listUseCase.execute(opts);
@@ -42,7 +43,7 @@ export class productController {
     }
 
     async get(c: Context): Promise<Response> {
-        const data = await this.getUseCase.execute(Number(c.req.param("id")));
+        const data = await this.getUseCase.execute(parseIdParam(c.req.param("id")));
         return ok(c, data, "Detail produk");
     }
 
@@ -52,17 +53,17 @@ export class productController {
     }
 
     async update(c: Context): Promise<Response> {
-        const data = await this.updateUseCase.execute(Number(c.req.param("id")), await c.req.json());
+        const data = await this.updateUseCase.execute(parseIdParam(c.req.param("id")), await c.req.json());
         return ok(c, data, "Produk berhasil diperbarui");
     }
 
     async remove(c: Context): Promise<Response> {
-        await this.deleteUseCase.execute(Number(c.req.param("id")));
+        await this.deleteUseCase.execute(parseIdParam(c.req.param("id")));
         return noContent(c);
     }
 
     async upload(c: Context): Promise<Response> {
-        const id = Number(c.req.param("id"));
+        const id = parseIdParam(c.req.param("id"));
         const body = await c.req.parseBody();
         const file = body["image"];
         if (!(file instanceof File)) {

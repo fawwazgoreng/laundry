@@ -6,6 +6,7 @@ import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
 import type { OrderListItem, OrderStatus } from "../../lib/types"
 import { adminApi, orderApi } from "../../services/api"
+import { ErrorState, LoadingState } from "../../components/ui"
 
 
 const statIcons = [ShoppingBag, Award, Box, Zap]
@@ -39,6 +40,8 @@ export function AdminDashboardPage() {
   const [adminOrders, setAdminOrders] = useState<AdminOrderRow[]>([])
   const [lowStockAlerts, setLowStockAlerts] = useState<LowStockItem[]>([])
   const [weeklyRevenue, setWeeklyRevenue] = useState<Array<{ day: string; value: number }>>([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   useEffect(() => {
     Promise.all([adminApi.stats(), orderApi.list({ perPage: 5 })])
@@ -73,8 +76,12 @@ export function AdminDashboardPage() {
             value: r.total,
           })),
         )
+        setLoadError(null)
       })
-      .catch(() => undefined)
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Gagal memuat data dashboard")
+      })
+      .finally(() => setLoading(false))
   }, [])
 
   return (
@@ -86,6 +93,12 @@ export function AdminDashboardPage() {
         </p>
       </div>
 
+      {loading ? (
+        <LoadingState />
+      ) : loadError ? (
+        <ErrorState message={loadError} />
+      ) : (
+      <>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {adminDashboardStats.map((stat, idx) => {
           const Icon = statIcons[idx]
@@ -183,6 +196,8 @@ export function AdminDashboardPage() {
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   )
 }

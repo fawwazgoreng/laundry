@@ -1,9 +1,10 @@
 export interface ApiEnvelope<T = unknown> {
     success: boolean
     status: number
+    code?: string
     message: string
     data: T
-    details?: any
+    details?: Record<string, unknown>
     meta?: Meta
 }
 

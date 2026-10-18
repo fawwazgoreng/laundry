@@ -7,6 +7,7 @@ import { orderApi } from "../../services/api"
 import { ApiError } from "../../services/apiClient"
 import { useToast } from "../../components/Toast"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
+import { ErrorState, LoadingState } from "../../components/ui"
 import { Link } from "react-router-dom"
 
 const tabs = [
@@ -36,11 +37,13 @@ export function AdminOrderManagementPage() {
   const [orders, setOrders] = useState<AdminOrderRow[]>([])
   const [statusTarget, setStatusTarget] = useState<{ order: AdminOrderRow; next: OrderStatus } | null>(null)
   const [updating, setUpdating] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const load = () =>
     orderApi
       .list({ perPage: 100 })
-      .then((page) =>
+      .then((page) => {
         setOrders(
           page.data.map((o: OrderListItem) => ({
             id: o.order_id,
@@ -51,9 +54,13 @@ export function AdminOrderManagementPage() {
             status: o.status,
             total: o.total_amount,
           })),
-        ),
-      )
-      .catch(() => undefined)
+        )
+        setLoadError(null)
+      })
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Gagal memuat daftar pesanan")
+      })
+      .finally(() => setLoading(false))
 
   useEffect(() => {
     load()
@@ -154,6 +161,12 @@ export function AdminOrderManagementPage() {
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-2">
+        {loading ? (
+          <LoadingState message="Memuat daftar pesanan..." />
+        ) : loadError ? (
+          <ErrorState message={loadError} onRetry={() => { setLoading(true); load() }} />
+        ) : (
+        <>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[860px] text-left text-sm">
             <thead>
@@ -240,6 +253,8 @@ export function AdminOrderManagementPage() {
             </button>
           </div>
         </div>
+        </>
+        )}
       </div>
 
 

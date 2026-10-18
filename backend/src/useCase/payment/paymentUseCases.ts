@@ -42,7 +42,11 @@ export class ConfirmPaymentUseCase {
             status: dto.status ?? "PAID",
             raw_response: { ...(dto.raw_response ?? {}), confirmedBy: actorUserId },
         });
-        if (!confirmed) throw AppError.notFound("Pembayaran tidak ditemukan");
+        if (!confirmed) {
+            const latest = await this.paymentRepository.findByTransactionId(dto.transaction_id);
+            if (!latest) throw AppError.notFound("Pembayaran tidak ditemukan");
+            throw AppError.conflict("Pembayaran sudah diverifikasi");
+        }
 
         if (confirmed.status === "PAID") {
             await this.cashflowRepository.create({

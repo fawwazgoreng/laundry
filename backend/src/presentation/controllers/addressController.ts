@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import { created, noContent, ok } from "../../helper/response/apiResponse";
+import { parseIdParam } from "../../helper/http/queryParams";
 import {
     CreateAddressUseCase,
     DeleteAddressUseCase,
@@ -53,6 +54,6 @@ export class addressController {
     }
 
     private id(c: AuthContext): number {
-        return Number(c.req.param("id"));
+        return parseIdParam(c.req.param("id"));
     }
 }

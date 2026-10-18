@@ -1,7 +1,7 @@
 import { prisma } from "../prisma/prisma";
 import { logger } from "../../helper/logging/logger";
 import { orderEntity } from "../../domain/entities/orderEntity";
-import type { Prisma } from "../src/generated/prisma/client";
+import { instant, numeric, varchar } from "../prisma/scalars";
 
 function daysAgo(days: number, hour = 14): Date {
     const d = new Date();
@@ -10,18 +10,17 @@ function daysAgo(days: number, hour = 14): Date {
     return d;
 }
 
-function futureHours(hours: number): Date {
-    return new Date(Date.now() + hours * 60 * 60 * 1000);
-}
-
 async function createDemoOrders(): Promise<void> {
-    if ((await prisma.orders.count()) > 0) return;
+    const { count } = await prisma.orm.public.Orders.aggregate((agg) => ({ count: agg.count() }));
+    if (count > 0) return;
 
-    const user = await prisma.user.findUnique({ where: { email: "customer@fadarosi.id" } });
-    const outlet = await prisma.outlets.findUnique({ where: { id: 1 } });
-    const address = await prisma.user_address.findFirst({ where: { user_id: user?.id, is_primary: true } });
-    const services = await prisma.laundry_services.findMany({ orderBy: { id: "asc" } });
-    const products = await prisma.products.findMany({ orderBy: { id: "asc" } });
+    const user = await prisma.orm.public.User.where({ email: "customer@fadarosi.id" }).first();
+    const outlet = await prisma.orm.public.Outlets.where({ id: 1 }).first();
+    const address = user
+        ? await prisma.orm.public.User_address.where({ user_id: user.id, is_primary: true }).first()
+        : null;
+    const services = await prisma.orm.public.Laundry_services.orderBy((s) => s.id.asc()).all();
+    const products = await prisma.orm.public.Products.orderBy((p) => p.id.asc()).all();
     if (!user || !outlet || !address || services.length < 4 || products.length < 6) return;
 
     const svc = (name: string) => services.find((s) => s.name === name)!;
@@ -94,11 +93,6 @@ async function createDemoOrders(): Promise<void> {
         },
     ];
 
-    const orderItems: Prisma.OrdersCreateManyInput[] = [];
-    const trackings: Prisma.Order_trackingsCreateManyInput[] = [];
-    const payments: Prisma.PaymentsCreateManyInput[] = [];
-    const cashFlows: Prisma.Cash_flowCreateManyInput[] = [];
-
     for (const [index, d] of demo.entries()) {
         const laundrySubtotal = d.services.reduce((sum, s) => sum + servicePrice(s.id) * s.qty, 0);
         const productSubtotal = d.products.reduce((sum, p) => sum + productPrice(p.id) * p.qty, 0);
@@ -113,117 +107,110 @@ async function createDemoOrders(): Promise<void> {
         const orderId = orderEntity.generateOrderId(seq, daysAgo(d.createdDaysAgo));
         const createdAt = daysAgo(d.createdDaysAgo, 14);
 
-        orderItems.push({
-            order_id: orderId,
-            user_id: user.id,
-            outlet_id: outlet.id,
-            user_address_id: address.id,
-            distance_km: d.distanceKm,
-            delivery_fee: deliveryFee,
-            total_laundry: totals.total_laundry,
-            total_product: totals.total_product,
-            total_amount: totals.total_amount,
-            status: d.status,
-            payment_method: d.paymentMethod,
-            notes: index === 0 ? "Tolong jemput setrikaan. Terima kasih." : null,
-            created_at: createdAt,
-        });
-
-        const paymentType = d.paymentMethod === "transfer_bank" ? "transfer_bank" : d.paymentMethod;
-        const VA = `2620${String(Math.floor(100000000000 + Math.random() * 899999999999))}`;
-        payments.push({
-            order_id: orderId,
-            transaction_id: d.paymentMethod === "transfer_bank" ? VA : `FDP-${orderId}`,
-            payment_type: paymentType,
-            gross_amount: totals.total_amount,
-            status: d.paymentStatus,
-            paid_at: d.paymentStatus === "PAID" ? createdAt : null,
-            raw_response:
-                d.paymentStatus === "PAID"
-                    ? d.paymentMethod === "fadarosipay"
-                        ? { gateway: "fadarosipay", method: "wallet" }
-                        : { gateway: "cod", paidOnDelivery: true }
-                    : undefined,
-            created_at: createdAt,
-        });
-
-        if (d.paymentStatus === "PAID" && d.status !== "DIBATALKAN") {
-            cashFlows.push({
-                order_id: orderId,
-                type: "income",
-                category: "sales",
-                amount: totals.total_amount,
-                description: `Pembayaran ${d.paymentMethod} untuk order ${orderId}`,
-                created_at: createdAt,
-            });
-        }
-        if (d.status === "DIBATALKAN") {
-            cashFlows.push({
-                order_id: orderId,
-                type: "expense",
-                category: "refund",
-                amount: totals.total_amount,
-                description: `Refund pembatalan order ${orderId} (${d.paymentMethod})`,
-                created_at: daysAgo(d.createdDaysAgo, 16),
-            });
-        }
-
         const statusFlow =
             d.status === "BARU"
                 ? ["BARU"]
                 : d.status === "DIBATALKAN"
                   ? ["BARU", "DIBATALKAN"]
                   : ["BARU", "DITERIMA", d.status === "DITERIMA" ? "" : d.status].filter(Boolean);
-        statusFlow.forEach((st, i) => {
-            trackings.push({
-                order_id: orderId,
-                status: st,
-                notes:
-                    st === "BARU"
-                        ? "Pesanan diterima. Menunggu konfirmasi outlet."
-                        : st === "DITERIMA"
-                          ? "Pakaian telah diterima staf di outlet."
-                          : st === "DIBATALKAN"
-                            ? "Pesanan dibatalkan."
-                            : `Status pesanan diperbarui menjadi ${st}.`,
-                estimated_completion_time: createdAt,
-                created_at: new Date(createdAt.getTime() + i * 3600 * 1000),
+        const trackings = statusFlow.map((st, i) => ({
+            status: varchar<20>(st),
+            notes:
+                st === "BARU"
+                    ? "Pesanan diterima. Menunggu konfirmasi outlet."
+                    : st === "DITERIMA"
+                      ? "Pakaian telah diterima staf di outlet."
+                      : st === "DIBATALKAN"
+                        ? "Pesanan dibatalkan."
+                        : `Status pesanan diperbarui menjadi ${st}.`,
+            estimated_completion_time: instant(createdAt),
+            created_at: instant(new Date(createdAt.getTime() + i * 3600 * 1000)),
+        }));
+
+        const cashFlows: Array<{
+            type: ReturnType<typeof varchar<20>>;
+            category: ReturnType<typeof varchar<40>>;
+            amount: ReturnType<typeof numeric<12, 2>>;
+            description: string;
+            created_at: Temporal.Instant;
+        }> = [];
+        if (d.paymentStatus === "PAID" && d.status !== "DIBATALKAN") {
+            cashFlows.push({
+                type: varchar<20>("income"),
+                category: varchar<40>("sales"),
+                amount: numeric<12, 2>(totals.total_amount),
+                description: `Pembayaran ${d.paymentMethod} untuk order ${orderId}`,
+                created_at: instant(createdAt),
             });
+        }
+        if (d.status === "DIBATALKAN") {
+            cashFlows.push({
+                type: varchar<20>("expense"),
+                category: varchar<40>("refund"),
+                amount: numeric<12, 2>(totals.total_amount),
+                description: `Refund pembatalan order ${orderId} (${d.paymentMethod})`,
+                created_at: instant(daysAgo(d.createdDaysAgo, 16)),
+            });
+        }
+
+        const paymentType = d.paymentMethod === "transfer_bank" ? "transfer_bank" : d.paymentMethod;
+        const VA = `2620${String(Math.floor(100000000000 + Math.random() * 899999999999))}`;
+
+        await prisma.orm.public.Orders.create({
+            order_id: orderId,
+            user_id: user.id,
+            outlet_id: outlet.id,
+            user_address_id: address.id,
+            distance_km: numeric<6, 2>(d.distanceKm),
+            delivery_fee: numeric<10, 2>(deliveryFee),
+            total_laundry: numeric<12, 2>(totals.total_laundry),
+            total_product: numeric<12, 2>(totals.total_product),
+            total_amount: totals.total_amount,
+            status: varchar<20>(d.status),
+            payment_method: varchar<20>(d.paymentMethod),
+            notes: index === 0 ? "Tolong jemput setrikaan. Terima kasih." : null,
+            created_at: instant(createdAt),
+            serviceOrderItems: (items) =>
+                items.create(
+                    d.services.map((s) => ({
+                        laundry_service_id: s.id,
+                        qty: numeric<6, 2>(s.qty),
+                        subtotal: numeric<12, 2>(servicePrice(s.id) * s.qty),
+                        notes: "",
+                    })),
+                ),
+            productOrderItems: (items) =>
+                items.create(
+                    d.products.map((p) => ({
+                        product_id: p.id,
+                        qty: p.qty,
+                        subtotal: productPrice(p.id) * p.qty,
+                    })),
+                ),
+            orderTrackings: (t) => t.create(trackings),
+            payments: (p) =>
+                p.create({
+                    transaction_id: d.paymentMethod === "transfer_bank" ? VA : `FDP-${orderId}`,
+                    payment_type: varchar<20>(paymentType),
+                    gross_amount: numeric<12, 2>(totals.total_amount),
+                    status: varchar<30>(d.paymentStatus),
+                    paid_at: d.paymentStatus === "PAID" ? instant(createdAt) : null,
+                    raw_response: (d.paymentStatus === "PAID"
+                        ? d.paymentMethod === "fadarosipay"
+                            ? { gateway: "fadarosipay", method: "wallet" }
+                            : { gateway: "cod", paidOnDelivery: true }
+                        : null) as never,
+                    created_at: instant(createdAt),
+                }),
+            ...(cashFlows.length > 0 ? { cashFlows: (c) => c.create(cashFlows) } : {}),
         });
+
+        for (const p of d.products) {
+            const product = prodById(p.id);
+            await prisma.orm.public.Products.where({ id: p.id }).update({ stock: product.stock - p.qty });
+        }
     }
 
-    await prisma.orders.createMany({ data: orderItems });
-    for (const [index, d] of demo.entries()) {
-        const orderIdFor = (i: number) => orderEntity.generateOrderId(i + 1, daysAgo(demo[i].createdDaysAgo));
-        for (const s of d.services) {
-            await prisma.service_order_item.create({
-                data: {
-                    order_id: orderIdFor(index),
-                    laundry_service_id: s.id,
-                    qty: s.qty,
-                    subtotal: servicePrice(s.id) * s.qty,
-                    notes: "",
-                },
-            });
-        }
-        for (const p of d.products) {
-            await prisma.product_order_item.create({
-                data: {
-                    order_id: orderIdFor(index),
-                    product_id: p.id,
-                    qty: p.qty,
-                    subtotal: productPrice(p.id) * p.qty,
-                },
-            });
-            await prisma.products.update({
-                where: { id: p.id },
-                data: { stock: { decrement: p.qty } },
-            });
-        }
-    }
-    await prisma.order_trackings.createMany({ data: trackings });
-    await prisma.payments.createMany({ data: payments });
-    await prisma.cash_flow.createMany({ data: cashFlows });
     logger.info("demo orders seeded", { count: demo.length });
 }
 
@@ -231,47 +218,44 @@ async function main() {
     const adminPassword = await Bun.password.hash("Admin@1234");
     const userPassword = await Bun.password.hash("User@1234");
 
-    const admin = await prisma.user.upsert({
-        where: { email: "admin@fadarosi.id" },
-        update: {},
-        create: {
-            username: "Budi",
+    let admin = await prisma.orm.public.User.where({ email: "admin@fadarosi.id" }).first();
+    if (!admin) {
+        admin = await prisma.orm.public.User.create({
+            username: varchar("Budi"),
             email: "admin@fadarosi.id",
             password: adminPassword,
-            phone: "081234567890",
-            role: "admin",
-        },
-    });
+            phone: varchar("081234567890"),
+            role: varchar("admin"),
+        });
+    }
     logger.info("admin ensured", { userId: admin.id });
 
-    const user = await prisma.user.upsert({
-        where: { email: "customer@fadarosi.id" },
-        update: {},
-        create: {
-            username: "Budi Hartono",
+    let user = await prisma.orm.public.User.where({ email: "customer@fadarosi.id" }).first();
+    if (!user) {
+        user = await prisma.orm.public.User.create({
+            username: varchar("Budi Hartono"),
             email: "customer@fadarosi.id",
             password: userPassword,
-            phone: "08123456789",
-            role: "user",
-        },
-    });
+            phone: varchar("08123456789"),
+            role: varchar("user"),
+        });
+    }
     logger.info("customer ensured", { userId: user.id });
 
-    const outlet = await prisma.outlets.upsert({
-        where: { id: 1 },
-        update: {},
-        create: {
+    let outlet = await prisma.orm.public.Outlets.where({ id: 1 }).first();
+    if (!outlet) {
+        outlet = await prisma.orm.public.Outlets.create({
             id: 1,
             name: "Fadarosi Premium Jakarta",
-            phone: "021-8273912",
+            phone: varchar("021-8273912"),
             address_text: "Jl. Boulevard Raya Barat Blok AD No. 12, Kelapa Gading, Jakarta Utara",
-            latitude: -6.1604,
-            longitude: 106.9047,
-            max_coverage_km: 5.0,
-            min_order_amount: 50000,
+            latitude: numeric<10, 8>(-6.1604),
+            longitude: numeric<11, 8>(106.9047),
+            max_coverage_km: numeric<5, 2>(5.0),
+            min_order_amount: numeric<12, 2>(50000),
             weekly_hours: "Senin - Jumat: 08:00-20:00 WIB\nSabtu: 08:00-18:00 WIB\nMinggu: Tutup",
-        },
-    });
+        });
+    }
     logger.info("outlet ensured", { outletId: outlet.id });
 
     const services = [
@@ -280,44 +264,60 @@ async function main() {
         { name: "Express", unit: "kg", price_per_unit: 6000, description: "Layanan cuci, kering setrika serba cepat. Selesai dalam 6 jam.", estimated_duration_hours: 6 },
         { name: "Setrika Saja", unit: "kg", price_per_unit: 4000, description: "Pakaian sudah bersih dari rumah, kami setrika & lipat rapi.", estimated_duration_hours: 6 },
     ];
-    if ((await prisma.laundry_services.count()) === 0) {
-        await prisma.laundry_services.createMany({
-            data: services.map((s) => ({ ...s, is_active: true })),
-        });
+    const { count: serviceCount } = await prisma.orm.public.Laundry_services.aggregate((agg) => ({ count: agg.count() }));
+    if (serviceCount === 0) {
+        for (const s of services) {
+            await prisma.orm.public.Laundry_services.create({
+                name: varchar(s.name),
+                unit: varchar(s.unit),
+                price_per_unit: numeric<12, 2>(s.price_per_unit),
+                description: s.description,
+                estimated_duration_hours: s.estimated_duration_hours,
+                is_active: true,
+            });
+        }
     }
     logger.info("services ensured", { count: services.length });
 
-    const existing = await prisma.products.count();
-    if (existing === 0) {
-        await prisma.products.createMany({
-            data: [
-                { name: "Detergen Cair Liquid Pro", category: "Detergen", price: 32500, size: "1L", stock: 24, is_active: true, image: "" },
-                { name: "Softener Lavender Blossom", category: "Softener", price: 28000, size: "800ml", stock: 18, is_active: true, image: "" },
-                { name: "Pewangi Semprot Jasmine", category: "Pewangi", price: 18500, size: "250ml", stock: 45, is_active: true, image: "" },
-                { name: "Pemutih OxiBright", category: "Pemutih", price: 15000, size: "500ml", stock: 12, is_active: true, image: "" },
-                { name: "Minyak Goreng Refill", category: "Minyak Goreng", price: 22000, size: "1L", stock: 50, is_active: true, image: "" },
-                { name: "Paket Hemat Cuci Bersih", category: "Paket Hemat", price: 65000, size: "set", stock: 8, is_active: true, image: "" },
-                { name: "Detergen Premium Lavender", category: "Detergen", price: 45000, size: "1.5L", stock: 2, is_active: true, image: "" },
-                { name: "Softener Anti Kusut Fresh", category: "Softener", price: 35000, size: "900ml", stock: 0, is_active: true, image: "" },
-                { name: "Pewangi Semprot Lemon", category: "Pewangi", price: 19500, size: "250ml", stock: 5, is_active: true, image: "" },
-            ],
-        });
-        logger.info("products seeded", { count: 9 });
+    const { count: productCount } = await prisma.orm.public.Products.aggregate((agg) => ({ count: agg.count() }));
+    if (productCount === 0) {
+        const productSeeds = [
+            { name: "Detergen Cair Liquid Pro", category: "Detergen", price: 32500, size: "1L", stock: 24, is_active: true, image: "" },
+            { name: "Softener Lavender Blossom", category: "Softener", price: 28000, size: "800ml", stock: 18, is_active: true, image: "" },
+            { name: "Pewangi Semprot Jasmine", category: "Pewangi", price: 18500, size: "250ml", stock: 45, is_active: true, image: "" },
+            { name: "Pemutih OxiBright", category: "Pemutih", price: 15000, size: "500ml", stock: 12, is_active: true, image: "" },
+            { name: "Minyak Goreng Refill", category: "Minyak Goreng", price: 22000, size: "1L", stock: 50, is_active: true, image: "" },
+            { name: "Paket Hemat Cuci Bersih", category: "Paket Hemat", price: 65000, size: "set", stock: 8, is_active: true, image: "" },
+            { name: "Detergen Premium Lavender", category: "Detergen", price: 45000, size: "1.5L", stock: 2, is_active: true, image: "" },
+            { name: "Softener Anti Kusut Fresh", category: "Softener", price: 35000, size: "900ml", stock: 0, is_active: true, image: "" },
+            { name: "Pewangi Semprot Lemon", category: "Pewangi", price: 19500, size: "250ml", stock: 5, is_active: true, image: "" },
+        ];
+        for (const p of productSeeds) {
+            await prisma.orm.public.Products.create({
+                name: varchar(p.name),
+                category: varchar(p.category),
+                price: numeric<12, 2>(p.price),
+                size: varchar(p.size),
+                stock: p.stock,
+                is_active: p.is_active,
+                image: p.image,
+            });
+        }
+        logger.info("products seeded", { count: productSeeds.length });
     }
 
-    const primaryAddress = await prisma.user_address.upsert({
-        where: { id: 1 },
-        update: {},
-        create: {
+    let primaryAddress = await prisma.orm.public.User_address.where({ id: 1 }).first();
+    if (!primaryAddress) {
+        primaryAddress = await prisma.orm.public.User_address.create({
             id: 1,
-            label: "Rumah Utama",
+            label: varchar("Rumah Utama"),
             address_text: "Jl. Kebon Jeruk No. 12, Kel. Palmerah, Kec. Palmerah, Jakarta Barat, DKI Jakarta, 11530",
-            latitude: -6.2001,
-            longitude: 106.7839,
+            latitude: numeric<10, 8>(-6.2001),
+            longitude: numeric<11, 8>(106.7839),
             is_primary: true,
             user_id: user.id,
-        },
-    });
+        });
+    }
     logger.info("primary address ensured", { addressId: primaryAddress.id });
 
     await createDemoOrders();
@@ -331,5 +331,5 @@ main()
         process.exit(1);
     })
     .finally(async () => {
-        await prisma.$disconnect();
+        await prisma.close();
     });

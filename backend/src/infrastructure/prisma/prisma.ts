@@ -28,6 +28,10 @@ function queryLogger(): SqlMiddleware {
 export const prisma = postgres<Contract>({
   contractJson,
   url: env.DATABASE_URL,
+  poolOptions: {
+    connectionTimeoutMillis: 10_000,
+    idleTimeoutMillis: 30_000,
+  },
   // Kosong saat production agar tidak ada beban I/O log
   middleware: env.NODE_ENV === "development" ? [queryLogger()] : [],
 });

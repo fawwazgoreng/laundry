@@ -67,14 +67,12 @@ export const AddressSection = () => {
     }
   }, [])
 
-  // Terjemahkan koordinat menjadi teks alamat via reverse geocode
   const lookupAddress = useCallback(async (lat: number, lng: number) => {
-    setLoadingAddress(true)
     try {
       const result = await reverseGeocode(lat, lng)
-      setForm((prev) => ({ ...prev, detail: result.displayName }))
+      return result.displayName
     } catch {
-      setForm((prev) => ({ ...prev, detail: "Alamat tidak ditemukan" }))
+      return "Alamat tidak ditemukan"
     } finally {
       setLoadingAddress(false)
     }
@@ -96,19 +94,37 @@ export const AddressSection = () => {
     }
   }, [])
 
+
   useEffect(() => {
     if (!gpsResult) return
     const { lat, lng } = gpsResult
-    queueMicrotask(() => {
-      setForm((prev) => ({ ...prev, lat, lng }))
-      lookupAddress(lat, lng)
-    })
+
+    const updateGpsAddress = async () => {
+      setLoadingAddress(true)
+      const textAddress = await lookupAddress(lat, lng)
+      setForm((prev) => ({
+        ...prev,
+        lat,
+        lng,
+        detail: textAddress
+      }))
+      setLoadingAddress(false)
+    }
+
+    updateGpsAddress()
   }, [gpsResult, lookupAddress])
 
   const handleMapPick = useCallback(
-    (coords: { lat: number; lng: number }) => {
-      setForm((prev) => ({ ...prev, lat: coords.lat, lng: coords.lng }))
-      lookupAddress(coords.lat, coords.lng)
+    async (coords: { lat: number; lng: number }) => {
+      setLoadingAddress(true)
+      const textAddress = await lookupAddress(coords.lat, coords.lng)
+      setForm((prev) => ({
+        ...prev,
+        lat: coords.lat,
+        lng: coords.lng,
+        detail: textAddress
+      }))
+      setLoadingAddress(false)
     },
     [lookupAddress],
   )
@@ -121,6 +137,10 @@ export const AddressSection = () => {
     setEditingId(null)
     setError(null)
     setForm(emptyForm())
+    window.scrollBy({
+      top: 800,
+      behavior: "smooth"
+    })
   }
 
   const handleEdit = (addr: CustomerAddress) => {
@@ -197,7 +217,7 @@ export const AddressSection = () => {
         <p className="text-sm text-gray-500">Atur lokasi rumah dan kantor untuk penjemputan laundry.</p>
       </div>
 
-      <div className="rounded-2xl" id="alamat">
+      <div className="rounded-2xl" >
         <div className="mb-4 flex justify-end">
           <button onClick={handleAddNew} className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-white hover:bg-primary-dark">
             + Tambah Alamat Baru
@@ -235,7 +255,7 @@ export const AddressSection = () => {
         </div>
       </div>
 
-      <div className="rounded-2xl bg-white" id="alamat">
+      <div className="rounded-2xl bg-white">
         <div className="mt-4 space-y-3">
           <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-5">
             <div className="flex items-center justify-between">
@@ -256,7 +276,7 @@ export const AddressSection = () => {
               <MapClickPicker key={`${form.lat}-${form.lng}`} defaultCenter={{ lat: form.lat, lng: form.lng }} onChange={handleMapPick} />
               <div className="grid grid-cols-2 gap-5 mt-10">
                 <FloatingInput
-                className="col-span-1"
+                  className="col-span-1"
                   label="Label Lokasi"
                   value={form.label}
                   onChange={(e) => setForm((prev) => ({ ...prev, label: e.target.value }))}
@@ -304,17 +324,17 @@ export const AddressSection = () => {
       </div>
 
       {/* Pop-up konfirmasi penghapusan alamat */}
-      <div className="z-999999 relative">
-      <DeletePopup
-        open={deleteTarget !== null}
-        dataName={deleteTarget?.label}
-        loading={deleting}
-        onCancel={() => setDeleteTarget(null)}
-        onConfirm={() => {
-          if (deleteTarget) handleDelete(deleteTarget.id)
+      <div className="z-999999 relative" id="alamat">
+        <DeletePopup
+          open={deleteTarget !== null}
+          dataName={deleteTarget?.label}
+          loading={deleting}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={() => {
+            if (deleteTarget) handleDelete(deleteTarget.id)
           }}
         />
-        </div>
+      </div>
     </>
   )
 }

@@ -1,3 +1,5 @@
+import type { paymentStatus } from "./paymentType";
+
 export const ORDER_STATUSES = [
     "BARU",
     "DITERIMA",
@@ -161,6 +163,23 @@ export interface orderTotalsType {
     item_count: number
 }
 
+export type orderNewPaymentType = {
+    payment_type: paymentMethod
+    gross_amount: number
+    status: paymentStatus
+    transaction_id?: string
+    va_number?: string | null
+    paid_at?: string | null
+    raw_response?: Record<string, unknown> | null
+}
+
+export type orderNewCashflowType = {
+    type: "income" | "expense"
+    category: string
+    amount: number
+    description: string
+}
+
 export type orderNewRecordType = {
     order_id: string
     user_id: string
@@ -175,4 +194,6 @@ export type orderNewRecordType = {
     totals: orderTotalsType
     status: orderStatus
     tracking: { status: orderStatus; notes: string }
+    payment: orderNewPaymentType
+    cashflow?: orderNewCashflowType | null
 }

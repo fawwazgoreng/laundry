@@ -3,6 +3,8 @@ import { useParams } from "react-router-dom"
 import { AlertTriangle, Box, Check, Copy, Hash, Info, RefreshCcw, ShieldCheck, Timer } from "lucide-react"
 import { formatIDR } from "../../lib/format"
 import { orderApi, paymentApi } from "../../services/api"
+import { ErrorState, LoadingState } from "../../components/ui"
+import { useToast } from "../../components/Toast"
 
 const PAYMENT_WINDOW_HOURS = 24
 
@@ -42,12 +44,16 @@ const paymentMethodLabel: Record<string, string> = {
 
 export function PaymentPage() {
   const { orderId } = useParams<{ orderId: string }>()
+  const { error: toastError } = useToast()
   const [summary, setSummary] = useState<SummaryRow[]>([])
   const [vaNumber, setVaNumber] = useState("")
   const [paymentLabel, setPaymentLabel] = useState("Bank BRI - akun virtual")
   const [createdAt, setCreatedAt] = useState("")
   const [secondsLeft, setSecondsLeft] = useState(PAYMENT_WINDOW_HOURS * 60 * 60)
   const [copied, setCopied] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   useEffect(() => {
     if (!orderId) return
@@ -72,9 +78,13 @@ export function PaymentPage() {
         setSummary(rows)
         const expiresAt = new Date(payment.created_at).getTime() + PAYMENT_WINDOW_HOURS * 60 * 60 * 1000
         setSecondsLeft(Math.max(0, Math.floor((expiresAt - Date.now()) / 1000)))
+        setLoadError(null)
       })
-      .catch(() => undefined)
-  }, [orderId])
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Gagal memuat detail pembayaran")
+      })
+      .finally(() => setLoading(false))
+  }, [orderId, reloadKey])
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -88,10 +98,14 @@ export function PaymentPage() {
   const minutes = String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, "0")
   const seconds = String(secondsLeft % 60).padStart(2, "0")
 
-  function handleCopy() {
-    navigator.clipboard.writeText(vaNumber).catch(() => undefined)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(vaNumber)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      toastError("Gagal menyalin nomor Virtual Account")
+    }
   }
 
   return (
@@ -136,6 +150,11 @@ export function PaymentPage() {
         </ul>
       </div>
 
+      {loading ? (
+        <LoadingState message="Memuat detail pembayaran..." />
+      ) : loadError ? (
+        <ErrorState message={loadError} onRetry={() => setReloadKey((k) => k + 1)} />
+      ) : (
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div className="rounded-2xl border border-gray-200 bg-white p-6">
           <div className="mb-4 flex items-center gap-2">
@@ -146,7 +165,7 @@ export function PaymentPage() {
             </div>
           </div>
 
-          <label className="mb-1 block text-xs font-medium text-gray-500">Nomor Virtual Account</label>
+          <p className="mb-1 block text-xs font-medium text-gray-500">Nomor Virtual Account</p>
           <div className="mb-4 flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3">
             <span className="font-mono text-sm font-semibold text-ink-strong">{vaNumber}</span>
             <button onClick={handleCopy} className="text-gray-400 hover:text-primary">
@@ -154,7 +173,7 @@ export function PaymentPage() {
             </button>
           </div>
 
-          <label className="mb-1 block text-xs font-medium text-gray-500">Total nominal yang harus dibayarkan</label>
+          <p className="mb-1 block text-xs font-medium text-gray-500">Total nominal yang harus dibayarkan</p>
           <div className="mb-4 rounded-lg border border-gray-200 px-4 py-3">
             <span className="text-lg font-bold text-ink-strong">{formatIDR(total)}</span>
           </div>
@@ -186,6 +205,7 @@ export function PaymentPage() {
           </div>
         </div>
       </div>
+      )}
     </div>
   )
 }

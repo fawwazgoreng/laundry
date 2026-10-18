@@ -166,4 +166,6 @@ model Cash_flow {
     description String
     created_at  DateTime @default(now())
     order       Orders?  @relation(fields: [order_id], references: [order_id])
+
+    @@unique([order_id, type])
 }

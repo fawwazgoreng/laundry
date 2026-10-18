@@ -4,6 +4,8 @@ import { Check, CreditCard, MessageCircle } from "lucide-react"
 import { formatIDR } from "../../lib/format"
 import type { OrderDetail } from "../../lib/types"
 import { orderApi } from "../../services/api"
+import { useToast } from "../../components/Toast"
+import { ErrorState } from "../../components/ui"
 
 const steps = ["Diterima", "Diproses", "Siap Antar", "Selesai", "Dibatalkan"]
 
@@ -42,20 +44,49 @@ interface OrderItemRow {
 
 export function OrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>()
+  const toast = useToast()
   const [order, setOrder] = useState<OrderDetail | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+  const [cancelling, setCancelling] = useState(false)
 
   useEffect(() => {
     if (!orderId) return
     orderApi
       .get(orderId)
-      .then(setOrder)
-      .catch(() => undefined)
-  }, [orderId])
+      .then((data) => {
+        setOrder(data)
+        setLoadError(null)
+      })
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Gagal memuat detail pesanan")
+      })
+  }, [orderId, reloadKey])
+
+  async function handleCancel() {
+    if (!order) return
+    setCancelling(true)
+    try {
+      const updated = await orderApi.cancel(order.order_id)
+      setOrder(updated)
+      toast.success("Pesanan berhasil dibatalkan")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal membatalkan pesanan")
+    } finally {
+      setCancelling(false)
+    }
+  }
 
   if (!order) {
     return (
       <div className="mx-auto max-w-6xl px-6 py-8">
-        <p className="py-16 text-center text-sm text-gray-400">Memuat detail pesanan...</p>
+        {loadError ? (
+          <ErrorState message={loadError} onRetry={() => setReloadKey((k) => k + 1)} />
+        ) : (
+          <p role="status" className="py-16 text-center text-sm text-gray-400">
+            Memuat detail pesanan...
+          </p>
+        )}
       </div>
     )
   }
@@ -116,10 +147,11 @@ export function OrderDetailPage() {
           </button>
           {(order.status === "BARU" || order.status === "DITERIMA") && (
             <button
-              onClick={() => orderApi.cancel(order.order_id).then(setOrder).catch(() => undefined)}
-              className="rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary-light"
+              onClick={handleCancel}
+              disabled={cancelling}
+              className="rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary-light disabled:opacity-60"
             >
-              Batalkan Pesanan
+              {cancelling ? "Membatalkan..." : "Batalkan Pesanan"}
             </button>
           )}
         </div>

@@ -4,6 +4,9 @@ import { rateLimiter } from "hono-rate-limiter";
 const keyGenerator = (c: Context): string =>
     c.req.header("cf-connecting-ip") ?? c.req.header("x-forwarded-for") ?? "anonymous";
 
+const authKeyGenerator = (c: Context): string =>
+    `${keyGenerator(c)}:${c.req.path}`;
+
 const tooManyRequests = (c: Context) =>
     c.json(
         {
@@ -26,7 +29,7 @@ export const apiRateLimiter = rateLimiter({
 export const authRateLimiter = rateLimiter({
     windowMs: 15 * 60 * 1000,
     limit: 10,
-    keyGenerator,
+    keyGenerator: authKeyGenerator,
     standardHeaders: "draft-6",
     handler: tooManyRequests,
 });

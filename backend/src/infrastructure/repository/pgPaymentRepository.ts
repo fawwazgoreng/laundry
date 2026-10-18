@@ -1,5 +1,6 @@
 import type { paymentRepository } from "../../domain/repositories/paymentRepository";
 import type { paymentConfirmInput, paymentCreateInput, paymentType } from "../../domain/types/paymentType";
+import { logger } from "../../helper/logging/logger";
 import { prisma } from "../prisma/prisma";
 import { fromInstant, instant, numeric, varchar } from "../prisma/scalars";
 
@@ -66,6 +67,7 @@ export class pgPaymentRepository implements paymentRepository {
         const paidAt = status === "PAID" ? new Date() : existing.paid_at ? new Date(existing.paid_at) : null;
         const row = await prisma.orm.public.Payments
             .where({ id: existing.id })
+            .where({ status: varchar<30>("PENDING") })
             .update({
                 status: varchar<30>(status),
                 paid_at: paidAt ? instant(paidAt) : null,
@@ -108,7 +110,12 @@ export class pgPaymentRepository implements paymentRepository {
                 .where({ id })
                 .update({ status: varchar<30>(status) });
             return row ? toPaymentType(row) : null;
-        } catch {
+        } catch (error) {
+            logger.error("failed to update payment status", {
+                paymentId: id,
+                status,
+                message: error instanceof Error ? error.message : String(error),
+            });
             return null;
         }
     }
@@ -119,8 +126,27 @@ export class pgPaymentRepository implements paymentRepository {
                 .where({ id })
                 .update({ raw_response: rawResponse as any });
             return row ? toPaymentType(row) : null;
-        } catch {
+        } catch (error) {
+            logger.error("failed to save payment raw response", {
+                paymentId: id,
+                message: error instanceof Error ? error.message : String(error),
+            });
             return null;
         }
+    }
+
+    async attachGatewayDetails(id: string, details: {
+        transaction_id?: string
+        va_number?: string | null
+        raw_response?: Record<string, unknown> | null
+    }): Promise<paymentType | null> {
+        const row = await prisma.orm.public.Payments
+            .where({ id })
+            .update({
+                ...(details.transaction_id ? { transaction_id: details.transaction_id } : {}),
+                ...(details.va_number !== undefined ? { va_number: details.va_number } : {}),
+                ...(details.raw_response !== undefined ? { raw_response: details.raw_response as any } : {}),
+            });
+        return row ? toPaymentType(row) : null;
     }
 }

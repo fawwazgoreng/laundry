@@ -20,7 +20,7 @@ export class pgStatsRepository implements statsRepository {
     async getStats(): Promise<adminStatsType> {
         const today = startOfToday();
 
-        const [ordersToday, revenueTodayAgg, inProgressAgg, productsSoldAgg, recentOrders, serviceItems, weeklyPayments, lowStock] =
+        const [ordersToday, revenueTodayAgg, inProgressAgg, productsSoldAgg, recentOrders, services, weeklyPayments, lowStock] =
             await Promise.all([
                 prisma.orm.public.Orders.where((c) => c.created_at.gte(instant(today))).aggregate((agg) => ({ count: agg.count() })).then(r => r.count),
                 prisma.orm.public.Payments
@@ -37,8 +37,8 @@ export class pgStatsRepository implements statsRepository {
                     .include("serviceOrderItems", (si) => si.include("service", (s) => s.select("name")))
                     .include("productOrderItems", (pi) => pi.include("product", (p) => p.select("name")))
                     .all(),
-                prisma.orm.public.Service_order_item
-                    .include("service", (s) => s.select("name"))
+                prisma.orm.public.Laundry_services
+                    .select("id", "name")
                     .all(),
                 prisma.orm.public.Payments
                     .where((p, { fns }) => fns.and(p.status.eq(varchar<30>("PAID")), p.paid_at.gte(instant(dayStart(6)))))
@@ -51,14 +51,18 @@ export class pgStatsRepository implements statsRepository {
                     .all(),
             ]);
 
-        const revenueByService = new Map<string, { total: number; count: number }>();
-        for (const item of serviceItems) {
-            const name = (item.service as any)?.name;
-            const current = revenueByService.get(name) ?? { total: 0, count: 0 };
-            current.total += Number(item.subtotal);
-            current.count += 1;
-            revenueByService.set(name, current);
-        }
+        const serviceRevenue = (
+            await Promise.all(
+                services.map(async (service) => {
+                    const agg = await prisma.orm.public.Service_order_item
+                        .where({ laundry_service_id: service.id })
+                        .aggregate((a) => ({ total: a.sum("subtotal"), count: a.count() }));
+                    return { service_name: service.name, total: Number(agg.total ?? 0), count: agg.count };
+                }),
+            )
+        )
+            .filter((row) => row.count > 0)
+            .sort((a, b) => b.total - a.total);
 
         const weekly = new Map<string, number>();
         for (let i = 0; i < 7; i++) {
@@ -97,9 +101,7 @@ export class pgStatsRepository implements statsRepository {
                     created_at: new Date(o.created_at.epochMilliseconds).toISOString(),
                 };
             }),
-            service_revenue: [...revenueByService.entries()]
-                .map(([service_name, v]) => ({ service_name, total: v.total, count: v.count }))
-                .sort((a, b) => b.total - a.total),
+            service_revenue: serviceRevenue,
             weekly_revenue: [...weekly.entries()]
                 .sort(([a], [b]) => (a < b ? -1 : 1))
                 .map(([date, total]) => ({ date, total })),
