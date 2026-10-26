@@ -12,7 +12,7 @@ export class orderEntity {
                 qty: z.coerce.number().positive("Berat harus lebih dari 0"),
                 notes: z.string().optional().default(""),
             }),
-        ).min(1, "Pilih minimal satu layanan laundry"),
+        ).optional().default([]),
         products: z.array(
             z.object({
                 product_id: z.coerce.number().int().positive(),
@@ -26,6 +26,8 @@ export class orderEntity {
         payment_method: z.enum(PAYMENT_METHODS, { message: "Invalid payment method" }),
         bank: z.enum(["bca", "bni", "bri", "permata"]).optional(),
         notes: z.string().optional(),
+    }).refine((data) => data.services.length > 0 || data.products.length > 0, {
+        message: "Minimal harus memilih satu layanan / satu produck"
     }).superRefine((value, ctx) => {
         if (value.payment_method === "transfer_bank" && !value.bank) {
             ctx.addIssue({

@@ -24,7 +24,7 @@ import type { AppVariables } from "./presentation/types";
 
 const app = new Hono<{ Variables: AppVariables }>();
 
-app.use("*", secureHeaders());
+app.use("*", secureHeaders({ crossOriginResourcePolicy: "cross-origin", }));
 app.use(
     "*",
     cors({
@@ -38,14 +38,46 @@ app.use("*", requestLogging);
 app.use("/api/*", apiRateLimiter);
 app.use("/uploads/*", serveStatic({ root: "./public" }));
 
+const HEALTH_TIMEOUT_MS = 3000;
+
+const describeError = (error: unknown) => {
+    if (error instanceof Error) {
+        const { code, sqlState } = error as Error & { code?: unknown; sqlState?: unknown };
+        return { message: error.message, code, sqlState };
+    }
+    return { message: String(error) };
+};
+
+const withTimeout = async <T>(work: Promise<T>, ms: number): Promise<T> => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeout = new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error(`health check timeout ${ms}ms`)), ms);
+    });
+    try {
+        return await Promise.race([work, timeout]);
+    } finally {
+        clearTimeout(timer);
+    }
+};
+
+const healthPlan = prisma.raw.sql`SELECT 1 AS result`
+    .returnsRow({ result: "pg/int4@1" })
+    .build();
+
+const runHealthQuery = async () => await prisma.runtime().query(healthPlan);
+
 app.get("/health", async (c) => {
     try {
-        await prisma.raw.sql.arguments("SELECT 1");
-        return c.json({ success: true, status: "ok", database: "up" });
+        const [row] = await withTimeout(runHealthQuery(), HEALTH_TIMEOUT_MS);
+
+        if (row?.result === 1) {
+            return c.json({ success: true, status: "ok", database: "up" });
+        }
+
+        logger.error("health check failed", { message: "Database response invalid", row });
+        return c.json({ success: false, status: "degraded", database: "down" }, 503);
     } catch (error) {
-        logger.error("health check failed", {
-            message: error instanceof Error ? error.message : String(error),
-        });
+        logger.error("health check failed", describeError(error));
         return c.json({ success: false, status: "degraded", database: "down" }, 503);
     }
 });

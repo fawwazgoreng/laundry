@@ -26,12 +26,19 @@ export class HandleMidtransNotificationUseCase {
         private readonly paymentRepository: paymentRepository,
         private readonly orderRepository: orderRepository,
         private readonly cashflowRepository: cashflowRepository,
-    ) {}
+    ) { }
 
     async execute(raw: unknown): Promise<void> {
         const dto = paymentEntity.validateNotification(raw);
+        
+        
         if (!paymentEntity.isValidSignature(dto, env.MIDTRANS_SERVER_KEY)) {
             throw AppError.forbidden("Signature Midtrans tidak valid");
+        }
+        
+        if (dto.order_id.startsWith("payment_notif_test")) {
+            logger.info("midtrans test notification acknowledged", { orderId: dto.order_id });
+            return;
         }
 
         const order = await this.orderRepository.findByOrderId(dto.order_id);
