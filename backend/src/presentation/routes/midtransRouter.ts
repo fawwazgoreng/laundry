@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { AppVariables } from "../types";
 import { handleMidtransNotificationUseCase } from "./container";
 
-const midtransRouter = new Hono<{ Variables: AppVariables }>();
+const midtransRouter = new Hono<{ Variables: AppVariables }>({strict: false});
 
 // Public webhook endpoint — Midtrans calls this (no Bearer auth; it is
 // protected by signature verification inside the use case).

@@ -3,7 +3,7 @@ import postgres from "@prisma/orm-postgres/runtime";
 import type { SqlMiddleware } from "@prisma/orm-postgres/family-runtime";
 import { env } from "../../config/env";
 
-import type { Contract } from "../database/generated/contract.d";
+import type { Contract } from "../database/generated/contract";
 import contractJson from "../database/generated/contract.json";
 
 // JSON.stringify gagal pada BigInt, jadi diubah ke string dulu
@@ -15,7 +15,6 @@ function queryLogger(): SqlMiddleware {
     name: "query-logger",
     familyId: "sql",
 
-    // Berjalan untuk setiap query setelah SQL dibuat, sebelum dikirim ke database
     async beforeEncode(plan) {
       console.log(`\n[Prisma SQL Kueri]: ${plan.sql}`);
       if (plan.params && plan.params.length > 0) {

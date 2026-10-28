@@ -4,14 +4,19 @@ import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 import { nodePolyfills } from 'vite-plugin-node-polyfills'
 
+const target = process.env.API_PROXY_TARGET ?? "http://localhost:3000";
+
 // https://vite.dev/config/
 export default defineConfig({
   server: {
     proxy: {
       '/uploads': {
-        target: "http://localhost:3000",
+        target,
         changeOrigin: true,
-        secure: false
+        secure: false,
+        headers: {
+          'ngrok-skip-browser-warning': 'true' // Menembus halaman warning ngrok
+        }
       }
     }
   },

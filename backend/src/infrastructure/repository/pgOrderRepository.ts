@@ -418,6 +418,18 @@ export class pgOrderRepository implements orderRepository {
         });
     }
 
+    async delete(orderId: string): Promise<void> {
+        await prisma.transaction(async (tx) => {
+            // Riwayat kas tetap disimpan, hanya tautan ke order yang dilepas.
+            await tx.orm.public.Cash_flow.where({ order_id: orderId }).updateAll({ order_id: null });
+            await tx.orm.public.Order_trackings.where({ order_id: orderId }).deleteAll();
+            await tx.orm.public.Payments.where({ order_id: orderId }).deleteAll();
+            await tx.orm.public.Product_order_item.where({ order_id: orderId }).deleteAll();
+            await tx.orm.public.Service_order_item.where({ order_id: orderId }).deleteAll();
+            await tx.orm.public.Orders.where({ order_id: orderId }).deleteAll();
+        });
+    }
+
     async countByDatePrefix(prefix: string): Promise<number> {
         const agg = await prisma.orm.public.Orders
             .where((o) => o.order_id.like(`${prefix}%`))

@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
-import { Check, CreditCard, MessageCircle } from "lucide-react"
+import { useNavigate, useParams } from "react-router-dom"
+import { Check, CreditCard, MessageCircle, Trash2 } from "lucide-react"
 import { formatIDR } from "../../lib/format"
 import type { OrderDetail } from "../../lib/types"
 import { orderApi } from "../../services/api"
+import { useAuth } from "../../context/AuthContext"
 import { useToast } from "../../components/Toast"
+import { ConfirmDialog } from "../../components/ConfirmDialog"
 import { ErrorState } from "../../components/ui"
 
 const steps = ["Diterima", "Diproses", "Siap Antar", "Selesai", "Dibatalkan"]
@@ -44,11 +46,15 @@ interface OrderItemRow {
 
 export function OrderDetailPage() {
   const { orderId } = useParams<{ orderId: string }>()
+  const navigate = useNavigate()
+  const { isAdmin } = useAuth()
   const toast = useToast()
   const [order, setOrder] = useState<OrderDetail | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const [cancelling, setCancelling] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!orderId) return
@@ -74,6 +80,21 @@ export function OrderDetailPage() {
       toast.error(err instanceof Error ? err.message : "Gagal membatalkan pesanan")
     } finally {
       setCancelling(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!order) return
+    setDeleting(true)
+    try {
+      await orderApi.remove(order.order_id)
+      setConfirmDelete(false)
+      toast.success("Pesanan berhasil dihapus")
+      navigate(isAdmin ? "/admin/pesanan" : "/history")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal menghapus pesanan")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -152,6 +173,15 @@ export function OrderDetailPage() {
               className="rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary-light disabled:opacity-60"
             >
               {cancelling ? "Membatalkan..." : "Batalkan Pesanan"}
+            </button>
+          )}
+          {order.status === "DIBATALKAN" && (
+            <button
+              onClick={() => setConfirmDelete(true)}
+              disabled={deleting}
+              className="flex items-center gap-1.5 rounded-lg bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+            >
+              <Trash2 size={15} /> Hapus Pesanan
             </button>
           )}
         </div>
@@ -303,6 +333,18 @@ export function OrderDetailPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Hapus Pesanan?"
+        message={`Pesanan ${order.order_id} akan dihapus permanen beserta detailnya. Tindakan ini tidak dapat dibatalkan. Yakin ingin menghapus?`}
+        confirmLabel="Ya, Hapus"
+        cancelLabel="Batal"
+        tone="danger"
+        loading={deleting}
+        onConfirm={handleDelete}
+        onCancel={() => setConfirmDelete(false)}
+      />
     </div>
   )
 }

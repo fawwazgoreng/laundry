@@ -1,9 +1,11 @@
 import type { MiddlewareHandler } from "hono";
 import { logger } from "../../helper/logging/logger";
 import type { AppVariables } from "../types";
+import { env } from "../../config/env";
 
 export const requestLogging: MiddlewareHandler<{ Variables: AppVariables }> = async (c, next) => {
     const requestId = c.req.header("x-request-id") ?? crypto.randomUUID();
+    c.header("Access-Control-Allow-Private-Network", "true")
     c.set("requestId", requestId);
     c.header("x-request-id", requestId);
 

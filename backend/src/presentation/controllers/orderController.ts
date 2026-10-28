@@ -69,7 +69,11 @@ export class orderController {
     }
 
     async remove(c: AuthContext): Promise<Response> {
-        const data = await this.deleteUseCase.execute(c.req.param("orderId")!, c.get("userId"));
+        const data = await this.deleteUseCase.execute(
+            c.req.param("orderId")!,
+            c.get("userId"),
+            c.get("user").role,
+        );
         return ok(c, data, "Pesanan dihapus");
     }
 }

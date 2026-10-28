@@ -45,7 +45,7 @@ orderRouter.post("/", (c) => controller.create(c));
 orderRouter.get("/", (c) => controller.list(c));
 orderRouter.patch("/:orderId/status", adminMiddleware, (c) => controller.updateStatus(c));
 orderRouter.patch("/:orderId/cancel", (c) => controller.cancel(c));
-orderRouter.delete("/:orderId", adminMiddleware, (c) => controller.remove(c));
+orderRouter.delete("/:orderId", (c) => controller.remove(c));
 orderRouter.get("/:orderId/tracking", (c) => controller.getTracking(c));
 orderRouter.get("/:orderId", (c) => controller.get(c));
 

@@ -16,4 +16,4 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 COPY . .
 
 EXPOSE 3000
-CMD ["bun", "run", "dev"]
+CMD ["sh", "-c", "bun run prisma contract emit && bun run dev"]

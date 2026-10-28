@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { ChevronLeft, ChevronRight, CreditCard, Eye, MapPin, Receipt, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, CreditCard, Eye, MapPin, Receipt, Search, Trash2 } from "lucide-react"
 import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
 import type { OrderListItem, OrderStatus } from "../../lib/types"
@@ -16,6 +16,7 @@ const tabs = [
   { key: "diproses", label: "Diproses" },
   { key: "siap_antar", label: "Siap Antar" },
   { key: "selesai", label: "Selesai" },
+  { key: "dibatalkan", label: "Dibatalkan" },
 ]
 
 const statusOrder: OrderStatus[] = ["BARU", "DITERIMA", "DIPROSES", "SIAP_ANTAR", "SELESAI"]
@@ -37,6 +38,8 @@ export function AdminOrderManagementPage() {
   const [orders, setOrders] = useState<AdminOrderRow[]>([])
   const [statusTarget, setStatusTarget] = useState<{ order: AdminOrderRow; next: OrderStatus } | null>(null)
   const [updating, setUpdating] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<AdminOrderRow | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
 
@@ -74,6 +77,7 @@ export function AdminOrderManagementPage() {
       if (o.status === "DIPROSES") c.diproses++
       if (o.status === "SIAP_ANTAR") c.siap_antar++
       if (o.status === "SELESAI") c.selesai++
+      if (o.status === "DIBATALKAN") c.dibatalkan++
     }
     return c
   }, [orders])
@@ -84,6 +88,7 @@ export function AdminOrderManagementPage() {
     if (activeTab === "diproses") list = list.filter((o) => o.status === "DIPROSES")
     if (activeTab === "siap_antar") list = list.filter((o) => o.status === "SIAP_ANTAR")
     if (activeTab === "selesai") list = list.filter((o) => o.status === "SELESAI")
+    if (activeTab === "dibatalkan") list = list.filter((o) => o.status === "DIBATALKAN")
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       list = list.filter((o) => o.id.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q))
@@ -114,6 +119,21 @@ export function AdminOrderManagementPage() {
       toastError(err instanceof ApiError ? err.message : "Gagal mengubah status pesanan")
     } finally {
       setUpdating(false)
+    }
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      await orderApi.remove(deleteTarget.id)
+      toastSuccess(`Pesanan ${deleteTarget.id} berhasil dihapus`)
+      setDeleteTarget(null)
+      await load()
+    } catch (err) {
+      toastError(err instanceof ApiError ? err.message : "Gagal menghapus pesanan")
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -213,7 +233,15 @@ export function AdminOrderManagementPage() {
                       <Link to={"/nota/" + order.id} target="blank" className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
                         <Receipt size={14} />
                       </Link>
-                      {statusOrder.indexOf(order.status) < statusOrder.length - 1 ? (
+                      {order.status === "DIBATALKAN" ? (
+                        <button
+                          onClick={() => setDeleteTarget(order)}
+                          aria-label={`Hapus pesanan ${order.id}`}
+                          className="flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                        >
+                          <Trash2 size={13} /> Hapus
+                        </button>
+                      ) : statusOrder.indexOf(order.status) < statusOrder.length - 1 ? (
                         <button
                           onClick={() => handleAdvance(order)}
                           className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-ink hover:bg-gray-50"
@@ -272,6 +300,23 @@ export function AdminOrderManagementPage() {
         loading={updating}
         onConfirm={confirmStatusChange}
         onCancel={() => setStatusTarget(null)}
+      />
+
+      {/* Konfirmasi sebelum pesanan yang sudah dibatalkan dihapus permanen */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Hapus Pesanan?"
+        message={
+          deleteTarget
+            ? `Pesanan ${deleteTarget.id} akan dihapus permanen beserta detailnya. Tindakan ini tidak dapat dibatalkan. Yakin ingin menghapus?`
+            : ""
+        }
+        confirmLabel="Ya, Hapus"
+        cancelLabel="Batal"
+        tone="danger"
+        loading={deleting}
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
       />
     </div>
   )

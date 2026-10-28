@@ -609,4 +609,58 @@ describe("DeleteOrderUseCase", () => {
 
         await expect(new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository).execute("CLN-20260908-001", "a-1")).rejects.toMatchObject({ statusCode: 409 });
     });
+
+    it("permanently deletes a cancelled order for its owner", async () => {
+        const order = makeOrder({ status: "DIBATALKAN" as orderStatus });
+        const orderRepo = {
+            findByOrderId: mock(() => order),
+            delete: mock(async () => {}),
+        } as unknown as orderRepository;
+
+        await new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository)
+            .execute("CLN-20260908-001", "u-1", "user");
+
+        expect(orderRepo.delete).toHaveBeenCalledWith("CLN-20260908-001");
+    });
+
+    it("forbids a user from deleting another customer's cancelled order", async () => {
+        const order = makeOrder({ status: "DIBATALKAN" as orderStatus });
+        const orderRepo = {
+            findByOrderId: mock(() => order),
+            delete: mock(async () => {}),
+        } as unknown as orderRepository;
+
+        await expect(
+            new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository)
+                .execute("CLN-20260908-001", "u-2", "user"),
+        ).rejects.toMatchObject({ statusCode: 403 });
+        expect(orderRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it("forbids a user from deleting an active order", async () => {
+        const order = makeOrder({ status: "BARU" as orderStatus });
+        const orderRepo = {
+            findByOrderId: mock(() => order),
+            delete: mock(async () => {}),
+        } as unknown as orderRepository;
+
+        await expect(
+            new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository)
+                .execute("CLN-20260908-001", "u-1", "user"),
+        ).rejects.toMatchObject({ statusCode: 403 });
+        expect(orderRepo.delete).not.toHaveBeenCalled();
+    });
+
+    it("allows an admin to permanently delete a cancelled order", async () => {
+        const order = makeOrder({ status: "DIBATALKAN" as orderStatus });
+        const orderRepo = {
+            findByOrderId: mock(() => order),
+            delete: mock(async () => {}),
+        } as unknown as orderRepository;
+
+        await new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository)
+            .execute("CLN-20260908-001", "a-1", "admin");
+
+        expect(orderRepo.delete).toHaveBeenCalledWith("CLN-20260908-001");
+    });
 });
