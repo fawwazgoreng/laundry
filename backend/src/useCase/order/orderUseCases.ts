@@ -450,9 +450,29 @@ export class DeleteOrderUseCase {
         private readonly cashflowRepository: cashflowRepository,
     ) { }
 
-    async execute(orderId: string, actorUserId: string): Promise<orderDetailType> {
+    async execute(
+        orderId: string,
+        actorUserId: string,
+        actorRole: "admin" | "user" = "admin",
+    ): Promise<orderDetailType> {
         const order = await this.orderRepository.findByOrderId(orderId);
         if (!order) throw AppError.notFound("Pesanan tidak ditemukan");
+
+        const isAdmin = actorRole === "admin";
+        const isOwner = order.customer.id === actorUserId;
+
+        if (order.status === "DIBATALKAN") {
+            if (!isAdmin && !isOwner) {
+                throw AppError.forbidden("Anda tidak memiliki akses ke pesanan ini");
+            }
+            await this.orderRepository.delete(orderId);
+            logger.warn("cancelled order deleted", { orderId, actorUserId, actorRole });
+            return order;
+        }
+
+        if (!isAdmin) {
+            throw AppError.forbidden("Hanya admin yang dapat menghapus pesanan aktif");
+        }
         if (order.status !== "BARU" && order.status !== "DITERIMA") {
             throw AppError.conflict("Hanya pesanan berstatus BARU/DITERIMA yang dapat dihapus");
         }
