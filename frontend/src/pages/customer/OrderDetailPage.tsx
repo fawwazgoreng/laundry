@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
 import { Check, CreditCard, MessageCircle, Trash2 } from "lucide-react"
 import { formatIDR } from "../../lib/format"
+import { paymentStatusLabel, paymentStatusStyle } from "../../lib/orderStatus"
 import type { OrderDetail } from "../../lib/types"
 import { orderApi } from "../../services/api"
 import { useAuth } from "../../context/AuthContext"
@@ -150,6 +151,13 @@ export function OrderDetailPage() {
             <span className="rounded-full bg-primary-light px-3 py-1 text-xs font-semibold text-primary">
               {statusLabel[order.status] ?? order.status}
             </span>
+            {order.payment && (
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${paymentStatusStyle[order.payment.status]}`}
+              >
+                {paymentStatusLabel[order.payment.status]}
+              </span>
+            )}
           </div>
           <p className="mt-1 text-xs text-gray-400">
             Dibuat pada:{" "}
@@ -175,7 +183,7 @@ export function OrderDetailPage() {
               {cancelling ? "Membatalkan..." : "Batalkan Pesanan"}
             </button>
           )}
-          {order.status === "DIBATALKAN" && (
+          {(order.status === "DIBATALKAN" || order.status === "SELESAI") && (
             <button
               onClick={() => setConfirmDelete(true)}
               disabled={deleting}

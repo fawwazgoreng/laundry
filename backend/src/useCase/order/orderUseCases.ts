@@ -445,10 +445,7 @@ export class CancelOrderUseCase {
 }
 
 export class DeleteOrderUseCase {
-    constructor(
-        private readonly orderRepository: orderRepository,
-        private readonly cashflowRepository: cashflowRepository,
-    ) { }
+    constructor(private readonly orderRepository: orderRepository) { }
 
     async execute(
         orderId: string,
@@ -460,35 +457,15 @@ export class DeleteOrderUseCase {
 
         const isAdmin = actorRole === "admin";
         const isOwner = order.customer.id === actorUserId;
-
-        if (order.status === "DIBATALKAN") {
-            if (!isAdmin && !isOwner) {
-                throw AppError.forbidden("Anda tidak memiliki akses ke pesanan ini");
-            }
-            await this.orderRepository.delete(orderId);
-            logger.warn("cancelled order deleted", { orderId, actorUserId, actorRole });
-            return order;
+        if (!isAdmin && !isOwner) {
+            throw AppError.forbidden("Anda tidak memiliki akses ke pesanan ini");
+        }
+        if (order.status !== "SELESAI" && order.status !== "DIBATALKAN") {
+            throw AppError.conflict("Hanya pesanan berstatus SELESAI/DIBATALKAN yang dapat dihapus");
         }
 
-        if (!isAdmin) {
-            throw AppError.forbidden("Hanya admin yang dapat menghapus pesanan aktif");
-        }
-        if (order.status !== "BARU" && order.status !== "DITERIMA") {
-            throw AppError.conflict("Hanya pesanan berstatus BARU/DITERIMA yang dapat dihapus");
-        }
-        await this.orderRepository.updateStatus(orderId, "DIBATALKAN");
-        await this.orderRepository.addTracking(orderId, "DIBATALKAN", `Pesanan dihapus oleh admin (${actorUserId}).`);
-        if (order.payment && order.payment.status === "PAID") {
-            await this.cashflowRepository.create({
-                order_id: order.order_id,
-                type: "expense",
-                category: "refund",
-                amount: order.total_amount,
-                description: `Refund penghapusan order ${order.order_id} (${order.payment_method})`,
-            });
-        }
-        logger.warn("order deleted by admin", { orderId, actorUserId });
-        const fresh = await this.orderRepository.findByOrderId(orderId);
-        return fresh ?? order;
+        await this.orderRepository.delete(orderId);
+        logger.warn("order deleted", { orderId, actorUserId, actorRole, status: order.status });
+        return order;
     }
 }

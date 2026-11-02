@@ -105,9 +105,13 @@ type OrderListRow = {
     payment_method: string
     created_at: Temporal.Instant
     user: {
+        id: string
         username: string
         phone: string
     } | null
+    payments: {
+        status: string
+    }[]
     serviceOrderItems: {
         qty: unknown
         service: {
@@ -232,6 +236,7 @@ const orderDetailQuery = () =>
 const orderListQuery = () =>
     prisma.orm.public.Orders
         .include("user", (u) => u.select("id", "username", "phone"))
+        .include("payments", (p) => p.select("status").orderBy((r) => r.created_at.desc()).limit(1))
         .include("serviceOrderItems", (s) => s.include("service"))
         .include("productOrderItems", (p) => p.include("product"));
 
@@ -334,7 +339,9 @@ export class pgOrderRepository implements orderRepository {
                 status: row.status as orderStatus,
                 total_amount: row.total_amount,
                 payment_method: row.payment_method as orderListItemType["payment_method"],
+                payment_status: row.payments[0]?.status ?? null,
                 created_at: fromInstant(row.created_at).toISOString(),
+                customer_id: user.id,
                 customer_name: user.username,
                 customer_phone: user.phone,
                 items_summary: summary,
@@ -367,6 +374,14 @@ export class pgOrderRepository implements orderRepository {
             const conditions = [];
             if (filters.status && filters.status !== "all") {
                 conditions.push(o.status.eq(varchar<20>(filters.status)));
+            }
+            if (filters.customer) {
+                const term = filters.customer;
+                const byUsername = o.user.some((u) => u.username.ilike(`%${term}%`));
+                const looksLikeId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(term);
+                conditions.push(
+                    looksLikeId ? fns.or(byUsername, o.user.some((u) => u.id.eq(term))) : byUsername,
+                );
             }
             if (filters.search) {
                 const term = filters.search;

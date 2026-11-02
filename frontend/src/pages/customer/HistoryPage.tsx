@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { ChevronLeft, ChevronRight, CreditCard, Eye, MapPin, Receipt, Search, Trash2 } from "lucide-react"
-import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
+import { adminStatusLabel, adminStatusStyle, paymentStatusLabel, paymentStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
 import type { OrderListItem, OrderStatus, Payment } from "../../lib/types"
 import { orderApi, paymentApi } from "../../services/api"
@@ -32,6 +32,7 @@ interface AdminOrderRow {
   content: string
   quantity: string
   status: OrderStatus
+  paymentStatus: Payment["status"] | null
   total: number
 }
 
@@ -59,6 +60,7 @@ export function UserOrderHistory() {
             content: o.items_summary,
             quantity: o.items_unit,
             status: o.status,
+            paymentStatus: o.payment_status,
             total: o.total_amount,
           })),
         )
@@ -206,11 +208,20 @@ export function UserOrderHistory() {
                   <td className="px-2 py-4 text-gray-600">{order.content}</td>
                   <td className="px-2 py-4 text-gray-600">{order.quantity}</td>
                   <td className="px-2 py-4">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${adminStatusStyle[order.status]}`}
-                    >
-                      {adminStatusLabel[order.status]}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${adminStatusStyle[order.status]}`}
+                      >
+                        {adminStatusLabel[order.status]}
+                      </span>
+                      {order.paymentStatus && (
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${paymentStatusStyle[order.paymentStatus]}`}
+                        >
+                          {paymentStatusLabel[order.paymentStatus]}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-2 py-4 text-right font-semibold text-ink-strong">
                     {formatIDR(order.total)}
@@ -235,7 +246,7 @@ export function UserOrderHistory() {
                       <Link to={"/nota/" + order.id} target="blank" className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
                         <Receipt size={14} />
                       </Link>
-                      {order.status === "DIBATALKAN" && (
+                      {(order.status === "DIBATALKAN" || order.status === "SELESAI") && (
                         <button
                           type="button"
                           onClick={() => setDeleteTarget(order)}

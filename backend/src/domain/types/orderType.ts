@@ -36,7 +36,7 @@ export type orderCreateType = {
     distance_km: number
     delivery_fee?: number
     payment_method: paymentMethod
-    bank?: "bca" | "bni" | "bri" | "permata"
+    bank?: "bca" | "bni" | "bri" | "permata" | "mandiri"
     notes?: string
 }
 
@@ -136,6 +136,7 @@ export interface paymentGate {
 
 export type orderListFilters = {
     search?: string
+    customer?: string
     status?: orderStatus | "all"
     service?: string
     page?: number
@@ -148,7 +149,9 @@ export interface orderListItemType {
     status: orderStatus
     total_amount: number
     payment_method: paymentMethod
+    payment_status: string | null
     created_at: string
+    customer_id: string
     customer_name: string
     customer_phone: string
     items_summary: string

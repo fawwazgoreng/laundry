@@ -158,7 +158,7 @@ export interface Payment {
     order_id: string
     payment_type: PaymentMethod
     gross_amount: number
-    status: "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "REFUNDED" | "CANCELLED"
+    status: "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "DIBATALKAN" | "REFUNDED" | "CANCELLED"
     paid_at: string | null
     raw_response: Record<string, unknown> | null
     created_at: string
@@ -204,7 +204,9 @@ export interface OrderListItem {
     status: OrderStatus
     total_amount: number
     payment_method: PaymentMethod
+    payment_status: Payment["status"] | null
     created_at: string
+    customer_id: string
     customer_name: string
     customer_phone: string
     items_summary: string

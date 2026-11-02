@@ -35,7 +35,7 @@ const controller = new orderController(
     new GetOrderUseCase(orderRepository),
     new UpdateOrderStatusUseCase(orderRepository, paymentRepository, cashflowRepository),
     new CancelOrderUseCase(orderRepository, cashflowRepository, paymentRepository),
-    new DeleteOrderUseCase(orderRepository, cashflowRepository),
+    new DeleteOrderUseCase(orderRepository),
 );
 
 const orderRouter = new Hono<{ Variables: AppVariables }>();

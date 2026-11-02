@@ -24,7 +24,7 @@ export class orderEntity {
         distance_km: z.coerce.number().nonnegative().default(0),
         delivery_fee: z.coerce.number().nonnegative().optional(),
         payment_method: z.enum(PAYMENT_METHODS, { message: "Invalid payment method" }),
-        bank: z.enum(["bca", "bni", "bri", "permata"]).optional(),
+        bank: z.enum(["bca", "bni", "bri", "permata", "mandiri"]).optional(),
         notes: z.string().optional(),
     }).refine((data) => data.services.length > 0 || data.products.length > 0, {
         message: "Minimal harus memilih satu layanan / satu produck"

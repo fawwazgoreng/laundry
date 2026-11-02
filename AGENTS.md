@@ -3,21 +3,21 @@
 ## Layout
 - Two independent apps: `frontend/` (React 19 + Vite 8, Tailwind v4) and `backend/` (Hono + Bun, port 3000). No monorepo workspace - run all commands inside each app.
 - Root has no scripts. Root only has `prisma-json-types-generator` as dependency.
-- Design mockups: `design/` and `frontend/design/` are identical (33 PNGs) - update both or neither.
+- Design mockups: `design/` (17 PNGs) is the only mockup directory; `frontend/design/` no longer exists.
 - Order IDs: `CLN-YYYYMMDD-NNN` via `orderEntity.generateOrderId` (never hand-written).
 
 ## Commands
 
 **Frontend (`frontend/`):**
 - `bun run dev` / `bun run build` (`tsc -b && vite build`). `tsc -b` only checks `tsconfig.app.json` (src) and `tsconfig.node.json` (vite.config.ts); tests/e2e are not typechecked.
-- `bun run lint` - has pre-existing failures (5 errors + 3 warnings). Don't fix unrelated lint issues.
+- `bun run lint` - currently 0 errors, 3 pre-existing `react-hooks/exhaustive-deps` warnings. Don't fix unrelated warnings.
 - `bun run test` / `bun run test:unit` - `bun test tests/unit` (localStorage polyfilled).
 - `bun run test:e2e` - Playwright Chromium. Requires `bun run build` first; starts its own backend (:3000) and preview (:4173). See Gotchas.
 
 **Backend (`backend/`):**
 - `bun run dev` / `bun run prod` - Hono on Bun.
-- `bun run typecheck` - `tsc --noEmit -p tsconfig.json` (no `include` in tsconfig).
-- `bun run test` / `bun run test:unit` - `bun test src/domain/entities src/useCase` (9 files/84 tests). Logger outputs JSON (expected).
+- `bun run typecheck` - `tsc --noEmit -p tsconfig.json`; tsconfig includes only `src` + `tests` so generated `migrations/` are not checked.
+- `bun run test` / `bun run test:unit` - `bun test src/domain/entities src/useCase` (9 files/92 tests). Logger outputs JSON (expected).
 - `bun run test:integration` - `bun test --timeout=30000 tests/integration`. Hardcoded DB in script targets `laundry_test`; override with `DATABASE_URL`. Requires `prisma db push` against a real Postgres. `resetTestDb()` wipes all tables + reseeds. Hits Midtrans sandbox.
 - `bun run prisma:generate` - runs `prisma contract emit` (not `prisma generate`). Schema is `src/infrastructure/prisma/contract.prisma`.
 - `bun run seed` - seeds DB.
@@ -25,7 +25,9 @@
 ## Architecture
 - Clean layered: `domain/` (entities, repo interfaces, types; no infrastructure imports), `useCase/` (app logic, uses logger; no infrastructure imports), `presentation/` (controllers/routes/middleware/types), `infrastructure/` (Prisma client/schema, pg repos, seed).
 - DI: `presentation/routes/container.ts` provides singletons. Entities lowercase (`orderEntity`), types lowercase, repos named `pgXRepository`.
-- Prisma: schema at `backend/src/infrastructure/prisma/contract.prisma`. Generated client committed at `backend/src/infrastructure/src/generated/prisma/` - import from there (not `@prisma/client`). Datasource uses adapter-pg (no `url`). Migrations gitignored; use `prisma db push`. After schema change: run `bun run prisma:generate` in `backend/`.
+- Prisma: schema at `backend/src/infrastructure/prisma/contract.prisma`. Generated client is tracked at `backend/src/infrastructure/src/generated/prisma/` - import from there (not `@prisma/client`). `prisma.config.ts` writes `contract.ts/json` to gitignored `src/infrastructure/database/generated/`. Datasource uses adapter-pg (no `url`). Migrations gitignored; use `prisma db push`. After schema change: run `bun run prisma:generate` in `backend/`.
+- Order data: list queries include the latest payment and return `payment_status` + `customer_id`; detail queries include the latest `payments` row. Keep these joins when editing order repository queries.
+- Deleting orders: use case allows only `SELESAI`/`DIBATALKAN`, for owner or admin. Repository delete unlinks `Cash_flow.order_id`, then deletes payments/trackings/items/order. Never delete BARU/DITERIMA/DIPROSES/SIAP_ANTAR.
 
 ## Frontend Conventions
 - Routing: `react-router-dom` v7 - use `<Link>`, `<NavLink>`, `useNavigate`, `<Navigate>`. Never use `window.location` or `addEventListener`. Routes in `App.tsx`. `ProtectedRoute` gates customer vs admin.
@@ -36,8 +38,8 @@
 ## Deployment (Docker + Nginx)
 - `frontend/Dockerfile`: build with bun → `nginx:alpine`; must `COPY nginx.conf /etc/nginx/conf.d/default.conf` (else SPA refresh 404s).
 - `frontend/nginx.conf`: `listen 80` (no colon), `try_files $uri $uri/ /index.html`; `index.html` no-cache, `/assets/` immutable. Any static host must fallback to `index.html`.
-- `docker-compose.yml`: `db` + `backend` (:3000, internal) + `frontend` (:80 → host 5173) + `ngrok` (fronts `frontend:80`). Root `.env` has Postgres/ngrok; `frontend/.env` has `VITE_PUBLIC_MIDTRANS_CLIENT_KEY`.
-- API base: `VITE_API_URL` else `http://localhost:3000/api` (build-time). Nginx does not proxy `/api` or `/uploads`; browser calls backend cross-origin for remote/ngrok clients.
+- `docker-compose.yml`: `db` + `backend` (:3000) + `frontend` (:80 → host 5173) + `ngrok` (fronts `backend:3000`). Root `.env` has Postgres/ngrok; `frontend/.env` has `VITE_PUBLIC_MIDTRANS_CLIENT_KEY`; `backend/.env` must contain Midtrans/JWT vars or the server refuses to boot.
+- API base: `VITE_API_URL` else `http://localhost:3000/api` (build-time). Nginx proxies `/uploads/` to `host.docker.internal:3000`; it does not proxy `/api`, so the browser calls the backend cross-origin for remote/ngrok clients.
 
 ## Critical Gotchas
 - **Integration DB creds**: script hardcodes `postgres:postgres@localhost:5432/laundry_test`. Override with `DATABASE_URL` and ensure it matches your local Postgres. Needs `prisma db push`.
@@ -48,8 +50,8 @@
 - **Rate limiting**: key is `cf-connecting-ip` → `x-forwarded-for` → "anonymous"; localhost shares the "anonymous" bucket. `authRateLimiter` 10/15min, API 300/15min, mounted only on `/api/*`. Restart backend to reset memory store.
 - **Leaflet icon**: import path uses `./../lib/leafletIconFix.ts` (doubled `.ts`) - don't rename.
 - **Reports**: `/api/admin/cash-flow` has no date params; filtering/totals computed client-side in `src/lib/report.ts`. Direct access to `/laporan/nota` may re-fetch (navigated with filtered state).
-- **Payments**: `transfer_bank` uses Midtrans Snap (creates token). `fadarosipay` marks PAID + income at checkout. `cod` stays PENDING until SELESAI. Webhook verifies signature and re-checks via `snap.transaction.status`.
-- **Dead files**: `backend/src/infrastructure/config/env.ts` (stub, unused) - real is `src/config/env.ts`. `frontend/src/lib/utils.ts` has `combineClass` (dead, `any[]`) - use `cx`.
+- **Payments**: `transfer_bank` uses Midtrans CoreApi `charge` (bank_transfer/VA, starts PENDING). `fadarosipay` and `cod` are created PAID at checkout; only `fadarosipay` writes income cashflow immediately. Webhook verifies signature and re-checks via `snap.transaction.status`.
+- **Dead file**: `backend/src/infrastructure/config/env.ts` is a stub - real env is `src/config/env.ts`. `frontend/src/lib/utils.ts` is live (`cx`, formatters, status labels).
 - **Prisma import path**: always import from `backend/src/infrastructure/src/generated/prisma/` (committed client). Schema at `backend/src/infrastructure/prisma/contract.prisma`; generate via `bun run prisma:generate`.
 
 ## Verification

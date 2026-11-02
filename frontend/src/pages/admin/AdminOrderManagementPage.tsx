@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { ChevronLeft, ChevronRight, CreditCard, Eye, MapPin, Receipt, Search, Trash2 } from "lucide-react"
-import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
+import { adminStatusLabel, adminStatusStyle, paymentStatusLabel, paymentStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
-import type { OrderListItem, OrderStatus } from "../../lib/types"
+import type { OrderListItem, OrderStatus, Payment } from "../../lib/types"
 import { orderApi } from "../../services/api"
 import { ApiError } from "../../services/apiClient"
 import { useToast } from "../../components/Toast"
@@ -23,11 +23,13 @@ const statusOrder: OrderStatus[] = ["BARU", "DITERIMA", "DIPROSES", "SIAP_ANTAR"
 
 interface AdminOrderRow {
   id: string
+  customerId: string
   customer: string
   phone: string
   content: string
   quantity: string
   status: OrderStatus
+  paymentStatus: Payment["status"] | null
   total: number
 }
 
@@ -35,6 +37,7 @@ export function AdminOrderManagementPage() {
   const { success: toastSuccess, error: toastError } = useToast()
   const [activeTab, setActiveTab] = useState("semua")
   const [search, setSearch] = useState("")
+  const [customerFilter, setCustomerFilter] = useState("")
   const [orders, setOrders] = useState<AdminOrderRow[]>([])
   const [statusTarget, setStatusTarget] = useState<{ order: AdminOrderRow; next: OrderStatus } | null>(null)
   const [updating, setUpdating] = useState(false)
@@ -50,11 +53,13 @@ export function AdminOrderManagementPage() {
         setOrders(
           page.data.map((o: OrderListItem) => ({
             id: o.order_id,
+            customerId: o.customer_id,
             customer: o.customer_name,
             phone: o.customer_phone,
             content: o.items_summary,
             quantity: o.items_unit,
             status: o.status,
+            paymentStatus: o.payment_status,
             total: o.total_amount,
           })),
         )
@@ -93,8 +98,14 @@ export function AdminOrderManagementPage() {
       const q = search.trim().toLowerCase()
       list = list.filter((o) => o.id.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q))
     }
+    if (customerFilter.trim()) {
+      const q = customerFilter.trim().toLowerCase()
+      list = list.filter(
+        (o) => o.customer.toLowerCase().includes(q) || o.customerId.toLowerCase().includes(q),
+      )
+    }
     return list
-  }, [orders, activeTab, search])
+  }, [orders, activeTab, search, customerFilter])
 
   // Buka pop-up konfirmasi sebelum status pesanan diubah ke tahap berikutnya
   function handleAdvance(order: AdminOrderRow) {
@@ -178,6 +189,15 @@ export function AdminOrderManagementPage() {
             className="w-full rounded-xl bg-white border border-gray-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-primary"
           />
         </div>
+        <div className="relative flex-1 sm:max-w-sm">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={customerFilter}
+            onChange={(e) => setCustomerFilter(e.target.value)}
+            placeholder="Filter pelanggan: username / ID..."
+            className="w-full rounded-xl bg-white border border-gray-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-primary"
+          />
+        </div>
       </div>
 
       <div className="rounded-2xl border border-gray-200 bg-white p-2">
@@ -210,11 +230,20 @@ export function AdminOrderManagementPage() {
                   <td className="px-2 py-4 text-gray-600">{order.content}</td>
                   <td className="px-2 py-4 text-gray-600">{order.quantity}</td>
                   <td className="px-2 py-4">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${adminStatusStyle[order.status]}`}
-                    >
-                      {adminStatusLabel[order.status]}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${adminStatusStyle[order.status]}`}
+                      >
+                        {adminStatusLabel[order.status]}
+                      </span>
+                      {order.paymentStatus && (
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-xs font-medium ${paymentStatusStyle[order.paymentStatus]}`}
+                        >
+                          {paymentStatusLabel[order.paymentStatus]}
+                        </span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-2 py-4 text-right font-semibold text-ink-strong">
                     {formatIDR(order.total)}
@@ -233,7 +262,7 @@ export function AdminOrderManagementPage() {
                       <Link to={"/nota/" + order.id} target="blank" className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
                         <Receipt size={14} />
                       </Link>
-                      {order.status === "DIBATALKAN" ? (
+                      {order.status === "DIBATALKAN" || order.status === "SELESAI" ? (
                         <button
                           onClick={() => setDeleteTarget(order)}
                           aria-label={`Hapus pesanan ${order.id}`}
@@ -241,17 +270,13 @@ export function AdminOrderManagementPage() {
                         >
                           <Trash2 size={13} /> Hapus
                         </button>
-                      ) : statusOrder.indexOf(order.status) < statusOrder.length - 1 ? (
+                      ) : (
                         <button
                           onClick={() => handleAdvance(order)}
                           className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-ink hover:bg-gray-50"
                         >
                           Ubah Status
                         </button>
-                      ) : (
-                        <span className="rounded-lg bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-400">
-                          Selesai
-                        </span>
                       )}
                     </div>
                   </td>
@@ -261,7 +286,9 @@ export function AdminOrderManagementPage() {
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={8} className="py-10 text-center text-sm text-gray-400">
-                    Tidak ada pesanan pada kategori ini.
+                    {customerFilter.trim()
+                      ? `Tidak ada pelanggan dengan username / ID "${customerFilter.trim()}".`
+                      : "Tidak ada pesanan pada kategori ini."}
                   </td>
                 </tr>
               )}

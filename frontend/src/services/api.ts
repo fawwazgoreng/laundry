@@ -74,6 +74,7 @@ export const orderApi = {
     create: (data: OrderCreateInput) => api.post<PaymentGate>("/orders", data),
     list: (params?: {
         search?: string
+        customer?: string
         status?: string
         service?: string
         page?: number
@@ -82,6 +83,7 @@ export const orderApi = {
         api.page<OrderListItem[]>("/orders", params),
     mine: (params?: {
         search?: string
+        customer?: string
         status?: string
         service?: string
         page?: number

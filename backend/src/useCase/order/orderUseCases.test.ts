@@ -217,7 +217,7 @@ describe("CreateOrderUseCase", () => {
         );
 
         try {
-            await uc.execute("u-1", validInput());
+            await uc.execute("u-1", { ...validInput(), payment_method: "transfer_bank", bank: "bca" });
             expect.unreachable("expected conflict error");
         } catch (error) {
             const appError = error as { statusCode: number; details?: Record<string, unknown> };
@@ -534,8 +534,9 @@ describe("CancelOrderUseCase", () => {
             addTracking: mock(async () => {}),
         } as unknown as orderRepository;
         const cashflowRepo = { create: mock(async () => ({})) } as unknown as cashflowRepository;
+        const paymentRepo = { updateStatus: mock(async () => null) } as unknown as paymentRepository;
 
-        const uc = new CancelOrderUseCase(orderRepo, cashflowRepo);
+        const uc = new CancelOrderUseCase(orderRepo, cashflowRepo, paymentRepo);
         const result = await uc.execute("CLN-20260908-001", "u-1");
 
         expect(result.status).toBe("DIBATALKAN");
@@ -556,8 +557,9 @@ describe("CancelOrderUseCase", () => {
             addTracking: mock(async () => {}),
         } as unknown as orderRepository;
         const cashflowRepo = { create: mock(async () => ({})) } as unknown as cashflowRepository;
+        const paymentRepo = { updateStatus: mock(async () => null) } as unknown as paymentRepository;
 
-        await new CancelOrderUseCase(orderRepo, cashflowRepo).execute("CLN-20260908-001", "u-1");
+        await new CancelOrderUseCase(orderRepo, cashflowRepo, paymentRepo).execute("CLN-20260908-001", "u-1");
         expect(cashflowRepo.create).not.toHaveBeenCalled();
     });
 
@@ -569,7 +571,7 @@ describe("CancelOrderUseCase", () => {
             addTracking: mock(async () => {}),
         } as unknown as orderRepository;
 
-        await expect(new CancelOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository).execute("CLN-20260908-001", "u-1")).rejects.toMatchObject({ statusCode: 409 });
+        await expect(new CancelOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository, { updateStatus: mock(async () => null) } as unknown as paymentRepository).execute("CLN-20260908-001", "u-1")).rejects.toMatchObject({ statusCode: 409 });
         expect(orderRepo.updateStatus).not.toHaveBeenCalled();
     });
 
@@ -581,74 +583,21 @@ describe("CancelOrderUseCase", () => {
             addTracking: mock(async () => {}),
         } as unknown as orderRepository;
 
-        await expect(new CancelOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository).execute("CLN-20260908-001", "u-2")).rejects.toMatchObject({ statusCode: 403 });
+        await expect(new CancelOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository, { updateStatus: mock(async () => null) } as unknown as paymentRepository).execute("CLN-20260908-001", "u-2")).rejects.toMatchObject({ statusCode: 403 });
     });
 });
 
 describe("DeleteOrderUseCase", () => {
-    it("deletes a BARU order and creates a refund when paid", async () => {
-        const order = makeOrder({
-            status: "BARU" as orderStatus,
-            payment: { id: "p", transaction_id: "T", payment_type: "fadarosipay", gross_amount: 19000, status: "PAID", paid_at: null, created_at: new Date().toISOString() },
-        });
-        const orderRepo = {
-            findByOrderId: mock(() => order),
-            updateStatus: mock(async () => {}),
-            addTracking: mock(async () => {}),
-        } as unknown as orderRepository;
-        const cashflowRepo = { create: mock(async () => ({})) } as unknown as cashflowRepository;
-
-        await new DeleteOrderUseCase(orderRepo, cashflowRepo).execute("CLN-20260908-001", "a-1");
-        expect(orderRepo.updateStatus).toHaveBeenCalledWith("CLN-20260908-001", "DIBATALKAN");
-        expect(cashflowRepo.create).toHaveBeenCalledTimes(1);
-    });
-
-    it("rejects deletion of an in-progress order", async () => {
+    it("permanently deletes a completed order for its owner", async () => {
         const order = makeOrder({ status: "SELESAI" as orderStatus });
-        const orderRepo = { findByOrderId: mock(() => order), updateStatus: mock(async () => {}), addTracking: mock(async () => {}) } as unknown as orderRepository;
-
-        await expect(new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository).execute("CLN-20260908-001", "a-1")).rejects.toMatchObject({ statusCode: 409 });
-    });
-
-    it("permanently deletes a cancelled order for its owner", async () => {
-        const order = makeOrder({ status: "DIBATALKAN" as orderStatus });
         const orderRepo = {
             findByOrderId: mock(() => order),
             delete: mock(async () => {}),
         } as unknown as orderRepository;
 
-        await new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository)
-            .execute("CLN-20260908-001", "u-1", "user");
+        await new DeleteOrderUseCase(orderRepo).execute("CLN-20260908-001", "u-1", "user");
 
         expect(orderRepo.delete).toHaveBeenCalledWith("CLN-20260908-001");
-    });
-
-    it("forbids a user from deleting another customer's cancelled order", async () => {
-        const order = makeOrder({ status: "DIBATALKAN" as orderStatus });
-        const orderRepo = {
-            findByOrderId: mock(() => order),
-            delete: mock(async () => {}),
-        } as unknown as orderRepository;
-
-        await expect(
-            new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository)
-                .execute("CLN-20260908-001", "u-2", "user"),
-        ).rejects.toMatchObject({ statusCode: 403 });
-        expect(orderRepo.delete).not.toHaveBeenCalled();
-    });
-
-    it("forbids a user from deleting an active order", async () => {
-        const order = makeOrder({ status: "BARU" as orderStatus });
-        const orderRepo = {
-            findByOrderId: mock(() => order),
-            delete: mock(async () => {}),
-        } as unknown as orderRepository;
-
-        await expect(
-            new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository)
-                .execute("CLN-20260908-001", "u-1", "user"),
-        ).rejects.toMatchObject({ statusCode: 403 });
-        expect(orderRepo.delete).not.toHaveBeenCalled();
     });
 
     it("allows an admin to permanently delete a cancelled order", async () => {
@@ -658,9 +607,37 @@ describe("DeleteOrderUseCase", () => {
             delete: mock(async () => {}),
         } as unknown as orderRepository;
 
-        await new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository)
-            .execute("CLN-20260908-001", "a-1", "admin");
+        await new DeleteOrderUseCase(orderRepo).execute("CLN-20260908-001", "a-1", "admin");
 
         expect(orderRepo.delete).toHaveBeenCalledWith("CLN-20260908-001");
+    });
+
+    it.each(["BARU", "DITERIMA", "DIPROSES", "SIAP_ANTAR"] as orderStatus[])(
+        "rejects deletion of a %s order",
+        async (status) => {
+            const order = makeOrder({ status });
+            const orderRepo = {
+                findByOrderId: mock(() => order),
+                delete: mock(async () => {}),
+            } as unknown as orderRepository;
+
+            await expect(
+                new DeleteOrderUseCase(orderRepo).execute("CLN-20260908-001", "a-1", "admin"),
+            ).rejects.toMatchObject({ statusCode: 409 });
+            expect(orderRepo.delete).not.toHaveBeenCalled();
+        },
+    );
+
+    it("forbids a user from deleting another customer's completed order", async () => {
+        const order = makeOrder({ status: "SELESAI" as orderStatus });
+        const orderRepo = {
+            findByOrderId: mock(() => order),
+            delete: mock(async () => {}),
+        } as unknown as orderRepository;
+
+        await expect(
+            new DeleteOrderUseCase(orderRepo).execute("CLN-20260908-001", "u-2", "user"),
+        ).rejects.toMatchObject({ statusCode: 403 });
+        expect(orderRepo.delete).not.toHaveBeenCalled();
     });
 });
