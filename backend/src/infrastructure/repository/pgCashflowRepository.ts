@@ -1,7 +1,26 @@
 import type { cashflowRepository, cashflowInput } from "../../domain/repositories/cashflowRepository";
-import type { cashflowSummaryType, cashflowType } from "../../domain/types/adminType";
+import type { cashflowSectionType, cashflowSummaryType, cashflowType } from "../../domain/types/adminType";
 import { prisma } from "../prisma/prisma";
 import { numeric, varchar } from "../prisma/scalars";
+
+function toCashflowSection(items: cashflowType[]): cashflowSectionType {
+    const totals = new Map<string, { total: number; count: number }>();
+    let total = 0;
+
+    for (const item of items) {
+        total += item.amount;
+        const current = totals.get(item.category) ?? { total: 0, count: 0 };
+        current.total += item.amount;
+        current.count += 1;
+        totals.set(item.category, current);
+    }
+
+    const categories = Array.from(totals.entries())
+        .map(([category, value]) => ({ category, total: value.total, count: value.count }))
+        .sort((a, b) => b.total - a.total);
+
+    return { total, categories, items };
+}
 
 function toCashflowType(row: {
     id: number
@@ -36,22 +55,33 @@ export class pgCashflowRepository implements cashflowRepository {
     }
 
     async summary(): Promise<cashflowSummaryType> {
-        const [incomeAgg, expenseAgg, rows] = await Promise.all([
+        const [incomeRows, expenseRows] = await Promise.all([
             prisma.orm.public.Cash_flow
                 .where({ type: varchar<20>("income") })
-                .aggregate((agg) => ({ sum: agg.sum("amount") })),
+                .orderBy((r) => r.created_at.desc())
+                .all(),
             prisma.orm.public.Cash_flow
                 .where({ type: varchar<20>("expense") })
-                .aggregate((agg) => ({ sum: agg.sum("amount") })),
-            prisma.orm.public.Cash_flow.orderBy((r) => r.created_at.desc()).limit(50).all(),
+                .orderBy((r) => r.created_at.desc())
+                .all(),
         ]);
-        const totalIncome = Number(incomeAgg.sum ?? 0);
-        const totalExpense = Number(expenseAgg.sum ?? 0);
+
+        const income = toCashflowSection(incomeRows.map(toCashflowType));
+        const expense = toCashflowSection(expenseRows.map(toCashflowType));
+        const netProfit = income.total - expense.total;
+
+        const items = [...income.items, ...expense.items].sort(
+            (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+        );
+
         return {
-            total_income: totalIncome,
-            total_expense: totalExpense,
-            balance: totalIncome - totalExpense,
-            items: rows.map(toCashflowType),
+            total_income: income.total,
+            total_expense: expense.total,
+            net_profit: netProfit,
+            balance: netProfit,
+            income,
+            expense,
+            items,
         };
     }
 }

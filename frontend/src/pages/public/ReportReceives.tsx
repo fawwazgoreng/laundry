@@ -18,7 +18,7 @@ import {
   filterByRange,
   formatShortDate,
   resolveReportRange,
-  summarizeCashflow,
+  splitCashflow,
 } from "../../lib/report"
 import type { LowStockItem, ReportNotaState, ReportRange, ReportRangeMode } from "../../lib/report"
 import { formatRupiah } from "../../lib/utils"
@@ -105,21 +105,15 @@ export function ReportNotaPage() {
   }, [nota])
 
   useEffect(() => {
-    if (nota) document.title = `Laporan Arus Kas - Fadarosi`
+    if (nota) document.title = `Laporan Keuangan - Fadarosi`
   }, [nota])
 
-  const totals = useMemo(() => summarizeCashflow(nota?.cashflow ?? []), [nota])
+  const sections = useMemo(() => splitCashflow(nota?.cashflow ?? []), [nota])
   const monthlyData = useMemo(
     () => buildMonthlySeries(nota?.cashflow ?? [], nota?.range ?? { start: new Date(), end: new Date() }),
     [nota],
   )
-  const cashflowRows = useMemo(
-    () =>
-      (nota?.cashflow ?? [])
-        .slice()
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
-    [nota],
-  )
+  const netProfitPositive = sections.net_profit >= 0
 
   const handlePrint = () => window.print()
 
@@ -153,9 +147,24 @@ export function ReportNotaPage() {
   const periodLabel = `${formatShortDate(nota.range.start)} s/d ${formatShortDate(nota.range.end)}`
 
   const statCards = [
-    { label: "Pendapatan", value: `+ ${formatRupiah(totals.income)}`, icon: TrendingUp, tone: "bg-red-100 text-red-600" },
-    { label: "Pengeluaran", value: `- ${formatRupiah(totals.expense)}`, icon: TrendingDown, tone: "bg-emerald-100 text-emerald-600" },
-    { label: "Saldo Bersih", value: formatRupiah(totals.balance), icon: Wallet, tone: "bg-blue-100 text-blue-600" },
+    {
+      label: "Pendapatan",
+      value: `+ ${formatRupiah(sections.income.total)}`,
+      icon: TrendingUp,
+      tone: "bg-emerald-100 text-emerald-700",
+    },
+    {
+      label: "Pengeluaran",
+      value: `- ${formatRupiah(sections.expense.total)}`,
+      icon: TrendingDown,
+      tone: "bg-red-100 text-red-700",
+    },
+    {
+      label: "Laba/Rugi Bersih",
+      value: `${netProfitPositive ? "+ " : ""}${formatRupiah(sections.net_profit)}`,
+      icon: Wallet,
+      tone: netProfitPositive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700",
+    },
     { label: "Jumlah Pesanan", value: `${nota.orders.length} Pesanan`, icon: ShoppingBag, tone: "bg-gray-100 text-gray-600" },
   ]
 
@@ -190,7 +199,7 @@ export function ReportNotaPage() {
             </div>
           </div>
           <div className="text-left sm:text-right">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Laporan Arus Kas</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Laporan Keuangan</p>
             <p className="text-sm font-bold text-ink-strong">{periodLabel}</p>
             <p className="mt-1 text-xs text-gray-400">Dicetak pada {formatShortDate(new Date())}</p>
           </div>
@@ -229,8 +238,8 @@ export function ReportNotaPage() {
                   <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={72} />
                   <Tooltip formatter={(value) => formatRupiah(Number(value))} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="income" name="Pendapatan" fill="#dc2626" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive={false} />
-                  <Bar dataKey="expense" name="Pengeluaran" fill="#9ca3af" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive={false} />
+                  <Bar dataKey="income" name="Pendapatan" fill="#059669" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive={false} />
+                  <Bar dataKey="expense" name="Pengeluaran" fill="#dc2626" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -262,60 +271,148 @@ export function ReportNotaPage() {
           </div>
         </div>
 
-        <div className="border-b border-gray-100 p-6 sm:p-8">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-gray-400">Rincian Arus Kas</h2>
-            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-500">
-              {cashflowRows.length} Transaksi
-            </span>
-          </div>
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="border-b border-gray-200 text-gray-400">
-                <th className="pb-2 font-medium">Tanggal</th>
-                <th className="pb-2 font-medium">Kategori</th>
-                <th className="pb-2 font-medium">Keterangan</th>
-                <th className="pb-2 font-medium">Tipe</th>
-                <th className="pb-2 text-right font-medium">Nominal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cashflowRows.map((row) => (
-                <tr key={row.id} className="border-b border-gray-50 last:border-0">
-                  <td className="py-2.5 text-gray-600">{formatShortDate(row.created_at)}</td>
-                  <td className="py-2.5 font-medium text-ink-strong">{cashflowCategoryLabel(row.category)}</td>
-                  <td className="py-2.5 text-gray-600">{row.description}</td>
-                  <td className="py-2.5">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${row.type === "income" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"}`}
-                    >
-                      {row.type === "income" ? "Masuk" : "Keluar"}
-                    </span>
+        <div className="space-y-6 border-b border-gray-100 p-6 sm:p-8">
+          <section className="report-section overflow-hidden rounded-xl border-2 border-emerald-600">
+            <div className="report-income-header flex flex-col gap-2 bg-emerald-600 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-wide">Pendapatan</h2>
+                <p className="text-[11px] text-white/80">Arus kas masuk pada periode {periodLabel}</p>
+              </div>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
+                {sections.income.items.length} Transaksi
+              </span>
+            </div>
+            <table className="w-full text-left text-xs">
+              <thead className="bg-emerald-50">
+                <tr className="text-emerald-800">
+                  <th className="px-4 py-2 font-semibold">Tanggal</th>
+                  <th className="px-4 py-2 font-semibold">Kategori</th>
+                  <th className="px-4 py-2 font-semibold">Keterangan</th>
+                  <th className="px-4 py-2 text-right font-semibold">Nominal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sections.income.items.map((item) => (
+                  <tr key={item.id} className="border-b border-emerald-100 last:border-0">
+                    <td className="px-4 py-2.5 text-gray-600">{formatShortDate(item.created_at)}</td>
+                    <td className="px-4 py-2.5 font-medium text-ink-strong">
+                      {cashflowCategoryLabel(item.category)}
+                    </td>
+                    <td className="px-4 py-2.5 text-gray-600">{item.description || "-"}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-emerald-700">
+                      + {formatRupiah(item.amount)}
+                    </td>
+                  </tr>
+                ))}
+                {sections.income.items.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-400">
+                      Belum ada pendapatan pada periode ini.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-emerald-600 bg-emerald-50">
+                  <td colSpan={3} className="px-4 py-3 text-right text-sm font-bold text-emerald-800">
+                    Subtotal Pendapatan
                   </td>
-                  <td
-                    className={`py-2.5 text-right font-semibold ${row.type === "income" ? "text-emerald-600" : "text-red-600"}`}
-                  >
-                    {row.type === "income" ? "+" : "-"} {formatRupiah(row.amount)}
+                  <td className="px-4 py-3 text-right text-base font-black text-emerald-700">
+                    + {formatRupiah(sections.income.total)}
                   </td>
                 </tr>
-              ))}
-              {cashflowRows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-sm text-gray-400">
-                    Tidak ada transaksi pada periode ini.
+              </tfoot>
+            </table>
+          </section>
+
+          <section className="report-section overflow-hidden rounded-xl border-2 border-red-700">
+            <div className="report-expense-header flex flex-col gap-2 bg-red-700 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-wide">Pengeluaran</h2>
+                <p className="text-[11px] text-white/80">Arus kas keluar pada periode {periodLabel}</p>
+              </div>
+              <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-bold">
+                {sections.expense.items.length} Transaksi
+              </span>
+            </div>
+            <table className="w-full text-left text-xs">
+              <thead className="bg-red-50">
+                <tr className="text-red-800">
+                  <th className="px-4 py-2 font-semibold">Tanggal</th>
+                  <th className="px-4 py-2 font-semibold">Kategori</th>
+                  <th className="px-4 py-2 font-semibold">Keterangan</th>
+                  <th className="px-4 py-2 text-right font-semibold">Nominal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sections.expense.items.map((item) => (
+                  <tr key={item.id} className="border-b border-red-100 last:border-0">
+                    <td className="px-4 py-2.5 text-gray-600">{formatShortDate(item.created_at)}</td>
+                    <td className="px-4 py-2.5 font-medium text-ink-strong">
+                      {cashflowCategoryLabel(item.category)}
+                    </td>
+                    <td className="px-4 py-2.5 text-gray-600">{item.description || "-"}</td>
+                    <td className="px-4 py-2.5 text-right font-semibold text-red-700">
+                      - {formatRupiah(item.amount)}
+                    </td>
+                  </tr>
+                ))}
+                {sections.expense.items.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-sm text-gray-400">
+                      Belum ada pengeluaran pada periode ini.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+              <tfoot>
+                <tr className="border-t-2 border-red-700 bg-red-50">
+                  <td colSpan={3} className="px-4 py-3 text-right text-sm font-bold text-red-800">
+                    Subtotal Pengeluaran
+                  </td>
+                  <td className="px-4 py-3 text-right text-base font-black text-red-700">
+                    - {formatRupiah(sections.expense.total)}
                   </td>
                 </tr>
-              )}
-            </tbody>
-            <tfoot>
-              <tr className="border-t border-gray-200">
-                <td colSpan={4} className="py-3 text-right font-bold text-ink-strong">
-                  Saldo Bersih
-                </td>
-                <td className="py-3 text-right font-black text-primary">{formatRupiah(totals.balance)}</td>
-              </tr>
-            </tfoot>
-          </table>
+              </tfoot>
+            </table>
+          </section>
+
+          <section
+            className={`report-net-summary rounded-xl border-4 bg-white p-5 ${netProfitPositive ? "border-emerald-700" : "border-red-700"}`}
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="text-sm font-black uppercase tracking-wide text-ink-strong">
+                  Ringkasan Laba / Rugi
+                </h2>
+                <p className="mt-1 text-xs text-gray-500">Net Profit = Total Pendapatan - Total Pengeluaran</p>
+              </div>
+              <div
+                className={`rounded-lg px-4 py-2.5 ${netProfitPositive ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}
+              >
+                <p className="text-[11px] font-bold uppercase tracking-wide">Net Profit</p>
+                <p className="text-xl font-black">
+                  {netProfitPositive ? "+ " : ""}
+                  {formatRupiah(sections.net_profit)}
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-lg border-2 border-emerald-600 bg-emerald-50 px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-emerald-700">Total Pendapatan</p>
+                <p className="mt-0.5 text-lg font-black text-emerald-700">
+                  + {formatRupiah(sections.income.total)}
+                </p>
+              </div>
+              <div className="rounded-lg border-2 border-red-700 bg-red-50 px-4 py-3">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-red-700">Total Pengeluaran</p>
+                <p className="mt-0.5 text-lg font-black text-red-700">
+                  - {formatRupiah(sections.expense.total)}
+                </p>
+              </div>
+            </div>
+          </section>
         </div>
 
         {/* <div className="border-b border-gray-100 p-6 sm:p-8">

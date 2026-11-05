@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react"
 import { useNavigate, useParams } from "react-router-dom"
-import { Check, CreditCard, MessageCircle, Trash2 } from "lucide-react"
+import { Check, CreditCard, Info, MessageCircle, RotateCcw, Trash2 } from "lucide-react"
 import { formatIDR } from "../../lib/format"
 import { paymentStatusLabel, paymentStatusStyle } from "../../lib/orderStatus"
-import type { OrderDetail } from "../../lib/types"
-import { orderApi } from "../../services/api"
+import type { OrderDetail, ServiceOrderAddon } from "../../lib/types"
+import { orderApi, refundApi } from "../../services/api"
 import { useAuth } from "../../context/AuthContext"
 import { useToast } from "../../components/Toast"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
@@ -26,6 +26,20 @@ const paymentLabel: Record<string, string> = {
   cod: "Bayar di Tempat (COD)",
 }
 
+const refundStatusLabel: Record<string, string> = {
+  REQUESTED: "Refund Diajukan",
+  APPROVED: "Refund Disetujui",
+  REJECTED: "Refund Ditolak",
+  REFUNDED: "Refund Selesai",
+}
+
+const refundStatusStyle: Record<string, string> = {
+  REQUESTED: "bg-amber-100 text-amber-700",
+  APPROVED: "bg-blue-100 text-blue-700",
+  REJECTED: "bg-red-100 text-red-700",
+  REFUNDED: "bg-emerald-100 text-emerald-700",
+}
+
 const statusLabel: Record<string, string> = {
   BARU: "Pesanan Baru",
   DITERIMA: "Diterima",
@@ -40,8 +54,10 @@ interface OrderItemRow {
   label: string
   note: string
   qty: number
+  unit: string
   weightKg: number
   pricePerUnit: number
+  addons: ServiceOrderAddon[]
   subtotal: number
 }
 
@@ -56,6 +72,8 @@ export function OrderDetailPage() {
   const [cancelling, setCancelling] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [reason, setReason] = useState("")
+  const [refundSubmitting, setRefundSubmitting] = useState(false)
 
   useEffect(() => {
     if (!orderId) return
@@ -81,6 +99,35 @@ export function OrderDetailPage() {
       toast.error(err instanceof Error ? err.message : "Gagal membatalkan pesanan")
     } finally {
       setCancelling(false)
+    }
+  }
+
+  async function handleRefundRequest() {
+    if (!order) return
+    setRefundSubmitting(true)
+    try {
+      await refundApi.create({ order_id: order.order_id, reason })
+      toast.success("Pengajuan refund berhasil dikirim")
+      setReason("")
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal mengajukan refund")
+    } finally {
+      setRefundSubmitting(false)
+    }
+  }
+
+  async function handleRefundDecision(status: "APPROVED" | "REJECTED") {
+    if (!order?.refund) return
+    setRefundSubmitting(true)
+    try {
+      await refundApi.decide(order.refund.id, { status })
+      toast.success(status === "APPROVED" ? "Refund disetujui dan diproses" : "Refund ditolak")
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Gagal memproses refund")
+    } finally {
+      setRefundSubmitting(false)
     }
   }
 
@@ -123,8 +170,10 @@ export function OrderDetailPage() {
       label: s.service_name,
       note: s.notes || "Layanan laundry",
       qty: s.qty,
+      unit: s.unit,
       weightKg: s.qty,
       pricePerUnit: s.price_per_unit,
+      addons: s.addons,
       subtotal: s.subtotal,
     })),
     ...order.products.map((p) => ({
@@ -132,8 +181,10 @@ export function OrderDetailPage() {
       label: p.product_name,
       note: p.category,
       qty: p.qty,
+      unit: "Pcs",
       weightKg: 0,
       pricePerUnit: p.price,
+      addons: [],
       subtotal: p.subtotal,
     })),
   ]
@@ -150,6 +201,9 @@ export function OrderDetailPage() {
             <h1 className="text-lg font-bold text-ink-strong">Pesanan #{order.order_id}</h1>
             <span className="rounded-full bg-primary-light px-3 py-1 text-xs font-semibold text-primary">
               {statusLabel[order.status] ?? order.status}
+            </span>
+            <span className={`rounded-full px-3 py-1 text-xs font-semibold ${order.order_type === "PRODUCT" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"}`}>
+              {order.order_type === "PRODUCT" ? "Product · Refundable" : "Service · Non-refund"}
             </span>
             {order.payment && (
               <span
@@ -192,6 +246,67 @@ export function OrderDetailPage() {
               <Trash2 size={15} /> Hapus Pesanan
             </button>
           )}
+        </div>
+      </div>
+
+      <div className={`rounded-2xl border p-4 text-sm ${order.order_type === "PRODUCT" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+        <div className="flex gap-3">
+          <Info size={18} className="mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <p>
+              <span className="font-semibold">Kebijakan refund:</span>{" "}
+              {order.order_type === "PRODUCT"
+                ? "Order ini bertipe Product dan dapat diajukan refund setelah pembayaran lunas."
+                : "Refund hanya dapat dilakukan untuk order bertipe Product dan pembayaran menggunakan Bank. Order layanan atau campuran otomatis tidak memenuhi syarat refund."}
+            </p>
+            {order.refund && (
+              <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-white/70 p-3">
+                <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${refundStatusStyle[order.refund.status]}`}>
+                  {refundStatusLabel[order.refund.status]}
+                </span>
+                <span className="text-xs">Alasan: {order.refund.reason}</span>
+              </div>
+            )}
+            {!isAdmin && order.refund_eligible && (!order.refund || order.refund.status === "REJECTED") && (
+              <div className="mt-3 space-y-2">
+                <textarea
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  placeholder="Tulis alasan refund (minimal 10 karakter)..."
+                  className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-ink-strong outline-none focus:border-primary"
+                  rows={3}
+                />
+                <button
+                  type="button"
+                  onClick={handleRefundRequest}
+                  disabled={refundSubmitting || reason.trim().length < 10}
+                  className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  <RotateCcw size={15} /> {refundSubmitting ? "Mengirim..." : "Ajukan Refund"}
+                </button>
+              </div>
+            )}
+            {isAdmin && order.refund?.status === "REQUESTED" && (
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRefundDecision("APPROVED")}
+                  disabled={refundSubmitting}
+                  className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  Setujui Refund
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleRefundDecision("REJECTED")}
+                  disabled={refundSubmitting}
+                  className="rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50"
+                >
+                  Tolak Refund
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -284,6 +399,12 @@ export function OrderDetailPage() {
               <span className="text-gray-500">Subtotal Laundry ({totalWeightKg} Kg)</span>
               <span className="font-medium text-ink-strong">{formatIDR(order.total_laundry)}</span>
             </div>
+            {order.total_addon > 0 && (
+              <div className="flex justify-between pl-3">
+                <span className="text-xs text-gray-400">Termasuk Add-on Layanan</span>
+                <span className="text-xs font-medium text-gray-500">{formatIDR(order.total_addon)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-gray-500">Subtotal Produk</span>
               <span className="font-medium text-ink-strong">{formatIDR(order.total_product)}</span>
@@ -327,10 +448,19 @@ export function OrderDetailPage() {
                     <td className="py-4">
                       <p className="font-semibold text-ink-strong">{item.label}</p>
                       <p className="text-xs text-gray-400">{item.note}</p>
+                      {item.addons.length > 0 && (
+                        <ul className="mt-1 space-y-0.5">
+                          {item.addons.map((addon) => (
+                            <li key={addon.id} className="text-[11px] text-primary">
+                              {addon.group_name}: {addon.option_name} ({formatIDR(addon.subtotal)})
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </td>
-                    <td className="py-4 text-right text-ink">{item.qty} Pcs</td>
-                    <td className="py-4 text-right text-ink">{item.weightKg} Kg</td>
-                    <td className="py-4 text-right text-ink">{formatIDR(item.pricePerUnit)} /kg</td>
+                    <td className="py-4 text-right text-ink">{item.qty} {item.unit}</td>
+                    <td className="py-4 text-right text-ink">{item.weightKg > 0 ? `${item.weightKg} Kg` : "-"}</td>
+                    <td className="py-4 text-right text-ink">{formatIDR(item.pricePerUnit)} /{item.unit}</td>
                     <td className="py-4 text-right font-semibold text-ink-strong">
                       {formatIDR(item.subtotal)}
                     </td>

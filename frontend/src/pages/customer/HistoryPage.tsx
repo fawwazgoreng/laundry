@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
-import { ChevronLeft, ChevronRight, CreditCard, Eye, MapPin, Receipt, Search, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, CreditCard, Eye, Info, MapPin, Receipt, Search, Trash2 } from "lucide-react"
 import { adminStatusLabel, adminStatusStyle, paymentStatusLabel, paymentStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
-import type { OrderListItem, OrderStatus, Payment } from "../../lib/types"
+import type { OrderKind, OrderListItem, OrderStatus, Payment, RefundStatus } from "../../lib/types"
 import { orderApi, paymentApi } from "../../services/api"
 import { useToast } from "../../components/Toast"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
@@ -25,6 +25,14 @@ const tabs = [
   { key: "dibatalkan", label: "Dibatalkan" },
 ]
 
+const refundTabs = [
+  { key: "semua", label: "Semua" },
+  { key: "request", label: "Refund Diajukan" },
+  { key: "approve", label: "Refund Disetujui" },
+  { key: "reject", label: "Refund Ditolak" },
+  { key: "refunded", label: "Refund Selesai" },
+]
+
 interface AdminOrderRow {
   id: string
   customer: string
@@ -32,14 +40,32 @@ interface AdminOrderRow {
   content: string
   quantity: string
   status: OrderStatus
+  orderType: OrderKind
+  refundEligible: boolean
+  refundStatus: RefundStatus | null
   paymentStatus: Payment["status"] | null
   total: number
+}
+
+const refundStatusLabel: Record<RefundStatus, string> = {
+  REQUESTED: "Refund diajukan",
+  APPROVED: "Refund disetujui",
+  REJECTED: "Refund ditolak",
+  REFUNDED: "Refund selesai",
+}
+
+const refundStatusStyle: Record<RefundStatus, string> = {
+  REQUESTED: "bg-amber-100 text-amber-700",
+  APPROVED: "bg-blue-100 text-blue-700",
+  REJECTED: "bg-red-100 text-red-700",
+  REFUNDED: "bg-emerald-100 text-emerald-700",
 }
 
 export function UserOrderHistory() {
   const navigate = useNavigate()
   const { success: toastSuccess, error: toastError } = useToast()
   const [activeTab, setActiveTab] = useState("semua")
+  const [refundTab, setRefundTab] = useState("semua")
   const [search, setSearch] = useState("")
   const [orders, setOrders] = useState<AdminOrderRow[]>([])
   const [checkingPayment, setCheckingPayment] = useState<string | null>(null)
@@ -60,6 +86,9 @@ export function UserOrderHistory() {
             content: o.items_summary,
             quantity: o.items_unit,
             status: o.status,
+            orderType: o.order_type,
+            refundEligible: o.refund_eligible,
+            refundStatus: o.refund_status,
             paymentStatus: o.payment_status,
             total: o.total_amount,
           })),
@@ -75,7 +104,6 @@ export function UserOrderHistory() {
     load()
   }, [])
 
-  // Buka halaman pembayaran hanya bila pesanan masih punya pembayaran yang belum kedaluwarsa
   async function handlePaymentClick(orderId: string) {
     if (checkingPayment) return
     setCheckingPayment(orderId)
@@ -121,6 +149,18 @@ export function UserOrderHistory() {
     return c
   }, [orders])
 
+  const refundCounts = useMemo(() => {
+    const c: Record<string, number> = { semua: orders.length }
+    for (const tab of refundTabs.slice(1)) c[tab.key] = 0
+    for (const o of orders) {
+      if (o.refundStatus === "REQUESTED") c.request++
+      if (o.refundStatus === "APPROVED") c.approve++
+      if (o.refundStatus === "REJECTED") c.reject++
+      if (o.refundStatus === "REFUNDED") c.refunded++
+    }
+    return c
+  }, [orders])
+
   const filtered = useMemo(() => {
     let list = orders
     if (activeTab === "diterima") list = list.filter((o) => o.status === "DITERIMA")
@@ -128,42 +168,93 @@ export function UserOrderHistory() {
     if (activeTab === "siap_antar") list = list.filter((o) => o.status === "SIAP_ANTAR")
     if (activeTab === "selesai") list = list.filter((o) => o.status === "SELESAI")
     if (activeTab === "dibatalkan") list = list.filter((o) => o.status === "DIBATALKAN")
+
+    if (refundTab === "request") list = list.filter((o) => o.refundStatus === "REQUESTED")
+    if (refundTab === "approve") list = list.filter((o) => o.refundStatus === "APPROVED")
+    if (refundTab === "reject") list = list.filter((o) => o.refundStatus === "REJECTED")
+    if (refundTab === "refunded") list = list.filter((o) => o.refundStatus === "REFUNDED")
+
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       list = list.filter((o) => o.id.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q))
     }
     return list
-  }, [orders, activeTab, search])
+  }, [orders, activeTab, refundTab, search])
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
       <div>
-        <h1 className="text-2xl font-bold text-ink-strong">Manajemen Pesanan</h1>
-        <p className="text-sm text-gray-500">Kelola antrean laundry, update status proses pencucian, dan kasir manual.</p>
+        <h1 className="text-2xl font-bold text-ink-strong">Riwayat Pesanan</h1>
+        <p className="text-sm text-gray-500">Pantau status pesanan, pembayaran, dan pengajuan refund Anda.</p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.key
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${isActive
-                  ? "border-primary bg-primary text-white"
-                  : "border-gray-200 bg-white text-ink hover:bg-gray-50"
+      <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <Info size={18} className="mt-0.5 shrink-0" />
+        <p>
+          <span className="font-semibold">Kebijakan refund:</span> Refund hanya dapat dilakukan untuk order bertipe{" "}
+          <span className="font-semibold">Product</span> dan pembayaran melalui bank. Order layanan laundry atau campuran layanan + produk otomatis
+          tidak memenuhi syarat refund.
+        </p>
+      </div>
+
+      {/* Section Header: Status Alur Pesanan */}
+      <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Status Alur Pesanan</h2>
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                  isActive
+                    ? "border-primary bg-primary text-white"
+                    : "border-gray-200 bg-gray-50 text-ink hover:bg-gray-100"
                 }`}
-            >
-              {tab.label}
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${isActive ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
-                  }`}
               >
-                {counts[tab.key] ?? 0}
-              </span>
-            </button>
-          )
-        })}
+                {tab.label}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
+                    isActive ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {counts[tab.key] ?? 0}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Section Header: Filter Status Refund */}
+      <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Filter Status Refund</h2>
+        <div className="flex flex-wrap gap-2">
+          {refundTabs.map((tab) => {
+            const isActive = refundTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setRefundTab(tab.key)}
+                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                  isActive
+                    ? "border-amber-600 bg-amber-600 text-white"
+                    : "border-gray-200 bg-gray-50 text-ink hover:bg-gray-100"
+                }`}
+              >
+                {tab.label}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
+                    isActive ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {refundCounts[tab.key] ?? 0}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -193,7 +284,6 @@ export function UserOrderHistory() {
                 <th className="px-2 py-3 font-medium">Pelanggan</th>
                 <th className="px-2 py-3 font-medium">No HP</th>
                 <th className="px-2 py-3 font-medium">Isi Pesanan</th>
-                <th className="px-2 py-3 font-medium">Satuan</th>
                 <th className="px-2 py-3 font-medium">Status</th>
                 <th className="px-2 py-3 text-right font-medium">Total Harga</th>
                 <th className="px-2 py-3 text-right font-medium">Aksi</th>
@@ -206,7 +296,6 @@ export function UserOrderHistory() {
                   <td className="px-2 py-4 text-gray-600">{order.customer}</td>
                   <td className="px-2 py-4 text-gray-600">{order.phone}</td>
                   <td className="px-2 py-4 text-gray-600">{order.content}</td>
-                  <td className="px-2 py-4 text-gray-600">{order.quantity}</td>
                   <td className="px-2 py-4">
                     <div className="flex flex-wrap items-center gap-2">
                       <span
@@ -214,6 +303,18 @@ export function UserOrderHistory() {
                       >
                         {adminStatusLabel[order.status]}
                       </span>
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                          order.orderType === "PRODUCT" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {order.orderType === "PRODUCT" ? "Product · Refundable" : "Service · Non-refund"}
+                      </span>
+                      {order.refundStatus && (
+                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${refundStatusStyle[order.refundStatus]}`}>
+                          {refundStatusLabel[order.refundStatus]}
+                        </span>
+                      )}
                       {order.paymentStatus && (
                         <span
                           className={`rounded-full px-2.5 py-1 text-xs font-medium ${paymentStatusStyle[order.paymentStatus]}`}
@@ -263,7 +364,7 @@ export function UserOrderHistory() {
 
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-10 text-center text-sm text-gray-400">
+                  <td colSpan={7} className="py-10 text-center text-sm text-gray-400">
                     Tidak ada pesanan pada kategori ini.
                   </td>
                 </tr>

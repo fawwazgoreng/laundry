@@ -5,7 +5,7 @@
     "prod": "bun run src/index.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "bun test src/domain/entities src/useCase",
-    "test:unit": "bun test src/domain/entities src/useCase",
+    "test:unit": "bun test src/domain/entities src/",
     "test:integration": "DATABASE_URL=\"postgresql://postgres:postgres@localhost:5432/laundry_test\" bun test --timeout=30000 tests/integration",
     "seed": "bun run src/infrastructure/seed/seed.ts",
     "prisma:generate": "prisma contract emit"

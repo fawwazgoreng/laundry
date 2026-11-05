@@ -16,6 +16,7 @@ model User {
     accessToken     Access_token?  @relation(fields: [access_tokenId], references: [id])
     access_tokenId  Uuid?
     orders          Orders[]
+    refundRequests  Refund_requests[]
 }
 
 model Refresh_token {
@@ -64,7 +65,7 @@ model Outlets {
 }
 
 model Laundry_services {
-    id                       Int                  @id @default(autoincrement())
+    id                       Int                            @id @default(autoincrement())
     name                     VarChar(30)
     unit                     VarChar(10)
     price_per_unit           Numeric(12, 2)
@@ -72,6 +73,41 @@ model Laundry_services {
     estimated_duration_hours Int
     is_active                Boolean
     serviceOrderItems        Service_order_item[]
+    addonGroups              Laundry_service_addon_groups[]
+}
+
+model Service_addon_groups {
+    id             Int                            @id @default(autoincrement())
+    code           VarChar(30)                    @unique
+    name           VarChar(50)
+    selection_type VarChar(20)                    @default("single")
+    is_required    Boolean                        @default(false)
+    is_active      Boolean                        @default(true)
+    options        Service_addon_options[]
+    services       Laundry_service_addon_groups[]
+}
+
+model Service_addon_options {
+    id              Int                          @id @default(autoincrement())
+    group_id        Int
+    name            VarChar(50)
+    price           Numeric(12, 2)               @default(0)
+    price_mode      VarChar(20)                  @default("per_unit")
+    is_default      Boolean                      @default(false)
+    is_active       Boolean                      @default(true)
+    group           Service_addon_groups         @relation(fields: [group_id], references: [id])
+    orderItemAddons Service_order_item_addons[]
+
+    @@unique([group_id, name])
+}
+
+model Laundry_service_addon_groups {
+    service_id Int
+    group_id   Int
+    service    Laundry_services       @relation(fields: [service_id], references: [id])
+    group      Service_addon_groups   @relation(fields: [group_id], references: [id])
+
+    @@id([service_id, group_id])
 }
 
 model Products {
@@ -96,6 +132,7 @@ model Orders {
     delivery_fee      Numeric(10, 2)
     total_laundry     Numeric(12, 2)
     total_product     Numeric(12, 2)
+    total_addon       Numeric(12, 2)      @default(0)
     total_amount      Int
     status            VarChar(20)
     payment_method    VarChar(20)
@@ -110,6 +147,7 @@ model Orders {
     payments          Payments[]
     orderTrackings    Order_trackings[]
     cashFlows         Cash_flow[]
+    refundRequests    Refund_requests[]
 }
 
 model Service_order_item {
@@ -117,10 +155,28 @@ model Service_order_item {
     order_id           String
     laundry_service_id Int
     qty                Numeric(6, 2)    // Kiloan laundry menggunakan pecahan desimal biner
+    price_per_unit     Numeric(12, 2)   @default(0)
+    addon_subtotal     Numeric(12, 2)   @default(0)
     subtotal           Numeric(12, 2)
     notes              String
     service            Laundry_services @relation(fields: [laundry_service_id], references: [id])
     order              Orders           @relation(fields: [order_id], references: [order_id])
+    addons             Service_order_item_addons[]
+}
+
+model Service_order_item_addons {
+    id                    Uuid               @id @default(uuid())
+    service_order_item_id Uuid
+    addon_option_id       Int?
+    group_code            VarChar(30)
+    group_name            VarChar(50)
+    option_name           VarChar(50)
+    price                 Numeric(12, 2)    @default(0)
+    price_mode            VarChar(20)       @default("per_unit")
+    qty                   Numeric(6, 2)     @default(0)
+    subtotal              Numeric(12, 2)    @default(0)
+    serviceOrderItem      Service_order_item @relation(fields: [service_order_item_id], references: [id], onDelete: Cascade)
+    addonOption           Service_addon_options? @relation(fields: [addon_option_id], references: [id])
 }
 
 model Product_order_item {
@@ -145,6 +201,27 @@ model Payments {
     raw_response   Json?
     created_at     DateTime  @default(now())
     order          Orders    @relation(fields: [order_id], references: [order_id])
+    refundRequests Refund_requests[]
+}
+
+model Refund_requests {
+    id               Uuid      @id @default(uuid())
+    order_id         String
+    user_id          Uuid
+    payment_id       Uuid?
+    amount           Numeric(12, 2)
+    reason           String
+    status           VarChar(20) @default("REQUESTED")
+    gateway_ref      String?
+    gateway_response Json?
+    requested_at     DateTime  @default(now())
+    processed_at     DateTime?
+    processed_by     Uuid?
+    order            Orders    @relation(fields: [order_id], references: [order_id])
+    user             User      @relation(fields: [user_id], references: [id])
+    payment          Payments? @relation(fields: [payment_id], references: [id])
+
+    @@index([order_id, status])
 }
 
 model Order_trackings {

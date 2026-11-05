@@ -2,6 +2,8 @@ import { api } from "./apiClient"
 import type {
     Address,
     AddressInput,
+    AddonGroupInput,
+    AddonOptionInput,
     AdminStats,
     AuthPayload,
     CashflowSummary,
@@ -16,7 +18,9 @@ import type {
     PaymentGate,
     Product,
     ProductInput,
+    RefundSummary,
     Service,
+    ServiceAddonGroup,
     ServiceInput,
     User,
 } from "../lib/types"
@@ -63,6 +67,24 @@ export const productApi = {
     uploadImage: (id: number, file: File) => api.upload<Product>(`/products/${id}/image`, file),
 }
 
+export const addonApi = {
+    listGroups: (includeInactive = true) =>
+        api.get<ServiceAddonGroup[]>("/addons/groups", includeInactive ? { all: "true" } : undefined),
+    createGroup: (data: AddonGroupInput) => api.post<ServiceAddonGroup>("/addons/groups", data),
+    updateGroup: (id: number, data: Partial<AddonGroupInput>) =>
+        api.put<ServiceAddonGroup>(`/addons/groups/${id}`, data),
+    removeGroup: (id: number) => api.delete<{ ok: boolean }>(`/addons/groups/${id}`),
+    createOption: (groupId: number, data: AddonOptionInput) =>
+        api.post<ServiceAddonGroup>(`/addons/groups/${groupId}/options`, data),
+    updateOption: (id: number, data: Partial<AddonOptionInput>) =>
+        api.put<ServiceAddonGroup>(`/addons/options/${id}`, data),
+    removeOption: (id: number) => api.delete<{ ok: boolean }>(`/addons/options/${id}`),
+    targetGroups: (targetType: "service" | "product", targetId: number) =>
+        api.get<number[]>(`/addons/targets/${targetType}/${targetId}`),
+    setTargetGroups: (targetType: "service" | "product", targetId: number, groupIds: number[]) =>
+        api.put<number[]>(`/addons/targets/${targetType}/${targetId}`, { group_ids: groupIds }),
+}
+
 export const outletApi = {
     list: () => api.get<Outlet[]>("/outlets"),
     getDefault: () => api.get<Outlet>("/outlets/default"),
@@ -99,6 +121,12 @@ export const orderApi = {
 
 export const paymentApi = {
     byOrder: (orderId: string) => api.get<Payment>(`/payments/order/${orderId}`),
+}
+
+export const refundApi = {
+    create: (data: { order_id: string; reason: string }) => api.post<RefundSummary>("/refunds", data),
+    decide: (id: string, data: { status: "APPROVED" | "REJECTED"; note?: string }) =>
+        api.patch<RefundSummary>(`/refunds/${id}`, data),
 }
 
 export const adminApi = {

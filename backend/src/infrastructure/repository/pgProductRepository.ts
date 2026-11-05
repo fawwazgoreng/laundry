@@ -1,8 +1,10 @@
 import type { productRepository } from "../../domain/repositories/productRepository";
 import type { productListOptions } from "../../domain/repositories/productRepository";
 import type { productCreateType, productType, productUpdateType } from "../../domain/types/productType";
+import type { serviceAddonGroupType } from "../../domain/types/serviceType";
 import { prisma } from "../prisma/prisma";
 import { numeric, varchar } from "../prisma/scalars";
+import { toAddonGroup, type AddonGroupRow } from "./addonRowMapper";
 
 type ProductRow = {
     id: number
@@ -27,7 +29,6 @@ function toProductType(row: ProductRow): productType {
         image: row.image,
     };
 }
-
 export class pgProductRepository implements productRepository {
     async list(opts: productListOptions = {}): Promise<{ data: productType[]; count: number }> {
         const {
@@ -58,11 +59,12 @@ export class pgProductRepository implements productRepository {
         })();
 
         const [rows, countAgg] = await Promise.all([
-            ordered.offset((page - 1) * perPage).limit(perPage).all(),
+            ordered
+                .offset((page - 1) * perPage).limit(perPage).all(),
             base.aggregate((agg) => ({ count: agg.count() })),
         ]);
 
-        return { data: rows.map(toProductType), count: countAgg.count };
+        return { data: rows.map((row) => toProductType(row)), count: countAgg.count };
     }
 
     async findById(id: number): Promise<productType | null> {

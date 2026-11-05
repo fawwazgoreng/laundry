@@ -38,9 +38,24 @@ export interface cashflowType {
     created_at: string
 }
 
+export interface cashflowCategoryTotalType {
+    category: string
+    total: number
+    count: number
+}
+
+export interface cashflowSectionType {
+    total: number
+    categories: cashflowCategoryTotalType[]
+    items: cashflowType[]
+}
+
 export interface cashflowSummaryType {
     total_income: number
     total_expense: number
+    net_profit: number
     balance: number
+    income: cashflowSectionType
+    expense: cashflowSectionType
     items: cashflowType[]
 }

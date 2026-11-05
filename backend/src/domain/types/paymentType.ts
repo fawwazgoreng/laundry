@@ -1,4 +1,4 @@
-export type paymentStatus = "PENDING" | "PAID" | "FAILED" | "EXPIRED";
+export type paymentStatus = "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "REFUNDED";
 
 export interface paymentType {
     id: string

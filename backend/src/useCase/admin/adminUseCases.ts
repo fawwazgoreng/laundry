@@ -25,6 +25,7 @@ export class CashflowSummaryUseCase {
         logger.debug("cashflow summary fetched", {
             totalIncome: summary.total_income,
             totalExpense: summary.total_expense,
+            netProfit: summary.net_profit,
         });
         return summary;
     }

@@ -6,6 +6,7 @@ const ADMIN_NAV = [
     { to: "/admin/pesanan", label: "Pesanan" },
     { to: "/admin/layanan", label: "Layanan" },
     { to: "/admin/produk", label: "Produk" },
+    { to: "/admin/pilihan", label: "Pilihan" },
     { to: "/admin/laporan", label: "Laporan" },
     { to: "/admin/pengaturan", label: "Pengaturan" },
 ]
