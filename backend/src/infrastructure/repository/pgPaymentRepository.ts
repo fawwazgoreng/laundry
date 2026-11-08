@@ -1,15 +1,17 @@
 import type { paymentRepository } from "../../domain/repositories/paymentRepository";
+import type { paymentGatewayDetails } from "../../domain/repositories/paymentRepository";
 import type { paymentConfirmInput, paymentCreateInput, paymentType } from "../../domain/types/paymentType";
 import { logger } from "../../helper/logging/logger";
 import { prisma } from "../prisma/prisma";
 import { fromInstant, instant, numeric, varchar } from "../prisma/scalars";
+import { money } from "../../lib/money";
 
 type PaymentRow = {
     id: string
     order_id: string
     transaction_id: string
     payment_type: string
-    gross_amount: unknown
+    gross_amount: string
     status: string
     va_number: string | null
     paid_at: Temporal.Instant | null
@@ -23,7 +25,7 @@ function toPaymentType(row: PaymentRow): paymentType {
         order_id: row.order_id,
         transaction_id: row.transaction_id,
         payment_type: row.payment_type,
-        gross_amount: Number(row.gross_amount),
+        gross_amount: money(row.gross_amount),
         status: row.status as paymentType["status"],
         va_number: row.va_number,
         paid_at: row.paid_at ? new Date(row.paid_at.epochMilliseconds).toISOString() : null,
@@ -135,11 +137,7 @@ export class pgPaymentRepository implements paymentRepository {
         }
     }
 
-    async attachGatewayDetails(id: string, details: {
-        transaction_id?: string
-        va_number?: string | null
-        raw_response?: Record<string, unknown> | null
-    }): Promise<paymentType | null> {
+    async attachGatewayDetails(id: string, details: paymentGatewayDetails): Promise<paymentType | null> {
         const row = await prisma.orm.public.Payments
             .where({ id })
             .update({

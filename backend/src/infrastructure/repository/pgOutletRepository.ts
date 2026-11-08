@@ -2,6 +2,7 @@ import type { outletRepository } from "../../domain/repositories/outletRepositor
 import type { outletType, outletUpdateType } from "../../domain/types/outletType";
 import { prisma } from "../prisma/prisma";
 import { numeric, varchar } from "../prisma/scalars";
+import { money } from "../../lib/money";
 
 type OutletRow = {
     id: number
@@ -11,7 +12,7 @@ type OutletRow = {
     latitude: unknown
     longitude: unknown
     max_coverage_km: unknown
-    min_order_amount: unknown
+    min_order_amount: string
     weekly_hours: string | null
 };
 
@@ -24,7 +25,7 @@ function toOutletType(row: OutletRow): outletType {
         latitude: Number(row.latitude),
         longitude: Number(row.longitude),
         max_coverage_km: Number(row.max_coverage_km),
-        min_order_amount: Number(row.min_order_amount),
+        min_order_amount: money(row.min_order_amount),
         weekly_hours: row.weekly_hours,
     };
 }

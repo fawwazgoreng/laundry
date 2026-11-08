@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { created, ok } from "../../helper/response/apiResponse";
-import { CreateRefundUseCase, DecideRefundUseCase } from "../../useCase/refund/refundUseCases";
+import { CreateRefundUseCase, DecideRefundUseCase } from "../../useCase/refund/index";
 import type { AppVariables } from "../types";
 
 type AuthContext = Context<{ Variables: AppVariables }>;

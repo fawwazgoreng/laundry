@@ -1,5 +1,7 @@
 import { prisma } from "../prisma/prisma";
 import { fromInstant, instant, numeric, varchar } from "../prisma/scalars";
+import Decimal from "decimal.js";
+import { money } from "../../lib/money";
 import { AppError } from "../../helper/errorHandling/appError";
 import { orderEntity } from "../../domain/entities/orderEntity";
 import type { orderRepository } from "../../domain/repositories/orderRepository";
@@ -23,46 +25,58 @@ type ServiceAddonRow = {
     group_code: string
     group_name: string
     option_name: string
-    price: unknown
+    price: string
     price_mode: string
-    qty: unknown
-    subtotal: unknown
+    qty: string
+    subtotal: string
 };
 
 type ServiceItemRow = {
     id: string
     laundry_service_id: number
-    qty: unknown
-    price_per_unit: unknown
-    addon_subtotal: unknown
-    subtotal: unknown
+    qty: string
+    price_per_unit: string
+    addon_subtotal: string
+    subtotal: string
     notes: string
     service: {
         name: string
         unit: string
-        price_per_unit: unknown
+        price_per_unit: string
     } | null
     addons: ServiceAddonRow[]
+};
+
+type ProductAddonRow = {
+    id: string
+    group_code: string
+    group_name: string
+    option_name: string
+    price: string
+    price_mode: string
+    qty: string
+    subtotal: string
 };
 
 type ProductItemRow = {
     id: string
     product_id: number
     qty: number
-    subtotal: number
+    subtotal: string
     product: {
         name: string
         category: string
         size: string
         image: string
-        price: unknown
+        price: string
     } | null
+    addons: ProductAddonRow[]
 };
 
 type RefundRow = {
     id: string
     status: string
-    amount: unknown
+    amount: string
     reason: string
     gateway_ref: string | null
     requested_at: Temporal.Instant
@@ -73,7 +87,7 @@ type PaymentRow = {
     id: string
     transaction_id: string
     payment_type: string
-    gross_amount: unknown
+    gross_amount: string
     status: string
     va_number: string | null
     paid_at: Temporal.Instant | null
@@ -94,12 +108,12 @@ type OrderDetailRow = {
     order_id: string
     status: string
     payment_method: string
-    total_laundry: unknown
-    total_product: unknown
-    total_addon: unknown
-    delivery_fee: unknown
-    total_amount: number
-    distance_km: unknown
+    total_laundry: string
+    total_product: string
+    total_addon: string
+    delivery_fee: string
+    total_amount: string
+    distance_km: string
     notes: string | null
     created_at: Temporal.Instant
     updated_at: Temporal.Instant
@@ -117,8 +131,8 @@ type OrderDetailRow = {
     outlet: {
         id: number
         name: string
-        latitude: unknown
-        longitude: unknown
+        latitude: string
+        longitude: string
     } | null
     serviceOrderItems: ServiceItemRow[]
     productOrderItems: ProductItemRow[]
@@ -131,7 +145,7 @@ type OrderListRow = {
     id: string
     order_id: string
     status: string
-    total_amount: number
+    total_amount: string
     payment_method: string
     created_at: Temporal.Instant
     user: {
@@ -146,7 +160,7 @@ type OrderListRow = {
         status: string
     }[]
     serviceOrderItems: {
-        qty: unknown
+        qty: string
         service: {
             name: string
             unit: string
@@ -167,10 +181,10 @@ function toServiceAddon(row: ServiceAddonRow): serviceOrderAddonType {
         group_code: row.group_code,
         group_name: row.group_name,
         option_name: row.option_name,
-        price: Number(row.price),
+        price: money(row.price),
         price_mode: row.price_mode as addonPriceMode,
         qty: Number(row.qty),
-        subtotal: Number(row.subtotal),
+        subtotal: money(row.subtotal),
     };
 }
 
@@ -183,10 +197,10 @@ function toServiceItem(row: ServiceItemRow): serviceOrderItemType {
         service_name: service.name,
         unit: service.unit,
         qty: Number(row.qty),
-        price_per_unit: Number(row.price_per_unit) || Number(service.price_per_unit),
-        addon_subtotal: Number(row.addon_subtotal),
+        price_per_unit: money(new Decimal(row.price_per_unit).isZero() ? new Decimal(service.price_per_unit) : new Decimal(row.price_per_unit)),
+        addon_subtotal: money(row.addon_subtotal),
         addons: row.addons.map(toServiceAddon),
-        subtotal: Number(row.subtotal),
+        subtotal: money(row.subtotal),
         notes: row.notes,
     };
 }
@@ -202,8 +216,9 @@ function toProductItem(row: ProductItemRow): productOrderItemType {
         size: product.size,
         image: product.image,
         qty: row.qty,
-        price: Number(product.price),
-        subtotal: row.subtotal,
+        price: money(product.price),
+        addons: row.addons.map(toServiceAddon),
+        subtotal: money(row.subtotal),
     };
 }
 
@@ -213,7 +228,7 @@ function toPayment(row: PaymentRow | undefined): paymentSummaryType | null {
         id: row.id,
         transaction_id: row.transaction_id,
         payment_type: row.payment_type as paymentSummaryType["payment_type"],
-        gross_amount: Number(row.gross_amount),
+        gross_amount: money(row.gross_amount),
         status: row.status,
         va_number: row.va_number,
         paid_at: row.paid_at ? fromInstant(row.paid_at).toISOString() : null,
@@ -237,7 +252,7 @@ function toRefundSummary(row: RefundRow | undefined): refundSummaryType | null {
     return {
         id: row.id,
         status: row.status as refundStatus,
-        amount: Number(row.amount),
+        amount: money(row.amount),
         reason: row.reason,
         gateway_ref: row.gateway_ref,
         requested_at: fromInstant(row.requested_at).toISOString(),
@@ -257,11 +272,11 @@ function toOrderDetail(row: OrderDetailRow): orderDetailType {
         order_type: kind,
         refund_eligible: orderEntity.isRefundEligible(kind, row.payment_method, payment?.status ?? null),
         payment_method: row.payment_method as orderDetailType["payment_method"],
-        total_laundry: Number(row.total_laundry),
-        total_product: Number(row.total_product),
-        total_addon: Number(row.total_addon),
-        delivery_fee: Number(row.delivery_fee),
-        total_amount: row.total_amount,
+        total_laundry: money(row.total_laundry),
+        total_product: money(row.total_product),
+        total_addon: money(row.total_addon),
+        delivery_fee: money(row.delivery_fee),
+        total_amount: money(row.total_amount),
         distance_km: Number(row.distance_km),
         notes: row.notes,
         created_at: fromInstant(row.created_at).toISOString(),
@@ -296,7 +311,7 @@ const orderDetailQuery = () =>
         .include("outlet", (o) => o.select("id", "name", "latitude", "longitude"))
         .include("payments", (p) => p.orderBy((r) => r.created_at.desc()).limit(1))
         .include("serviceOrderItems", (s) => s.include("service").include("addons"))
-        .include("productOrderItems", (p) => p.include("product"))
+        .include("productOrderItems", (p) => p.include("product").include("addons"))
         .include("refundRequests", (r) => r.orderBy((refund) => refund.requested_at.desc()).limit(1))
         .include("orderTrackings");
 
@@ -321,7 +336,7 @@ export class pgOrderRepository implements orderRepository {
                 total_laundry: numeric<12, 2>(input.totals.total_laundry),
                 total_product: numeric<12, 2>(input.totals.total_product),
                 total_addon: numeric<12, 2>(input.totals.total_addon),
-                total_amount: input.totals.total_amount,
+                total_amount: numeric<12, 2>(input.totals.total_amount),
                 status: varchar<20>(input.status),
                 payment_method: varchar<20>(input.payment_method),
                 notes: input.notes ?? null,
@@ -363,12 +378,25 @@ export class pgOrderRepository implements orderRepository {
                 await tx.orm.public.Products.where({ id: p.product_id }).update({
                     stock: product.stock - p.qty,
                 });
-                await tx.orm.public.Product_order_item.create({
+                const productItem = await tx.orm.public.Product_order_item.create({
                     order_id: input.order_id,
                     product_id: p.product_id,
                     qty: p.qty,
-                    subtotal: p.subtotal,
+                    subtotal: numeric<12, 2>(p.subtotal),
                 });
+                for (const addon of p.addons) {
+                    await tx.orm.public.Product_order_item_addons.create({
+                        product_order_item_id: productItem.id,
+                        addon_option_id: addon.addon_option_id,
+                        group_code: varchar<30>(addon.group_code),
+                        group_name: varchar<50>(addon.group_name),
+                        option_name: varchar<50>(addon.option_name),
+                        price: numeric<12, 2>(addon.price),
+                        price_mode: varchar<20>(addon.price_mode),
+                        qty: numeric<6, 2>(addon.qty),
+                        subtotal: numeric<12, 2>(addon.subtotal),
+                    });
+                }
             }
 
             await tx.orm.public.Payments.create({
@@ -432,7 +460,7 @@ export class pgOrderRepository implements orderRepository {
                 order_type: kind,
                 refund_eligible: orderEntity.isRefundEligible(kind, row.payment_method, paymentStatus),
                 refund_status: (row.refundRequests[0]?.status as refundStatus | undefined) ?? null,
-                total_amount: row.total_amount,
+                total_amount: money(row.total_amount),
                 payment_method: row.payment_method as orderListItemType["payment_method"],
                 payment_status: paymentStatus,
                 created_at: fromInstant(row.created_at).toISOString(),

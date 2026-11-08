@@ -2,6 +2,7 @@ import { prisma } from "../prisma/prisma";
 import { logger } from "../../helper/logging/logger";
 import { orderEntity } from "../../domain/entities/orderEntity";
 import { instant, numeric, varchar } from "../prisma/scalars";
+import { addMoney, money, moneySum, multiplyMoney } from "../../lib/money";
 
 function daysAgo(days: number, hour = 14): Date {
     const d = new Date();
@@ -120,8 +121,8 @@ async function createDemoOrders(): Promise<void> {
     const prod = (name: string) => products.find((p) => p.name === name)!;
     const svcById = (id: number) => services.find((s) => s.id === id)!;
     const prodById = (id: number) => products.find((p) => p.id === id)!;
-    const servicePrice = (id: number) => Number(svcById(id).price_per_unit);
-    const productPrice = (id: number) => Number(prodById(id).price);
+    const servicePrice = (id: number) => money(svcById(id).price_per_unit);
+    const productPrice = (id: number) => money(prodById(id).price);
 
     const demo = [
         {
@@ -187,8 +188,8 @@ async function createDemoOrders(): Promise<void> {
     ];
 
     for (const [index, d] of demo.entries()) {
-        const laundrySubtotal = d.services.reduce((sum, s) => sum + servicePrice(s.id) * s.qty, 0);
-        const productSubtotal = d.products.reduce((sum, p) => sum + productPrice(p.id) * p.qty, 0);
+        const laundrySubtotal = moneySum(d.services.map((s) => multiplyMoney(servicePrice(s.id), s.qty)));
+        const productSubtotal = moneySum(d.products.map((p) => multiplyMoney(productPrice(p.id), p.qty)));
         const deliveryFee = orderEntity.computeDeliveryFee(d.distanceKm);
         const totals = orderEntity.computeTotals({
             laundrySubtotal,
@@ -258,7 +259,7 @@ async function createDemoOrders(): Promise<void> {
             delivery_fee: numeric<10, 2>(deliveryFee),
             total_laundry: numeric<12, 2>(totals.total_laundry),
             total_product: numeric<12, 2>(totals.total_product),
-            total_amount: totals.total_amount,
+            total_amount: numeric<12, 2>(totals.total_amount),
             status: varchar<20>(d.status),
             payment_method: varchar<20>(d.paymentMethod),
             notes: index === 0 ? "Tolong jemput setrikaan. Terima kasih." : null,
@@ -270,7 +271,7 @@ async function createDemoOrders(): Promise<void> {
                         qty: numeric<6, 2>(s.qty),
                         price_per_unit: numeric<12, 2>(servicePrice(s.id)),
                         addon_subtotal: numeric<12, 2>(0),
-                        subtotal: numeric<12, 2>(servicePrice(s.id) * s.qty),
+                        subtotal: numeric<12, 2>(multiplyMoney(servicePrice(s.id), s.qty)),
                         notes: "",
                     })),
                 ),
@@ -279,7 +280,7 @@ async function createDemoOrders(): Promise<void> {
                     d.products.map((p) => ({
                         product_id: p.id,
                         qty: p.qty,
-                        subtotal: productPrice(p.id) * p.qty,
+                        subtotal: numeric<12, 2>(multiplyMoney(productPrice(p.id), p.qty)),
                     })),
                 ),
             orderTrackings: (t) => t.create(trackings),

@@ -43,7 +43,7 @@ describe("orderEntity.validateCreate", () => {
             distance_km: "3",
             payment_method: "cod",
         });
-        expect(result.services[0].qty).toBe(2);
+        expect(result.services[0]!.qty).toBe(2);
         expect(result.distance_km).toBe(3);
     });
 });
@@ -105,29 +105,29 @@ describe("orderEntity IDs", () => {
 describe("orderEntity.totals", () => {
     it("applies discounts without turning the total negative", () => {
         const totals = orderEntity.computeTotals({
-            laundrySubtotal: 100000,
-            productSubtotal: 0,
+            laundrySubtotal: "100000.00",
+            productSubtotal: "0.00",
             itemCount: 1,
-            deliveryFee: 6000,
+            deliveryFee: "6000.00",
         });
-        expect(totals.total_amount).toBe(106000);
+        expect(totals.total_amount).toBe("106000.00");
     });
 
-    it("rounds rupee amounts", () => {
+    it("keeps 2-decimal money amounts", () => {
         const totals = orderEntity.computeTotals({
-            laundrySubtotal: 3333.33,
-            productSubtotal: 4.56,
+            laundrySubtotal: "3333.33",
+            productSubtotal: "4.56",
             itemCount: 2,
-            deliveryFee: 999.5,
+            deliveryFee: "999.5",
         });
-        expect(totals.total_laundry).toBe(3333);
-        expect(totals.total_product).toBe(5);
-        expect(totals.delivery_fee).toBe(1000);
+        expect(totals.total_laundry).toBe("3333.33");
+        expect(totals.total_product).toBe("4.56");
+        expect(totals.delivery_fee).toBe("999.50");
     });
 
     it("zero delivery fee under 1 km", () => {
-        expect(orderEntity.computeDeliveryFee(0)).toBe(0);
-        expect(orderEntity.computeDeliveryFee(3)).toBe(6000);
-        expect(orderEntity.computeDeliveryFee(1.2)).toBe(2400);
+        expect(orderEntity.computeDeliveryFee(0)).toBe("0.00");
+        expect(orderEntity.computeDeliveryFee(3)).toBe("6000.00");
+        expect(orderEntity.computeDeliveryFee(1.2)).toBe("2400.00");
     });
 });

@@ -4,3 +4,6 @@
 .env
 AGENTS.md
 ngrok.yml
+AUDIT_REPORT.md
+package.json
+bun.lock

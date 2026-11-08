@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { moneyInputSchema } from "../../lib/money";
+
 import { AppError } from "../../helper/errorHandling/appError";
 import type { productCategory, productCreateType, productUpdateType } from "../types/productType";
 
@@ -8,7 +10,7 @@ export class productEntity {
     private static readonly createSchema = z.object({
         name: z.string().min(1, "Name is required").max(30, "Name max 30 characters"),
         category: z.enum(categories, { message: "Invalid category" }),
-        price: z.coerce.number().nonnegative("Harga tidak boleh negatif"),
+        price: moneyInputSchema,
         size: z.string().max(10, "Size max 10 characters").default("pcs"),
         stock: z.coerce.number().int().nonnegative("Stok tidak boleh negatif").default(0),
         is_active: z.boolean().default(true),

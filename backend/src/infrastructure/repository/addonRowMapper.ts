@@ -1,9 +1,10 @@
 import type { addonPriceMode, addonSelectionType, serviceAddonGroupType } from "../../domain/types/serviceType";
+import { money } from "../../lib/money";
 
 export type AddonOptionRow = {
     id: number
     name: string
-    price: unknown
+    price: string
     price_mode: string
     is_default: boolean
     is_active: boolean
@@ -35,7 +36,7 @@ export function toAddonGroup(row: AddonGroupRow, activeOnly: boolean): serviceAd
             .map((option) => ({
                 id: option.id,
                 name: option.name,
-                price: Number(option.price),
+                price: money(option.price),
                 price_mode: option.price_mode as addonPriceMode,
                 is_default: option.is_default,
                 is_active: option.is_active,

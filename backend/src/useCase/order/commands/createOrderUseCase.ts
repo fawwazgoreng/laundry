@@ -1,15 +1,13 @@
-import { orderEntity } from "../../domain/entities/orderEntity";
-import type { addressRepository } from "../../domain/repositories/addressRepository";
-import type { cashflowRepository } from "../../domain/repositories/cashflowRepository";
-import type { orderRepository } from "../../domain/repositories/orderRepository";
-import type { outletRepository } from "../../domain/repositories/outletRepository";
-import type { paymentRepository } from "../../domain/repositories/paymentRepository";
-import type { productRepository } from "../../domain/repositories/productRepository";
-import type { serviceRepository } from "../../domain/repositories/serviceRepository";
+import { orderEntity } from "../../../domain/entities/orderEntity";
+import type { addressRepository } from "../../../domain/repositories/addressRepository";
+import type { cashflowRepository } from "../../../domain/repositories/cashflowRepository";
+import type { orderRepository } from "../../../domain/repositories/orderRepository";
+import type { outletRepository } from "../../../domain/repositories/outletRepository";
+import type { paymentRepository } from "../../../domain/repositories/paymentRepository";
+import type { productRepository } from "../../../domain/repositories/productRepository";
+import type { serviceRepository } from "../../../domain/repositories/serviceRepository";
 import type {
     orderDetailType,
-    orderListFilters,
-    orderListItemType,
     orderNewCashflowType,
     orderNewPaymentType,
     orderStatus,
@@ -17,31 +15,14 @@ import type {
     paymentMethod,
     serviceAddonRecord,
     serviceAddonInput,
-} from "../../domain/types/orderType";
-import type { serviceAddonGroupType } from "../../domain/types/serviceType";
-import type { meta } from "../../domain/types/globalType";
-import { AppError } from "../../helper/errorHandling/appError";
-import { logger } from "../../helper/logging/logger";
-import { env } from "../../config/env";
+} from "../../../domain/types/orderType";
+import { addMoney, money, moneySum, multiplyMoney, type Money, roundMoney } from "../../../lib/money";
+import type { patchType } from "../../../domain/types/globalType";
+import type { serviceAddonGroupType } from "../../../domain/types/serviceType";
+import { AppError } from "../../../helper/errorHandling/appError";
+import { logger } from "../../../helper/logging/logger";
+import { env } from "../../../config/env";
 import * as midtransClient from "midtrans-client";
-
-function buildMeta(count: number, page: number, perPage: number): meta {
-    return {
-        firstPage: 1,
-        currentPage: page,
-        lastPage: Math.max(1, Math.ceil(count / perPage)),
-        count,
-    };
-}
-
-function isDuplicateOrderId(error: unknown): boolean {
-    return (
-        typeof error === "object" &&
-        error !== null &&
-        (("code" in error && error.code === "P2002") ||
-            ("sqlState" in error && error.sqlState === "23505"))
-    );
-}
 
 export type coreChargeResponse = {
     transaction_id?: string
@@ -70,13 +51,22 @@ export function defaultMidtransCoreApi(): midtransCoreApiClient {
     }) as unknown as midtransCoreApiClient;
 }
 
-export type gatewayCharge = {
-    transaction_id?: string
-    va_number?: string
-    raw_response?: Record<string, unknown>
-};
+export type gatewayCharge = patchType<{
+    transaction_id: string
+    va_number: string
+    raw_response: Record<string, unknown>
+}>;
 
 export const ACTIVE_PAYMENT_WINDOW_HOURS = 24;
+
+function isDuplicateOrderId(error: unknown): boolean {
+    return (
+        typeof error === "object" &&
+        error !== null &&
+        (("code" in error && error.code === "P2002") ||
+            ("sqlState" in error && error.sqlState === "23505"))
+    );
+}
 
 export class CreateOrderUseCase {
     constructor(
@@ -101,26 +91,26 @@ export class CreateOrderUseCase {
         const outlet = await this.outletRepository.findById(dto.outlet_id);
         if (!outlet) throw AppError.notFound("Outlet tidak ditemukan");
 
-        let laundrySubtotal = 0;
-        let addonSubtotal = 0;
+        let laundrySubtotal: Money = money(0);
+        let addonSubtotal: Money = money(0);
         const services: Array<{
             laundry_service_id: number
             qty: number
             notes: string
-            price_per_unit: number
-            addon_subtotal: number
+            price_per_unit: Money
+            addon_subtotal: Money
             addons: serviceAddonRecord[]
-            subtotal: number
+            subtotal: Money
         }> = [];
         for (const item of dto.services) {
             const svc = await this.serviceRepository.findById(item.laundry_service_id);
             if (!svc) throw AppError.notFound(`Layanan id ${item.laundry_service_id} tidak ditemukan`);
             if (!svc.is_active) throw AppError.conflict("Layanan tidak tersedia");
             const addons = this.resolveAddons(svc.addon_groups, item.addons ?? [], item.qty);
-            const itemAddonSubtotal = addons.reduce((sum, addon) => sum + addon.subtotal, 0);
-            const subtotal = svc.price_per_unit * item.qty + itemAddonSubtotal;
-            laundrySubtotal += subtotal;
-            addonSubtotal += itemAddonSubtotal;
+            const itemAddonSubtotal = moneySum(addons.map((addon) => addon.subtotal));
+            const subtotal = addMoney(multiplyMoney(svc.price_per_unit, item.qty), itemAddonSubtotal);
+            laundrySubtotal = addMoney(laundrySubtotal, subtotal);
+            addonSubtotal = addMoney(addonSubtotal, itemAddonSubtotal);
             services.push({
                 laundry_service_id: item.laundry_service_id,
                 qty: item.qty,
@@ -132,22 +122,26 @@ export class CreateOrderUseCase {
             });
         }
 
-        let productSubtotal = 0;
+        let productSubtotal: Money = money(0);
         const products: Array<{
             product_id: number
             qty: number
-            subtotal: number
+            addons: serviceAddonRecord[]
+            subtotal: Money
         }> = [];
         for (const item of dto.products) {
             const prod = await this.productRepository.findById(item.product_id);
             if (!prod) throw AppError.notFound(`Produk id ${item.product_id} tidak ditemukan`);
             if (!prod.is_active) throw AppError.conflict("Produk tidak tersedia");
             if (prod.stock < item.qty) throw AppError.conflict(`Stok ${prod.name} tidak mencukupi`);
-            const subtotal = Number(prod.price) * item.qty;
-            productSubtotal += subtotal;
+            const addons = this.resolveAddons(prod.addon_groups, item.addons ?? [], item.qty);
+            const itemAddonSubtotal = moneySum(addons.map((addon) => addon.subtotal));
+            const subtotal = addMoney(multiplyMoney(prod.price, item.qty), itemAddonSubtotal);
+            productSubtotal = addMoney(productSubtotal, subtotal);
             products.push({
                 product_id: item.product_id,
                 qty: item.qty,
+                addons,
                 subtotal,
             });
         }
@@ -294,14 +288,14 @@ export class CreateOrderUseCase {
                     price: option.price,
                     price_mode: option.price_mode,
                     qty,
-                    subtotal: option.price * qty,
+                    subtotal: multiplyMoney(option.price, qty),
                 });
             }
         }
         return records.sort((a, b) => a.group_code.localeCompare(b.group_code) || a.option_name.localeCompare(b.option_name));
     }
 
-    private buildInitialPayment(method: paymentMethod, amount: number): orderNewPaymentType {
+    private buildInitialPayment(method: paymentMethod, amount: Money): orderNewPaymentType {
         if (method === "fadarosipay" || method === "cod") {
             return {
                 payment_type: method,
@@ -318,7 +312,7 @@ export class CreateOrderUseCase {
         };
     }
 
-    private buildInitialCashflow(method: paymentMethod, amount: number, orderId: string): orderNewCashflowType | null {
+    private buildInitialCashflow(method: paymentMethod, amount: Money, orderId: string): orderNewCashflowType | null {
         if (method !== "fadarosipay") return null;
         return {
             type: "income",
@@ -397,171 +391,5 @@ export class CreateOrderUseCase {
             va_number: vaNumber,
             raw_response: response as Record<string, unknown>,
         };
-    }
-}
-
-export class ListOrdersUseCase {
-    constructor(private readonly orderRepository: orderRepository) { }
-
-    async execute(
-        userId: string,
-        role: string,
-        filters: orderListFilters = {},
-    ): Promise<{ data: orderListItemType[]; meta: meta }> {
-        const page = filters.page ?? 1;
-        const perPage = filters.perPage ?? 10;
-        const result =
-            role === "admin"
-                ? await this.orderRepository.listAll({ ...filters, page, perPage })
-                : await this.orderRepository.listByUser(userId, { ...filters, page, perPage });
-        logger.debug("orders listed", {
-            requestUserId: userId,
-            role,
-            count: result.count,
-            page,
-            perPage,
-            filter: filters.status ?? "all",
-        });
-        return { data: result.data, meta: buildMeta(result.count, page, perPage) };
-    }
-}
-
-export class GetOrderUseCase {
-    constructor(private readonly orderRepository: orderRepository) { }
-
-    async execute(orderId: string, userId: string, role: string): Promise<orderDetailType> {
-        const order = await this.orderRepository.findByOrderId(orderId);
-        if (!order) throw AppError.notFound("Pesanan tidak ditemukan");
-        if (order.customer.id !== userId && role !== "admin") {
-            logger.warn("order access denied", { requestUserId: userId, orderId });
-            throw AppError.forbidden("Anda tidak memiliki akses ke pesanan ini");
-        }
-        return order;
-    }
-}
-
-export class UpdateOrderStatusUseCase {
-    constructor(
-        private readonly orderRepository: orderRepository,
-        private readonly paymentRepository: paymentRepository,
-        private readonly cashflowRepository: cashflowRepository,
-    ) { }
-
-    async execute(orderId: string, input: unknown, actorUserId: string): Promise<orderDetailType> {
-        const { status } = input as { status: unknown };
-        const next = orderEntity.validateStatus(status);
-
-        const order = await this.orderRepository.findByOrderId(orderId);
-        if (!order) throw AppError.notFound("Pesanan tidak ditemukan");
-        orderEntity.assertTransition(order.status, next);
-
-        const notes = this.statusNote(next);
-        await this.orderRepository.updateStatus(orderId, next);
-        await this.orderRepository.addTracking(orderId, next, notes);
-        logger.info("order status updated", {
-            orderId,
-            actorUserId,
-            from: order.status,
-            to: next,
-        });
-
-        if (next === "SELESAI") {
-            const pending = order.payment;
-            if (pending && pending.status === "PENDING") {
-                const confirmed = await this.paymentRepository.confirm({
-                    transaction_id: pending.transaction_id,
-                    status: "PAID",
-                    raw_response: { confirmedBy: "admin-status-update" },
-                });
-                if (confirmed && confirmed.raw_response && (confirmed.raw_response as { confirmedBy?: string }).confirmedBy) {
-                    await this.cashflowRepository.create({
-                        order_id: orderId,
-                        type: "income",
-                        category: "sales",
-                        amount: order.total_amount,
-                        description: `Pembayaran ${order.payment_method} untuk order ${orderId} (SELESAI)`,
-                    });
-                }
-            }
-        }
-
-        const fresh = await this.orderRepository.findByOrderId(orderId);
-        return fresh ?? order;
-    }
-
-    private statusNote(status: orderStatus): string {
-        switch (status) {
-            case "BARU": return "Pesanan diterima, menunggu konfirmasi outlet.";
-            case "DITERIMA": return "Pakaian telah diterima staf di outlet.";
-            case "DIPROSES": return "Pakaian sedang dicuci dengan detergen pilihan.";
-            case "SIAP_ANTAR": return "Pakaian siap dikemas dan diserahkan ke kurir.";
-            case "SELESAI": return "Pakaian bersih telah sampai ke pelanggan. Terima kasih!";
-            case "DIBATALKAN": return "Pesanan dibatalkan.";
-        }
-    }
-}
-
-export class CancelOrderUseCase {
-    constructor(
-        private readonly orderRepository: orderRepository,
-        private readonly cashflowRepository: cashflowRepository,
-        private readonly paymentRepository: paymentRepository,
-    ) { }
-
-    async execute(orderId: string, userId: string): Promise<orderDetailType> {
-        const order = await this.orderRepository.findByOrderId(orderId);
-        if (!order) throw AppError.notFound("Pesanan tidak ditemukan");
-        if (order.customer.id !== userId) throw AppError.forbidden("Anda tidak memiliki akses ke pesanan ini");
-        if (!orderEntity.canCancel(order.status)) {
-            throw AppError.conflict("Pesanan yang sedang berjalan tidak dapat dibatalkan");
-        }
-        if (order.payment_method == "transfer_bank" && order.payment) {
-            console.log(order.payment)
-            await this.paymentRepository.updateStatus(order.payment.id, "DIBATALKAN")
-        }
-        await this.orderRepository.updateStatus(orderId, "DIBATALKAN");
-        await this.orderRepository.addTracking(orderId, "DIBATALKAN", "Pesanan dibatalkan oleh pelanggan.");
-        await this.reversePayment(order);
-        logger.info("order cancelled by customer", { orderId, userId });
-        const fresh = await this.orderRepository.findByOrderId(orderId);
-        return fresh ?? order;
-    }
-
-    private async reversePayment(order: orderDetailType): Promise<void> {
-        if (order.payment && order.payment.status === "PAID") {
-            await this.cashflowRepository.create({
-                order_id: order.order_id,
-                type: "expense",
-                category: "refund",
-                amount: order.total_amount,
-                description: `Refund pembatalan order ${order.order_id} (${order.payment_method})`,
-            });
-        }
-    }
-}
-
-export class DeleteOrderUseCase {
-    constructor(private readonly orderRepository: orderRepository) { }
-
-    async execute(
-        orderId: string,
-        actorUserId: string,
-        actorRole: "admin" | "user" = "admin",
-    ): Promise<orderDetailType> {
-        const order = await this.orderRepository.findByOrderId(orderId);
-        if (!order) throw AppError.notFound("Pesanan tidak ditemukan");
-
-        const isAdmin = actorRole === "admin";
-        const isOwner = order.customer.id === actorUserId;
-        if (!isAdmin && !isOwner) {
-            throw AppError.forbidden("Anda tidak memiliki akses ke pesanan ini");
-        }
-        if (order.status !== "SELESAI" && order.status !== "DIBATALKAN") {
-            throw AppError.conflict("Hanya pesanan berstatus SELESAI/DIBATALKAN yang dapat dihapus");
-        }
-
-        await this.orderRepository.delete(orderId);
-        logger.warn("order deleted", { orderId, actorUserId, actorRole, status: order.status });
-        return order;
     }
 }

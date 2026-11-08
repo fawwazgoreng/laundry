@@ -8,12 +8,13 @@ import type {
 import { prisma } from "../prisma/prisma";
 import { numeric, varchar } from "../prisma/scalars";
 import { toAddonGroup, type AddonGroupRow } from "./addonRowMapper";
+import { money } from "../../lib/money";
 
 type ServiceRow = {
     id: number
     name: string
     unit: string
-    price_per_unit: unknown
+    price_per_unit: string
     description: string
     estimated_duration_hours: number
     is_active: boolean
@@ -25,7 +26,7 @@ function toServiceType(row: ServiceRow, activeOnly = false): serviceType {
         id: row.id,
         name: row.name,
         unit: row.unit,
-        price_per_unit: Number(row.price_per_unit),
+        price_per_unit: money(row.price_per_unit),
         description: row.description,
         estimated_duration_hours: row.estimated_duration_hours,
         is_active: row.is_active,

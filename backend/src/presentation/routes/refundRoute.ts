@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { refundController } from "../controllers/refundController";
-import { CreateRefundUseCase, DecideRefundUseCase } from "../../useCase/refund/refundUseCases";
+import { CreateRefundUseCase, DecideRefundUseCase } from "../../useCase/refund/index";
 import {
     adminMiddleware,
     authMiddleware,

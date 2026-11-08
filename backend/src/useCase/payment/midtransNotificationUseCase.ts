@@ -86,14 +86,14 @@ export class HandleMidtransNotificationUseCase {
                 order_id: orderId,
                 type: "income",
                 category: "sales",
-                amount: Number(confirmed.gross_amount),
+                amount: confirmed.gross_amount,
                 description: `Pembayaran ${statusResponse.payment_type ?? "transfer_bank"} diverifikasi otomatis oleh Midtrans (${orderId})`,
             });
             logger.info("midtrans payment settled", {
                 orderId,
                 transactionId,
                 paymentType: statusResponse.payment_type,
-                amount: Number(confirmed.gross_amount),
+                amount: confirmed.gross_amount,
             });
         } else {
             logger.info("midtrans payment closed", { orderId, transactionId, status });

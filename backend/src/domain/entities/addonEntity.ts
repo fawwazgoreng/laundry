@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { moneyInputSchema } from "../../lib/money";
+
 import { AppError } from "../../helper/errorHandling/appError";
 import type { addonGroupCreateType, addonGroupUpdateType, addonOptionCreateType, addonOptionUpdateType } from "../types/addonType";
 import { ADDON_PRICE_MODES, ADDON_SELECTION_TYPES } from "../types/serviceType";
@@ -16,7 +18,7 @@ export class addonEntity {
 
     private static readonly optionCreateSchema = z.object({
         name: z.string().trim().min(1, "Nama pilihan wajib diisi").max(50, "Nama maksimal 50 karakter"),
-        price: z.coerce.number().nonnegative("Harga tidak boleh negatif"),
+        price: moneyInputSchema,
         price_mode: z.enum(ADDON_PRICE_MODES).default("per_unit"),
         is_default: z.boolean().default(false),
         is_active: z.boolean().default(true),

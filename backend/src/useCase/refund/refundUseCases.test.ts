@@ -1,5 +1,5 @@
 import { describe, expect, it, mock } from "bun:test";
-import { CreateRefundUseCase, DecideRefundUseCase } from "./refundUseCases";
+import { CreateRefundUseCase, DecideRefundUseCase } from "./index";
 import type { cashflowRepository } from "../../domain/repositories/cashflowRepository";
 import type { orderRepository } from "../../domain/repositories/orderRepository";
 import type { paymentRepository } from "../../domain/repositories/paymentRepository";
@@ -37,7 +37,7 @@ const pendingRefund: refundType = {
     order_id: productOrder.order_id,
     user_id: "u-1",
     payment_id: "pay-1",
-    amount: 25000,
+    amount: "25000.00",
     reason: "Barang tidak sesuai pesanan",
     status: "REQUESTED",
     gateway_ref: null,
@@ -138,5 +138,77 @@ describe("DecideRefundUseCase", () => {
 
         await expect(useCase.execute("refund-1", { status: "APPROVED" }, "admin-1"))
             .rejects.toMatchObject({ statusCode: 409 });
+    });
+});
+
+describe("DecideRefundUseCase (characterization of current behavior)", () => {
+    it("rejects a refund decision without recording anything", async () => {
+        const refunds = refundRepo({ updateStatus: mock(async () => ({ ...pendingRefund, status: "REJECTED" as const })) });
+        const orders = { findByOrderId: mock(async () => productOrder) } as unknown as orderRepository;
+        const payments = { updateStatus: mock(async () => null) } as unknown as paymentRepository;
+        const cashflow = { create: mock(async () => ({})) } as unknown as cashflowRepository;
+        const useCase = new DecideRefundUseCase(refunds, orders, payments, cashflow);
+
+        const result = await useCase.execute("refund-1", { status: "REJECTED", note: "Tidak sesuai kebijakan" }, "admin-1");
+
+        expect(result.status).toBe("REJECTED");
+        expect(refunds.updateStatus).toHaveBeenCalledWith("refund-1", expect.objectContaining({ status: "REJECTED", processed_by: "admin-1" }));
+        expect(payments.updateStatus).not.toHaveBeenCalled();
+        expect(cashflow.create).not.toHaveBeenCalled();
+    });
+
+    it("refuses to decide an already processed refund", async () => {
+        const refunds = refundRepo({ findById: mock(async () => ({ ...pendingRefund, status: "REFUNDED" as const })) });
+        const useCase = new DecideRefundUseCase(
+            refunds,
+            { findByOrderId: mock() } as unknown as orderRepository,
+            { updateStatus: mock() } as unknown as paymentRepository,
+            { create: mock() } as unknown as cashflowRepository,
+        );
+
+        await expect(useCase.execute("refund-1", { status: "APPROVED" }, "admin-1"))
+            .rejects.toMatchObject({ statusCode: 409 });
+        expect(refunds.updateStatus).not.toHaveBeenCalled();
+    });
+
+    it("rejects approval for an unpaid payment", async () => {
+        const orders = { findByOrderId: mock(async () => ({ ...productOrder, payment: { ...productOrder.payment, status: "PENDING" } })) } as unknown as orderRepository;
+        const useCase = new DecideRefundUseCase(
+            refundRepo(),
+            orders,
+            { updateStatus: mock() } as unknown as paymentRepository,
+            { create: mock() } as unknown as cashflowRepository,
+        );
+
+        await expect(useCase.execute("refund-1", { status: "APPROVED" }, "admin-1"))
+            .rejects.toMatchObject({ statusCode: 409 });
+    });
+
+    it("rejects approval for a COD order", async () => {
+        const orders = { findByOrderId: mock(async () => ({ ...productOrder, payment_method: "cod" })) } as unknown as orderRepository;
+        const useCase = new DecideRefundUseCase(
+            refundRepo(),
+            orders,
+            { updateStatus: mock() } as unknown as paymentRepository,
+            { create: mock() } as unknown as cashflowRepository,
+        );
+
+        await expect(useCase.execute("refund-1", { status: "APPROVED" }, "admin-1"))
+            .rejects.toMatchObject({ statusCode: 409 });
+    });
+
+    it("records the refund cashflow only once for transfer_bank decisions", async () => {
+        const refunds = refundRepo();
+        const orders = { findByOrderId: mock(async () => productOrder) } as unknown as orderRepository;
+        const payments = { updateStatus: mock(async () => null) } as unknown as paymentRepository;
+        const cashflow = { create: mock(async () => ({})) } as unknown as cashflowRepository;
+        const useCase = new DecideRefundUseCase(refunds, orders, payments, cashflow);
+
+        await useCase.execute("refund-1", { status: "APPROVED" }, "admin-1");
+
+        expect(cashflow.create).toHaveBeenCalledTimes(2);
+        expect(cashflow.create).toHaveBeenNthCalledWith(1, expect.objectContaining({ amount: 25000, type: "expense", category: "refund" }));
+        expect(cashflow.create).toHaveBeenNthCalledWith(2, expect.objectContaining({ amount: 25000, type: "expense", category: "refund", order_id: productOrder.order_id }));
+        expect(payments.updateStatus).toHaveBeenCalledWith("pay-1", "REFUNDED");
     });
 });

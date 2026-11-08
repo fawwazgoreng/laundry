@@ -8,7 +8,7 @@ import {
     GetOrderUseCase,
     ListOrdersUseCase,
     UpdateOrderStatusUseCase,
-} from "../../useCase/order/orderUseCases";
+} from "../../useCase/order/index";
 import type { orderListFilters } from "../../domain/types/orderType";
 import type { AppVariables } from "../types";
 

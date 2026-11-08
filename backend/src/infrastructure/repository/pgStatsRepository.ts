@@ -2,6 +2,8 @@ import type { statsRepository } from "../../domain/repositories/statsRepository"
 import type { adminStatsType } from "../../domain/types/adminType";
 import { prisma } from "../prisma/prisma";
 import { fromInstant, instant, varchar } from "../prisma/scalars";
+import Decimal from "decimal.js";
+import { money } from "../../lib/money";
 
 function startOfToday(): Date {
     const d = new Date();
@@ -34,8 +36,8 @@ export class pgStatsRepository implements statsRepository {
                     .orderBy((o) => o.created_at.desc())
                     .limit(5)
                     .include("user", (u) => u.select("username", "phone"))
-                    .include("serviceOrderItems", (si) => si.include("service", (s) => s.select("name")))
-                    .include("productOrderItems", (pi) => pi.include("product", (p) => p.select("name")))
+                    .include("serviceOrderItems", (si) => si.include("service", (s) => s.select("name", "unit")))
+                    .include("productOrderItems", (pi) => pi.include("product", (p) => p.select("name", "size")))
                     .all(),
                 prisma.orm.public.Laundry_services
                     .select("id", "name")
@@ -57,46 +59,46 @@ export class pgStatsRepository implements statsRepository {
                     const agg = await prisma.orm.public.Service_order_item
                         .where({ laundry_service_id: service.id })
                         .aggregate((a) => ({ total: a.sum("subtotal"), count: a.count() }));
-                    return { service_name: service.name, total: Number(agg.total ?? 0), count: agg.count };
+                    return { service_name: service.name, total: money(agg.total ?? 0), count: agg.count };
                 }),
             )
         )
             .filter((row) => row.count > 0)
-            .sort((a, b) => b.total - a.total);
+            .sort((a, b) => Number(b.total) - Number(a.total));
 
-        const weekly = new Map<string, number>();
+        const weekly = new Map<string, Decimal>();
         for (let i = 0; i < 7; i++) {
             const d = dayStart(i);
             const key = d.toISOString().slice(0, 10);
-            weekly.set(key, 0);
+            weekly.set(key, new Decimal(0));
         }
         for (const p of weeklyPayments) {
             if (!p.paid_at) continue;
             const key = fromInstant(p.paid_at).toISOString().slice(0, 10);
-            if (weekly.has(key)) weekly.set(key, (weekly.get(key) ?? 0) + Number(p.gross_amount));
+            if (weekly.has(key)) weekly.set(key, (weekly.get(key) ?? new Decimal(0)).plus(p.gross_amount));
         }
 
         return {
             orders_today: ordersToday,
-            revenue_today: Number(revenueTodayAgg.sum ?? 0),
+            revenue_today: money(revenueTodayAgg.sum ?? 0),
             laundry_in_progress: inProgressAgg,
             products_sold: Number(productsSoldAgg.sum ?? 0),
             recent_orders: recentOrders.map((o) => {
                 const svc = o.serviceOrderItems[0];
                 const prod = o.productOrderItems[0];
                 let summary = "Layanan laundry";
-                if (svc) {
-                    const num = `${Number(svc.qty) % 1 === 0 ? Number(svc.qty).toFixed(0) : Number(svc.qty).toFixed(1)} ${(svc.service as any)?.unit}`;
-                    summary = `${(svc.service as any)?.name} ${num}`;
-                } else if (prod) {
-                    summary = `${(prod.product as any)?.name} ${prod.qty} ${(prod.product as any)?.size}`;
+                if (svc && svc.service) {
+                    const num = `${Number(svc.qty) % 1 === 0 ? Number(svc.qty).toFixed(0) : Number(svc.qty).toFixed(1)} ${svc.service.unit}`;
+                    summary = `${svc.service.name} ${num}`;
+                } else if (prod && prod.product) {
+                    summary = `${prod.product.name} ${prod.qty} ${prod.product.size}`;
                 }
                 return {
                     order_id: o.order_id,
-                    customer_name: (o.user as any)?.username ?? (o as any).customer_name,
-                    customer_phone: (o.user as any)?.phone ?? (o as any).customer_phone,
+                    customer_name: o.user?.username ?? "",
+                    customer_phone: o.user?.phone ?? "",
                     status: o.status,
-                    total_amount: o.total_amount,
+                    total_amount: money(o.total_amount),
                     items_summary: summary,
                     created_at: new Date(o.created_at.epochMilliseconds).toISOString(),
                 };
@@ -104,7 +106,7 @@ export class pgStatsRepository implements statsRepository {
             service_revenue: serviceRevenue,
             weekly_revenue: [...weekly.entries()]
                 .sort(([a], [b]) => (a < b ? -1 : 1))
-                .map(([date, total]) => ({ date, total })),
+                .map(([date, total]) => ({ date, total: money(total) })),
             low_stock_products: lowStock,
         };
     }

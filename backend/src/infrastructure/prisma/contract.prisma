@@ -85,6 +85,7 @@ model Service_addon_groups {
     is_active      Boolean                        @default(true)
     options        Service_addon_options[]
     services       Laundry_service_addon_groups[]
+    productAddons  Product_addon_groups[]
 }
 
 model Service_addon_options {
@@ -120,6 +121,16 @@ model Products {
     is_active         Boolean
     image             String
     productOrderItems Product_order_item[]
+    addonGroups       Product_addon_groups[]
+}
+
+model Product_addon_groups {
+    product_id                                  Int
+    group_id                                    Int
+    product                                     Products              @relation(fields: [product_id], references: [id])
+    group                                       Service_addon_groups  @relation(fields: [group_id], references: [id])
+
+    @@id([product_id, group_id])
 }
 
 model Orders {
@@ -133,7 +144,7 @@ model Orders {
     total_laundry     Numeric(12, 2)
     total_product     Numeric(12, 2)
     total_addon       Numeric(12, 2)      @default(0)
-    total_amount      Int
+    total_amount      Numeric(12, 2)
     status            VarChar(20)
     payment_method    VarChar(20)
     notes             String?
@@ -180,13 +191,29 @@ model Service_order_item_addons {
 }
 
 model Product_order_item {
-    id         Uuid     @id @default(uuid())
+    id         Uuid           @id @default(uuid())
     order_id   String
     product_id Int
     qty        Int
-    subtotal   Int
+    subtotal   Numeric(12, 2)
     product    Products @relation(fields: [product_id], references: [id])
     order      Orders   @relation(fields: [order_id], references: [order_id])
+    addons     Product_order_item_addons[]
+}
+
+model Product_order_item_addons {
+    id                    Uuid               @id @default(uuid())
+    product_order_item_id Uuid
+    addon_option_id       Int?
+    group_code            VarChar(30)
+    group_name            VarChar(50)
+    option_name           VarChar(50)
+    price                 Numeric(12, 2)     @default(0)
+    price_mode            VarChar(20)        @default("per_unit")
+    qty                   Numeric(6, 2)      @default(0)
+    subtotal              Numeric(12, 2)     @default(0)
+    productOrderItem      Product_order_item @relation(fields: [product_order_item_id], references: [id], onDelete: Cascade)
+    addonOption           Service_addon_options? @relation(fields: [addon_option_id], references: [id])
 }
 
 model Payments {

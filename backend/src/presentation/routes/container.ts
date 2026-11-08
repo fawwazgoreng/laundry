@@ -15,7 +15,7 @@ import { pgUserRepository } from "../../infrastructure/repository/pgUserReposito
 import { AuthUseCase } from "../../useCase/user/authUseCase";
 import { HandleMidtransNotificationUseCase } from "../../useCase/payment/midtransNotificationUseCase";
 import { ExpirePendingPaymentsUseCase } from "../../useCase/payment/expirePendingPaymentsUseCase";
-import { defaultMidtransCoreApi } from "../../useCase/order/orderUseCases";
+import { defaultMidtransCoreApi } from "../../useCase/order/index";
 import { createAdminMiddleware } from "../middleware/adminMiddleware";
 import { createAuthMiddleware } from "../middleware/authMiddleware";
 

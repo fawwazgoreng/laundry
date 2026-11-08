@@ -3,6 +3,8 @@ import { z } from "zod";
 import { AppError } from "../../helper/errorHandling/appError";
 import type { paymentConfirmInput, paymentCreateInput, paymentStatus } from "../types/paymentType";
 
+import { moneyInputSchema } from "../../lib/money";
+
 const statuses = ["PENDING", "PAID", "FAILED", "EXPIRED"] as const;
 const confirmStatuses = ["PAID", "FAILED", "EXPIRED"] as const;
 
@@ -11,21 +13,21 @@ export type midtransNotificationInput = {
     status_code: string
     gross_amount: string
     signature_key: string
-    transaction_status?: string
-    payment_type?: string
-    fraud_status?: string
-    va_numbers?: Array<{ bank: string; va_number: string }>
-    permata_va_number?: string
-    bill_key?: string
-    biller_code?: string
-    transaction_time?: string
+    transaction_status?: string | undefined
+    payment_type?: string | undefined
+    fraud_status?: string | undefined
+    va_numbers?: Array<{ bank: string; va_number: string }> | undefined
+    permata_va_number?: string | undefined
+    bill_key?: string | undefined
+    biller_code?: string | undefined
+    transaction_time?: string | undefined
 }
 
 export class paymentEntity {
     private static readonly createSchema = z.object({
         order_id: z.string().min(1),
         payment_type: z.string().min(1).max(20),
-        gross_amount: z.coerce.number().nonnegative(),
+        gross_amount: moneyInputSchema,
         transaction_id: z.string().optional(),
         va_number: z.string().optional(),
     });

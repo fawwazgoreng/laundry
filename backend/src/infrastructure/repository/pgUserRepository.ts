@@ -54,7 +54,7 @@ export class pgUserRepository implements userRepository {
         return toUserType(user);
     }
 
-    async updateProfile(id: string, data: { username?: string; phone?: string }): Promise<userType | null> {
+    async updateProfile(id: string, data: { username?: string | undefined; phone?: string | undefined }): Promise<userType | null> {
         const existing = await prisma.orm.public.User.where({ id }).first();
         if (!existing) return null;
         const user = await prisma.orm.public.User.where({ id }).update({

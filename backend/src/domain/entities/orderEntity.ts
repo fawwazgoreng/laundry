@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { AppError } from "../../helper/errorHandling/appError";
+import { roundMoney, type Money, moneyInputSchema, addMoney, clampMinMoney, multiplyMoney, money, decimalPlacesOf } from "../../lib/money";
 import { ORDER_STATUSES, type orderCreateType, type orderKind, type orderStatus, type orderTotalsType, PAYMENT_METHODS } from "../types/orderType";
 import type { paymentStatus } from "../types/paymentType";
 
@@ -10,7 +11,10 @@ export class orderEntity {
         services: z.array(
             z.object({
                 laundry_service_id: z.coerce.number().int().positive(),
-                qty: z.coerce.number().positive("Berat harus lebih dari 0"),
+                qty: z.coerce.number().positive("Berat harus lebih dari 0").refine(
+                    (q) => decimalPlacesOf(q) <= 2,
+                    { message: "Kuantitas maksimal 2 desimal" },
+                ),
                 notes: z.string().optional().default(""),
                 addons: z.array(
                     z.object({
@@ -29,7 +33,7 @@ export class orderEntity {
         user_address_id: z.coerce.number().int().positive(),
         outlet_id: z.coerce.number().int().positive(),
         distance_km: z.coerce.number().nonnegative().default(0),
-        delivery_fee: z.coerce.number().nonnegative().optional(),
+        delivery_fee: moneyInputSchema.optional(),
         payment_method: z.enum(PAYMENT_METHODS, { message: "Invalid payment method" }),
         bank: z.enum(["bca", "bni", "bri", "permata", "mandiri"]).optional(),
         notes: z.string().optional(),
@@ -106,28 +110,28 @@ export class orderEntity {
     }
 
     static computeTotals(input: {
-        laundrySubtotal: number
-        productSubtotal: number
+        laundrySubtotal: Money
+        productSubtotal: Money
         itemCount: number
-        deliveryFee: number
-        addonSubtotal?: number
+        deliveryFee: Money
+        addonSubtotal?: Money
     }): orderTotalsType {
-        const total = Math.max(
+        const total = clampMinMoney(
+            addMoney(input.laundrySubtotal, input.productSubtotal, roundMoney(input.deliveryFee)),
             0,
-            Math.round(input.laundrySubtotal + input.productSubtotal + input.deliveryFee),
         );
         return {
-            total_laundry: Math.round(input.laundrySubtotal),
-            total_product: Math.round(input.productSubtotal),
-            total_addon: Math.round(input.addonSubtotal ?? 0),
-            delivery_fee: Math.round(input.deliveryFee),
+            total_laundry: input.laundrySubtotal,
+            total_product: input.productSubtotal,
+            total_addon: input.addonSubtotal ?? money(0),
+            delivery_fee: roundMoney(input.deliveryFee),
             total_amount: total,
             item_count: input.itemCount,
         };
     }
 
-    static computeDeliveryFee(distanceKm: number): number {
-        if (distanceKm <= 0) return 0;
-        return Math.round(distanceKm * 2000);
+    static computeDeliveryFee(distanceKm: number): Money {
+        if (distanceKm <= 0) return money(0);
+        return roundMoney(multiplyMoney(distanceKm, 2000));
     }
 }

@@ -10,7 +10,7 @@ describe("paymentEntity", () => {
             payment_type: "transfer_bank",
             gross_amount: "75000",
         });
-        expect(dto.gross_amount).toBe(75000);
+        expect(dto.gross_amount).toBe("75000.00");
     });
 
     it("rejects a negative amount", () => {

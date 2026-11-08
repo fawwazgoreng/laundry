@@ -5,7 +5,9 @@ export type addressCreateType = {
     longitude: number
 }
 
-export type addressUpdateType = Partial<addressCreateType>
+import type { patchType } from "./globalType";
+
+export type addressUpdateType = patchType<addressCreateType>
 
 export interface addressType {
     id: number

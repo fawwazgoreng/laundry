@@ -1,9 +1,9 @@
 import type { productCategory, productCreateType, productType, productUpdateType } from "../types/productType";
 
 export type productListOptions = {
-    category?: productCategory | "all"
-    search?: string
-    sort?: "terbaru" | "terlama" | "termahal" | "termurah"
+    category?: productCategory | "all" | undefined
+    search?: string | undefined
+    sort?: "terbaru" | "terlama" | "termahal" | "termurah" | undefined
     page?: number
     perPage?: number
     inStockOnly?: boolean

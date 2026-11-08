@@ -1,3 +1,7 @@
+import type { patchType } from "./globalType";
+import type { Money } from "../../lib/money";
+import type { serviceAddonGroupType } from "./serviceType";
+
 
 export type productCategory =
     | "Detergen"
@@ -9,21 +13,22 @@ export type productCategory =
 export type productCreateType = {
     name: string
     category: productCategory
-    price: number
+    price: Money
     size: string
     stock: number
     is_active: boolean
 }
 
-export type productUpdateType = Partial<Omit<productCreateType, "name">> & { name?: string }
+export type productUpdateType = patchType<productCreateType>
 
 export interface productType {
     id: number
     name: string
     category: productCategory
-    price: number
+    price: Money
     size: string
     stock: number
     is_active: boolean
     image: string
+    addon_groups: serviceAddonGroupType[]
 }

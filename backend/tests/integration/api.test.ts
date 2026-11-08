@@ -19,7 +19,7 @@ function api(method: string, path: string, options: ApiOptions = {}) {
             "cf-connecting-ip": options.ip ?? `10.0.0.${Math.floor(Math.random() * 250) + 1}`,
             ...(options.token ? { Authorization: `Bearer ${options.token}` } : {}),
         },
-        body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+        ...(options.body !== undefined ? { body: JSON.stringify(options.body) } : {}),
     });
 }
 

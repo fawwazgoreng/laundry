@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { moneyInputSchema } from "../../lib/money";
+
 import { AppError } from "../../helper/errorHandling/appError";
 import type { serviceCreateType, serviceUpdateType } from "../types/serviceType";
 
@@ -6,7 +8,7 @@ export class serviceEntity {
     private static readonly createSchema = z.object({
         name: z.string().min(1, "Name is required").max(30, "Name max 30 characters"),
         unit: z.string().min(1, "Unit is required").max(10, "Unit max 10 characters"),
-        price_per_unit: z.coerce.number().positive("Harga harus lebih dari 0"),
+        price_per_unit: moneyInputSchema,
         description: z.string().max(500, "Description max 500 characters").default(""),
         estimated_duration_hours: z.coerce.number().int().positive("Estimasi waktu harus positif"),
         is_active: z.boolean().default(true),

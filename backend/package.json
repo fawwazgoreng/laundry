@@ -13,6 +13,7 @@
   "dependencies": {
     "@prisma/orm-postgres": "8.0.0-rc.18",
     "@types/midtrans-client": "^1.4.0",
+    "decimal.js": "^10.6.0",
     "hono": "^4.13.0",
     "hono-rate-limiter": "^0.5.3",
     "midtrans-client": "^1.4.3",

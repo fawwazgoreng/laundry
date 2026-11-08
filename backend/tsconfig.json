@@ -1,6 +1,9 @@
 {
   "compilerOptions": {
     "strict": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
     "types": ["bun"],
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx"

@@ -2,13 +2,14 @@ import type { refundRepository } from "../../domain/repositories/refundRepositor
 import type { refundCreateType, refundStatus, refundType, refundUpdateType } from "../../domain/types/refundType";
 import { prisma } from "../prisma/prisma";
 import { fromInstant, instant, numeric, varchar } from "../prisma/scalars";
+import { money } from "../../lib/money";
 
 type RefundRow = {
     id: string
     order_id: string
     user_id: string
     payment_id: string | null
-    amount: unknown
+    amount: string
     reason: string
     status: string
     gateway_ref: string | null
@@ -23,7 +24,7 @@ function toRefundType(row: RefundRow): refundType {
         order_id: row.order_id,
         user_id: row.user_id,
         payment_id: row.payment_id,
-        amount: Number(row.amount),
+        amount: money(row.amount),
         reason: row.reason,
         status: row.status as refundStatus,
         gateway_ref: row.gateway_ref,

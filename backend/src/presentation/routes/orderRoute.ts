@@ -7,7 +7,7 @@ import {
     GetOrderUseCase,
     ListOrdersUseCase,
     UpdateOrderStatusUseCase,
-} from "../../useCase/order/orderUseCases";
+} from "../../useCase/order/index";
 import {
     addressRepository,
     adminMiddleware,

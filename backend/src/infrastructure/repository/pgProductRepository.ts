@@ -5,30 +5,41 @@ import type { serviceAddonGroupType } from "../../domain/types/serviceType";
 import { prisma } from "../prisma/prisma";
 import { numeric, varchar } from "../prisma/scalars";
 import { toAddonGroup, type AddonGroupRow } from "./addonRowMapper";
+import { money } from "../../lib/money";
 
 type ProductRow = {
     id: number
     name: string
     category: string
-    price: unknown
+    price: string
     size: string
     stock: number
     is_active: boolean
     image: string
+    addonGroups?: Array<{ group: AddonGroupRow | null }>;
 };
 
-function toProductType(row: ProductRow): productType {
+function toProductType(row: ProductRow, activeOnly = false): productType {
     return {
         id: row.id,
         name: row.name,
         category: row.category as productType["category"],
-        price: Number(row.price),
+        price: money(row.price),
         size: row.size,
         stock: row.stock,
         is_active: row.is_active,
         image: row.image,
+        addon_groups: (row.addonGroups ?? [])
+            .map((link) => (link.group ? toAddonGroup(link.group, activeOnly) : null))
+            .filter((group): group is serviceAddonGroupType => group !== null),
     };
 }
+
+const productQuery = () =>
+    prisma.orm.public.Products
+        .include("addonGroups", (link) =>
+            link.include("group", (group) => group.include("options")),
+        );
 export class pgProductRepository implements productRepository {
     async list(opts: productListOptions = {}): Promise<{ data: productType[]; count: number }> {
         const {
@@ -64,12 +75,12 @@ export class pgProductRepository implements productRepository {
             base.aggregate((agg) => ({ count: agg.count() })),
         ]);
 
-        return { data: rows.map((row) => toProductType(row)), count: countAgg.count };
+        return { data: rows.map((row) => toProductType(row, true)), count: countAgg.count };
     }
 
     async findById(id: number): Promise<productType | null> {
-        const row = await prisma.orm.public.Products.where({ id }).first();
-        return row ? toProductType(row) : null;
+        const row = await productQuery().where({ id }).first();
+        return row ? toProductType(row, true) : null;
     }
 
     async create(data: productCreateType): Promise<productType> {
@@ -96,7 +107,7 @@ export class pgProductRepository implements productRepository {
             ...(data.stock !== undefined ? { stock: data.stock } : {}),
             ...(data.is_active !== undefined ? { is_active: data.is_active } : {}),
         });
-        return row ? toProductType(row) : null;
+        return row ? toProductType({ ...row, addonGroups: [] }) : null;
     }
 
     async remove(id: number): Promise<boolean> {
@@ -110,7 +121,7 @@ export class pgProductRepository implements productRepository {
         const existing = await prisma.orm.public.Products.where({ id }).first();
         if (!existing) return null;
         const row = await prisma.orm.public.Products.where({ id }).update({ image });
-        return row ? toProductType(row) : null;
+        return row ? toProductType({ ...row, addonGroups: [] }) : null;
     }
 
     async decrementStock(id: number, qty: number): Promise<productType | null> {
@@ -118,6 +129,6 @@ export class pgProductRepository implements productRepository {
         if (!existing) return null;
         const newStock = Math.max(0, existing.stock - qty);
         const row = await prisma.orm.public.Products.where({ id }).update({ stock: newStock });
-        return row ? toProductType(row) : null;
+        return row ? toProductType({ ...row, addonGroups: [] }) : null;
     }
 }

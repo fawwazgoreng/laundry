@@ -1,6 +1,8 @@
+import type { Money } from "../../lib/money";
+
 export interface adminStatsType {
     orders_today: number
-    revenue_today: number
+    revenue_today: Money
     laundry_in_progress: number
     products_sold: number
     recent_orders: Array<{
@@ -8,18 +10,18 @@ export interface adminStatsType {
         customer_name: string
         customer_phone: string
         status: string
-        total_amount: number
+        total_amount: Money
         items_summary: string
         created_at: string
     }>
     service_revenue: Array<{
         service_name: string
-        total: number
+        total: Money
         count: number
     }>
     weekly_revenue: Array<{
         date: string
-        total: number
+        total: Money
     }>
     low_stock_products: Array<{
         id: number
@@ -33,28 +35,28 @@ export interface cashflowType {
     order_id: string | null
     type: "income" | "expense"
     category: string
-    amount: number
+    amount: Money
     description: string
     created_at: string
 }
 
 export interface cashflowCategoryTotalType {
     category: string
-    total: number
+    total: Money
     count: number
 }
 
 export interface cashflowSectionType {
-    total: number
+    total: Money
     categories: cashflowCategoryTotalType[]
     items: cashflowType[]
 }
 
 export interface cashflowSummaryType {
-    total_income: number
-    total_expense: number
-    net_profit: number
-    balance: number
+    total_income: Money
+    total_expense: Money
+    net_profit: Money
+    balance: Money
     income: cashflowSectionType
     expense: cashflowSectionType
     items: cashflowType[]

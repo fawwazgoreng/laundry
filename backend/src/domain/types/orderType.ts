@@ -1,3 +1,4 @@
+import type { Money } from "../../lib/money";
 import type { addonPriceMode } from "./serviceType";
 import type { paymentStatus } from "./paymentType";
 import type { refundSummaryType, refundStatus } from "./refundType";
@@ -27,8 +28,8 @@ export type serviceAddonInput = {
 export type serviceOrderItemInput = {
     laundry_service_id: number
     qty: number
-    notes?: string
-    addons?: serviceAddonInput[]
+    notes?: string | undefined
+    addons?: serviceAddonInput[] | undefined
 }
 
 export type serviceAddonRecord = {
@@ -36,26 +37,27 @@ export type serviceAddonRecord = {
     group_code: string
     group_name: string
     option_name: string
-    price: number
+    price: Money
     price_mode: addonPriceMode
     qty: number
-    subtotal: number
+    subtotal: Money
 }
 
 export type productOrderItemInput = {
     product_id: number
     qty: number
-    addons?: serviceAddonInput[]
+    addons?: serviceAddonInput[] | undefined
 }
 
 export type serviceItemRecord = Omit<serviceOrderItemInput, "addons"> & {
-    price_per_unit: number
-    addon_subtotal: number
+    price_per_unit: Money
+    addon_subtotal: Money
     addons: serviceAddonRecord[]
-    subtotal: number
+    subtotal: Money
 }
 export type productItemRecord = Omit<productOrderItemInput, "addons"> & {
-    subtotal: number
+    addons: serviceAddonRecord[]
+    subtotal: Money
 }
 
 export type orderCreateType = {
@@ -64,10 +66,10 @@ export type orderCreateType = {
     user_address_id: number
     outlet_id: number
     distance_km: number
-    delivery_fee?: number
+    delivery_fee?: Money | undefined
     payment_method: paymentMethod
-    bank?: "bca" | "bni" | "bri" | "permata" | "mandiri"
-    notes?: string
+    bank?: "bca" | "bni" | "bri" | "permata" | "mandiri" | undefined
+    notes?: string | undefined
 }
 
 export interface serviceOrderAddonType {
@@ -75,10 +77,10 @@ export interface serviceOrderAddonType {
     group_code: string
     group_name: string
     option_name: string
-    price: number
+    price: Money
     price_mode: addonPriceMode
     qty: number
-    subtotal: number
+    subtotal: Money
 }
 
 export interface serviceOrderItemType {
@@ -87,10 +89,10 @@ export interface serviceOrderItemType {
     service_name: string
     unit: string
     qty: number
-    price_per_unit: number
-    addon_subtotal: number
+    price_per_unit: Money
+    addon_subtotal: Money
     addons: serviceOrderAddonType[]
-    subtotal: number
+    subtotal: Money
     notes: string
 }
 
@@ -102,16 +104,17 @@ export interface productOrderItemType {
     size: string
     image: string
     qty: number
-    price: number
-    subtotal: number
+    price: Money
+    addons: serviceOrderAddonType[]
+    subtotal: Money
 }
 
 export interface orderSummaryType {
-    total_laundry: number
-    total_product: number
-    total_addon: number
-    delivery_fee: number
-    total_amount: number
+    total_laundry: Money
+    total_product: Money
+    total_addon: Money
+    delivery_fee: Money
+    total_amount: Money
     item_count: number
 }
 
@@ -127,7 +130,7 @@ export interface paymentSummaryType {
     id: string
     transaction_id: string
     payment_type: paymentMethod
-    gross_amount: number
+    gross_amount: Money
     status: string
     va_number?: string | null
     paid_at: string | null
@@ -142,11 +145,11 @@ export interface orderDetailType {
     order_type: orderKind
     refund_eligible: boolean
     payment_method: paymentMethod
-    total_laundry: number
-    total_product: number
-    total_addon: number
-    delivery_fee: number
-    total_amount: number
+    total_laundry: Money
+    total_product: Money
+    total_addon: Money
+    delivery_fee: Money
+    total_amount: Money
     distance_km: number
     notes: string | null
     created_at: string
@@ -176,19 +179,19 @@ export interface orderDetailType {
 }
 
 export interface paymentGate {
-    redirect_url?: string
-    token?: string
+    redirect_url?: string | undefined
+    token?: string | undefined
     order_id: string
-    va_number?: string
+    va_number?: string | undefined
 }
 
 export type orderListFilters = {
-    search?: string
-    customer?: string
-    status?: orderStatus | "all"
-    service?: string
-    page?: number
-    perPage?: number
+    search?: string | undefined
+    customer?: string | undefined
+    status?: orderStatus | "all" | undefined
+    service?: string | undefined
+    page?: number | undefined
+    perPage?: number | undefined
 }
 
 export interface orderListItemType {
@@ -198,7 +201,7 @@ export interface orderListItemType {
     order_type: orderKind
     refund_eligible: boolean
     refund_status: refundStatus | null
-    total_amount: number
+    total_amount: Money
     payment_method: paymentMethod
     payment_status: string | null
     created_at: string
@@ -210,17 +213,17 @@ export interface orderListItemType {
 }
 
 export interface orderTotalsType {
-    total_laundry: number
-    total_product: number
-    total_addon: number
-    delivery_fee: number
-    total_amount: number
+    total_laundry: Money
+    total_product: Money
+    total_addon: Money
+    delivery_fee: Money
+    total_amount: Money
     item_count: number
 }
 
 export type orderNewPaymentType = {
     payment_type: paymentMethod
-    gross_amount: number
+    gross_amount: Money
     status: paymentStatus
     transaction_id?: string
     va_number?: string | null
@@ -231,7 +234,7 @@ export type orderNewPaymentType = {
 export type orderNewCashflowType = {
     type: "income" | "expense"
     category: string
-    amount: number
+    amount: Money
     description: string
 }
 
@@ -241,9 +244,9 @@ export type orderNewRecordType = {
     outlet_id: number
     user_address_id: number
     distance_km: number
-    delivery_fee: number
+    delivery_fee: Money
     payment_method: paymentMethod
-    notes?: string
+    notes?: string | undefined
     services: serviceItemRecord[]
     products: productItemRecord[]
     totals: orderTotalsType

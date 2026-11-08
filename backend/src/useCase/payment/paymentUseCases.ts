@@ -53,13 +53,13 @@ export class ConfirmPaymentUseCase {
                 order_id: confirmed.order_id,
                 type: "income",
                 category: "sales",
-                amount: Number(confirmed.gross_amount),
+                amount: confirmed.gross_amount,
                 description: `Pembayaran ${confirmed.payment_type} diverifikasi (${confirmed.transaction_id})`,
             });
             logger.info("payment confirmed", {
                 orderId: confirmed.order_id,
                 transactionId: confirmed.transaction_id,
-                amount: Number(confirmed.gross_amount),
+                amount: confirmed.gross_amount,
                 actorUserId,
             });
         }
