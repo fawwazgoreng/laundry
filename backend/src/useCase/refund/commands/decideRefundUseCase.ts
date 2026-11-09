@@ -6,6 +6,7 @@ import type { refundRepository } from "../../../domain/repositories/refundReposi
 import type { refundType } from "../../../domain/types/refundType";
 import { AppError } from "../../../helper/errorHandling/appError";
 import { logger } from "../../../helper/logging/logger";
+import { assertRefundEligibility } from "../refundValidator";
 
 export class DecideRefundUseCase {
     constructor(
@@ -36,18 +37,18 @@ export class DecideRefundUseCase {
 
         const order = await this.orderRepository.findByOrderId(refund.order_id);
         if (!order) throw AppError.notFound("Pesanan tidak ditemukan");
-        refundEntity.assertProductOnly(order);
-        if (!order.payment || order.payment.status !== "PAID") {
-            throw AppError.conflict("Pembayaran tidak dapat direfund karena statusnya bukan PAID");
-        }
-        if (order.payment_method === "cod") {
-            throw AppError.conflict("Refund gateway tidak tersedia untuk pembayaran COD");
-        }
+        assertRefundEligibility({
+            order,
+            now: new Date(),
+            latestRefundStatus: refund.status,
+        });
+        const payment = order.payment;
+        if (!payment) throw AppError.conflict("Pembayaran tidak dapat direfund karena statusnya bukan PAID");
 
         let gatewayRef: string | null = null;
         let gatewayResponse: Record<string, unknown> | null = null;
         if (order.payment_method === "transfer_bank") {
-            const transactionId = order.payment.transaction_id;
+            const transactionId = payment.transaction_id;
             if (!transactionId) throw AppError.conflict("Transaksi gateway tidak ditemukan");
             await this.cashflowRepository.create({
                 order_id: order.id,
@@ -58,7 +59,7 @@ export class DecideRefundUseCase {
             })
         }
 
-        await this.paymentRepository.updateStatus(order.payment.id, "REFUNDED");
+        await this.paymentRepository.updateStatus(payment.id, "REFUNDED");
         try {
             await this.cashflowRepository.create({
                 order_id: order.order_id,

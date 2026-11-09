@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import type { ChangeEvent } from "react"
 import { Box, Search, UploadCloud } from "lucide-react"
 import { formatIDR } from "../../lib/format"
+import { toMoneyInput } from "../../lib/utils"
 import { PRODUCT_CATEGORIES } from "../../lib/utils"
-import type { Product } from "../../lib/types"
+import type { Money, Product } from "../../lib/types"
 import { productApi } from "../../services/api"
 import { ApiError } from "../../services/apiClient"
 import { useToast } from "../../components/Toast"
@@ -23,7 +24,7 @@ interface ProductCard {
   id: number
   name: string
   category: string
-  price: number
+  price: Money
   stock: number
   image: string | undefined
 }
@@ -122,7 +123,7 @@ export function AdminProductManagementPage() {
     setEditingId(product.id)
     setName(product.name)
     setFormCategory(product.category)
-    setPrice(String(product.price))
+    setPrice(product.price)
     setStock(String(product.stock))
     setDescription("")
     setPendingImage(null)
@@ -152,7 +153,7 @@ export function AdminProductManagementPage() {
       const payload = {
         name: name.trim(),
         category: formCategory,
-        price: Number(price),
+        price: toMoneyInput(price),
         stock: stock ? Number(stock) : 0,
         size: "1 Pack",
         is_active: true,

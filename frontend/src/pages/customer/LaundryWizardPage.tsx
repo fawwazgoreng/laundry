@@ -1,3 +1,4 @@
+import { Decimal } from "decimal.js"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Check, Droplets, Scissors, Shirt, Sparkles, Wind, Zap } from "lucide-react"
@@ -77,9 +78,10 @@ export function LaundryWizardPage() {
       .filter((option) => optionIds.includes(option.id))
       .map((option) => ({ group, option }))
   })
-  const laundryBase = (selectedService?.price_per_unit ?? 0) * estimatedWeightKg
-  const addonTotal = selectedAddonsSubtotal(selectedAddonList, estimatedWeightKg)
-  const estimatedTotal = laundryBase + addonTotal
+  const laundryBase = new Decimal(selectedService?.price_per_unit ?? "0")
+    .times(new Decimal(estimatedWeightKg))
+  const addonTotal = new Decimal(selectedAddonsSubtotal(selectedAddonList, estimatedWeightKg))
+  const estimatedTotal = laundryBase.plus(addonTotal)
 
   function handleSelectService(service: Service) {
     setSelectedServiceId(service.id)
@@ -281,13 +283,13 @@ export function LaundryWizardPage() {
             {selectedAddonList.length > 0 && (
               <div className="flex justify-between">
                 <span className="text-gray-500">Tambahan Add-on</span>
-                <span className="font-medium text-ink-strong">{formatIDR(addonTotal)}</span>
+                <span className="font-medium text-ink-strong">{formatIDR(addonTotal.toNumber())}</span>
               </div>
             )}
           </div>
           <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
             <span className="text-sm font-semibold text-ink-strong">Estimasi Total</span>
-            <span className="text-lg font-bold text-primary">{formatIDR(estimatedTotal)}</span>
+            <span className="text-lg font-bold text-primary">{formatIDR(estimatedTotal.toNumber())}</span>
           </div>
           {(addOnsError && addOnsError.length > 3) && (
             <div className="m-4">

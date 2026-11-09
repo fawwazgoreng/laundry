@@ -11,6 +11,7 @@ import { SpendingTrend } from "./dashboard/SpendingTrend"
 import { RecentActivity } from "./dashboard/RecentActivity"
 import { ProfileSection } from "./dashboard/ProfileSection"
 import { AddressSection } from "./dashboard/AddressSection"
+import { Decimal } from "decimal.js"
 import type { Activity, DashboardStat, HistoryRow } from "./dashboard/types"
 
 // Ambil angka pertama dari teks satuan, misal "2 Kg" -> "2"
@@ -22,11 +23,11 @@ const parseUnits = (unitText: string): string => {
 // Bangun data tren pengeluaran 6 bulan terakhir dari daftar order
 const buildSpendingTrend = (orders: OrderListItem[]): Array<{ month: string; value: number }> => {
   const now = new Date()
-  const buckets = new Map<string, number>()
+  const buckets = new Map<string, Decimal>()
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-    buckets.set(key, 0)
+    buckets.set(key, new Decimal(0))
   }
   const labels = new Map<string, string>()
   for (const [key] of buckets) {
@@ -38,9 +39,9 @@ const buildSpendingTrend = (orders: OrderListItem[]): Array<{ month: string; val
     const d = new Date(order.created_at)
     if (Number.isNaN(d.getTime())) continue
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
-    if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + order.total_amount)
+    if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? new Decimal(0)).plus(order.total_amount))
   }
-  return [...buckets.entries()].map(([key, value]) => ({ month: labels.get(key) ?? key, value }))
+  return [...buckets.entries()].map(([key, value]) => ({ month: labels.get(key) ?? key, value: value.toNumber() }))
 }
 
 // Halaman pengaturan akun & aktivitas pelanggan (komposisi dari beberapa section)
@@ -87,7 +88,7 @@ export const DashboardPage = () => {
   const stats: DashboardStat[] = [
     {
       label: "Total Pengeluaran",
-      value: formatIDR(orderHistory.reduce((sum, o) => sum + o.total, 0)),
+      value: formatIDR(orderHistory.filter((o) => o.status !== "DIBATALKAN").reduce((sum, o) => sum.plus(o.total), new Decimal(0)).toNumber()),
       icon: Wind,
     },
     {

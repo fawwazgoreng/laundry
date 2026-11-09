@@ -4,6 +4,7 @@ import type { refundRepository } from "../../../domain/repositories/refundReposi
 import type { refundStatus, refundType } from "../../../domain/types/refundType";
 import { AppError } from "../../../helper/errorHandling/appError";
 import { logger } from "../../../helper/logging/logger";
+import { assertRefundEligibility } from "../refundValidator";
 
 export const ACTIVE_REFUND_STATUSES: refundStatus[] = ["REQUESTED", "APPROVED", "REFUNDED"];
 
@@ -21,9 +22,12 @@ export class CreateRefundUseCase {
             throw AppError.forbidden("Anda tidak memiliki akses ke pesanan ini");
         }
 
-        refundEntity.assertRequestable(order);
-
         const existing = await this.refundRepository.findLatestByOrderId(order.order_id);
+        assertRefundEligibility({
+            order,
+            now: new Date(),
+            latestRefundStatus: existing?.status ?? null,
+        });
         if (existing && ACTIVE_REFUND_STATUSES.includes(existing.status)) {
             throw AppError.conflict("Pesanan ini sudah memiliki pengajuan refund");
         }

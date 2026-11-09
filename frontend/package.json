@@ -16,6 +16,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@types/leaflet": "^1.9.22",
     "@types/react-router-hash-link": "^2.4.10",
+    "decimal.js": "^10.6.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.42.0",
     "react": "^19.2.8",

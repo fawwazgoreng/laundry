@@ -4,7 +4,8 @@ import { Bar, BarChart, ResponsiveContainer, XAxis } from "recharts"
 import { Award, Box, ShoppingBag, Zap } from "lucide-react"
 import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
-import type { OrderListItem, OrderStatus } from "../../lib/types"
+import type { Money, OrderListItem, OrderStatus } from "../../lib/types"
+import { moneyToNumber } from "../../lib/utils"
 import { adminApi, orderApi } from "../../services/api"
 import { ErrorState, LoadingState } from "../../components/ui"
 
@@ -24,7 +25,7 @@ interface AdminOrderRow {
   customer: string
   content: string
   status: OrderStatus
-  total: number
+  total: Money
 }
 
 interface LowStockItem {
@@ -73,7 +74,7 @@ export function AdminDashboardPage() {
         setWeeklyRevenue(
           stats.weekly_revenue.map((r, idx) => ({
             day: dayLabels[idx] ?? r.date,
-            value: r.total,
+            value: moneyToNumber(r.total),
           })),
         )
         setLoadError(null)

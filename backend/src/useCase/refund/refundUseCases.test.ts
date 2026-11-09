@@ -12,7 +12,7 @@ const productOrder = {
     order_type: "PRODUCT",
     status: "SELESAI",
     payment_method: "transfer_bank",
-    total_amount: 25000,
+    total_amount: "25000.00",
     customer: { id: "u-1", username: "Budi", phone: "081" },
     services: [],
     products: [{ id: "item-1" }],
@@ -20,7 +20,7 @@ const productOrder = {
         id: "pay-1",
         transaction_id: "TRX-1",
         status: "PAID",
-        gross_amount: 25000,
+        gross_amount: "25000.00",
         payment_type: "transfer_bank",
     },
 } as unknown as orderDetailType;
@@ -86,7 +86,7 @@ describe("CreateRefundUseCase", () => {
         expect(result.status).toBe("REQUESTED");
         expect(refunds.create).toHaveBeenCalledWith(expect.objectContaining({
             order_id: productOrder.order_id,
-            amount: 25000,
+            amount: "25000.00",
             status: "REQUESTED",
         }));
     });
@@ -122,7 +122,7 @@ describe("DecideRefundUseCase", () => {
         expect(cashflow.create).toHaveBeenCalledWith(expect.objectContaining({
             type: "expense",
             category: "refund",
-            amount: 25000,
+            amount: "25000.00",
         }));
     });
 
@@ -207,8 +207,8 @@ describe("DecideRefundUseCase (characterization of current behavior)", () => {
         await useCase.execute("refund-1", { status: "APPROVED" }, "admin-1");
 
         expect(cashflow.create).toHaveBeenCalledTimes(2);
-        expect(cashflow.create).toHaveBeenNthCalledWith(1, expect.objectContaining({ amount: 25000, type: "expense", category: "refund" }));
-        expect(cashflow.create).toHaveBeenNthCalledWith(2, expect.objectContaining({ amount: 25000, type: "expense", category: "refund", order_id: productOrder.order_id }));
+        expect(cashflow.create).toHaveBeenNthCalledWith(1, expect.objectContaining({ amount: "25000.00", type: "expense", category: "refund" }));
+        expect(cashflow.create).toHaveBeenNthCalledWith(2, expect.objectContaining({ amount: "25000.00", type: "expense", category: "refund", order_id: productOrder.order_id }));
         expect(payments.updateStatus).toHaveBeenCalledWith("pay-1", "REFUNDED");
     });
 });

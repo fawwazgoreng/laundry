@@ -52,10 +52,14 @@ export type AddressInput = {
 export type AddonSelectionType = "single" | "multiple"
 export type AddonPriceMode = "per_unit" | "per_order"
 
+// Uang selalu dikirim backend sebagai string desimal 2 digit (mis. "12500.00")
+// agar tidak ada float di batas API.
+export type Money = string
+
 export interface ServiceAddonOption {
     id: number
     name: string
-    price: number
+    price: Money
     price_mode: AddonPriceMode
     is_default: boolean
     is_active: boolean
@@ -77,7 +81,7 @@ export interface Service {
     id: number
     name: string
     unit: string
-    price_per_unit: number
+    price_per_unit: Money
     description: string
     estimated_duration_hours: number
     is_active: boolean
@@ -87,7 +91,7 @@ export interface Service {
 export type ServiceInput = {
     name: string
     unit: string
-    price_per_unit: number
+    price_per_unit: Money
     description: string
     estimated_duration_hours: number
     is_active: boolean
@@ -97,7 +101,7 @@ export interface Product {
     id: number
     name: string
     category: string
-    price: number
+    price: Money
     size: string
     stock: number
     is_active: boolean
@@ -108,7 +112,7 @@ export interface Product {
 export type ProductInput = {
     name: string
     category: string
-    price: number
+    price: Money
     size: string
     stock: number
     is_active: boolean
@@ -122,7 +126,7 @@ export interface Outlet {
     latitude: number
     longitude: number
     max_coverage_km: number
-    min_order_amount: number
+    min_order_amount: Money
     weekly_hours: string | null
 }
 
@@ -131,7 +135,7 @@ export type OutletInput = {
     phone?: string
     address_text?: string
     max_coverage_km?: number
-    min_order_amount?: number
+    min_order_amount?: Money
     weekly_hours?: string
     latitude?: number
     longitude?: number
@@ -145,12 +149,12 @@ export type OrderStatus =
     | "SELESAI"
     | "DIBATALKAN"
 
-export type PaymentMethod = "fadarosipay" | "transfer_bank" | "cod"
+export type PaymentMethod =  "transfer_bank" | "cod"
 
 export interface OrderItem {
     id: string
     qty: number
-    subtotal: number
+    subtotal: Money
 }
 
 export interface ServiceOrderAddon {
@@ -158,18 +162,18 @@ export interface ServiceOrderAddon {
     group_code: string
     group_name: string
     option_name: string
-    price: number
+    price: Money
     price_mode: AddonPriceMode
     qty: number
-    subtotal: number
+    subtotal: Money
 }
 
 export interface ServiceOrderItem extends OrderItem {
     service_id: number
     service_name: string
     unit: string
-    price_per_unit: number
-    addon_subtotal: number
+    price_per_unit: Money
+    addon_subtotal: Money
     addons: ServiceOrderAddon[]
     notes: string
 }
@@ -180,8 +184,8 @@ export interface ProductOrderItem extends OrderItem {
     category: string
     size: string
     image: string
-    price: number
-    addon_subtotal: number
+    price: Money
+    addon_subtotal: Money
     addons: ServiceOrderAddon[]
 }
 
@@ -198,7 +202,7 @@ export interface Payment {
     transaction_id: string
     order_id: string
     payment_type: PaymentMethod
-    gross_amount: number
+    gross_amount: Money
     status: "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "DIBATALKAN" | "REFUNDED" | "CANCELLED"
     paid_at: string | null
     raw_response: Record<string, unknown> | null
@@ -212,7 +216,7 @@ export type RefundStatus = "REQUESTED" | "APPROVED" | "REJECTED" | "REFUNDED"
 export interface RefundSummary {
     id: string
     status: RefundStatus
-    amount: number
+    amount: Money
     reason: string
     gateway_ref: string | null
     requested_at: string
@@ -226,13 +230,13 @@ export interface OrderDetail {
     order_type: OrderKind
     refund_eligible: boolean
     payment_method: PaymentMethod
-    total_laundry: number
-    total_product: number
-    total_addon: number
-    delivery_fee: number
+    total_laundry: Money
+    total_product: Money
+    total_addon: Money
+    delivery_fee: Money
     discount_member: number
     discount_voucher: number
-    total_amount: number
+    total_amount: Money
     distance_km: number
     pickup_schedule: string | null
     estimated_delivery: string | null
@@ -263,7 +267,7 @@ export interface OrderListItem {
     order_type: OrderKind
     refund_eligible: boolean
     refund_status: RefundStatus | null
-    total_amount: number
+    total_amount: Money
     payment_method: PaymentMethod
     payment_status: Payment["status"] | null
     created_at: string
@@ -281,7 +285,7 @@ export type OrderCreateInput = {
         notes?: string
         addons?: Array<{ group_code: string; option_id: number }>
     }>
-    products: Array<{ product_id: number; qty: number }>
+    products: Array<{ product_id: number; qty: number; addons?: Array<{ group_code: string; option_id: number }> }>
     user_address_id: number
     outlet_id: number
     distance_km: number
@@ -296,7 +300,7 @@ export type OrderCreateInput = {
 
 export interface AdminStats {
     orders_today: number
-    revenue_today: number
+    revenue_today: Money
     laundry_in_progress: number
     products_sold: number
     recent_orders: Array<{
@@ -304,12 +308,12 @@ export interface AdminStats {
         customer_name: string
         customer_phone: string
         status: string
-        total_amount: number
+        total_amount: Money
         items_summary: string
         created_at: string
     }>
-    service_revenue: Array<{ service_name: string; total: number; count: number }>
-    weekly_revenue: Array<{ date: string; total: number }>
+    service_revenue: Array<{ service_name: string; total: Money; count: number }>
+    weekly_revenue: Array<{ date: string; total: Money }>
     low_stock_products: Array<{ id: number; name: string; stock: number }>
 }
 
@@ -323,7 +327,7 @@ export interface AddonGroupInput {
 
 export interface AddonOptionInput {
     name: string
-    price: number
+    price: Money
     price_mode: AddonPriceMode
     is_default: boolean
     is_active: boolean
@@ -334,28 +338,28 @@ export interface CashflowItem {
     order_id: string | null
     type: "income" | "expense"
     category: string
-    amount: number
+    amount: Money
     description: string
     created_at: string
 }
 
 export interface CashflowCategoryTotal {
     category: string
-    total: number
+    total: Money
     count: number
 }
 
 export interface CashflowSection {
-    total: number
+    total: Money
     categories: CashflowCategoryTotal[]
     items: CashflowItem[]
 }
 
 export interface CashflowSummary {
-    total_income: number
-    total_expense: number
-    net_profit: number
-    balance: number
+    total_income: Money
+    total_expense: Money
+    net_profit: Money
+    balance: Money
     income: CashflowSection
     expense: CashflowSection
     items: CashflowItem[]

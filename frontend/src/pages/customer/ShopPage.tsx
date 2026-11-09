@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { Search, X } from "lucide-react"
 import { formatIDR } from "../../lib/format"
-import type { Product, ServiceAddonGroup, ServiceAddonOption } from "../../lib/types"
+import type { Money, Product, ServiceAddonGroup, ServiceAddonOption } from "../../lib/types"
+import { moneyToNumber } from "../../lib/utils"
 import { productApi } from "../../services/api"
 import { useOrderDraft } from "../../context/OrderDraftContext"
 import { PRODUCT_CATEGORIES } from "../../lib/utils"
@@ -12,7 +13,7 @@ interface CardProduct {
   id: number
   name: string
   category: string
-  price: number
+  price: Money
   size: string
   imageUrl: string
   stock: number
@@ -65,8 +66,8 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
     if (search.trim()) {
       list = list.filter((p) => p.name.toLowerCase().includes(search.trim().toLowerCase()))
     }
-    if (sort === "termurah") list = [...list].sort((a, b) => a.price - b.price)
-    if (sort === "termahal") list = [...list].sort((a, b) => b.price - a.price)
+    if (sort === "termurah") list = [...list].sort((a, b) => moneyToNumber(a.price) - moneyToNumber(b.price))
+    if (sort === "termahal") list = [...list].sort((a, b) => moneyToNumber(b.price) - moneyToNumber(a.price))
     return list
   }, [category, search, sort, products])
 

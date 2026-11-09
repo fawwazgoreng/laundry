@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { ChevronLeft, ChevronRight, CreditCard, Eye, MapPin, Receipt, Search, Trash2 } from "lucide-react"
 import { adminStatusLabel, adminStatusStyle, paymentStatusLabel, paymentStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
-import type { OrderKind, OrderListItem, OrderStatus, Payment, RefundStatus } from "../../lib/types"
+import type { Money, OrderKind, OrderListItem, OrderStatus, Payment, RefundStatus } from "../../lib/types"
 import { orderApi } from "../../services/api"
 import { ApiError } from "../../services/apiClient"
 import { useToast } from "../../components/Toast"
@@ -40,7 +40,7 @@ interface AdminOrderRow {
   orderType: OrderKind
   refundStatus: RefundStatus | null
   paymentStatus: Payment["status"] | null
-  total: number
+  total: Money
 }
 
 export function AdminOrderManagementPage() {

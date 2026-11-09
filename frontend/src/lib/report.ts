@@ -1,3 +1,4 @@
+import { Decimal } from "decimal.js"
 import type { CashflowItem, OrderListItem } from "./types"
 
 // Helper bersama untuk halaman Laporan (/admin/laporan) dan Nota Laporan (/laporan/nota).
@@ -129,22 +130,23 @@ export function filterByRange<T extends { created_at: string }>(rows: T[], range
 // Nilai mentah tidak pernah dicampur: setiap section punya item, kategori, dan subtotal sendiri.
 export function buildCashflowSection(items: CashflowItem[]): CashflowSection {
   const sorted = items.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-  const totals = new Map<string, { total: number; count: number }>()
-  let total = 0
+  const totals = new Map<string, { total: Decimal; count: number }>()
+  let total = new Decimal(0)
 
   for (const item of sorted) {
-    total += item.amount
-    const current = totals.get(item.category) ?? { total: 0, count: 0 }
-    current.total += item.amount
+    const amount = new Decimal(item.amount)
+    total = total.plus(amount)
+    const current = totals.get(item.category) ?? { total: new Decimal(0), count: 0 }
+    current.total = current.total.plus(amount)
     current.count += 1
     totals.set(item.category, current)
   }
 
   const categories = Array.from(totals.entries())
-    .map(([category, value]) => ({ category, total: value.total, count: value.count }))
+    .map(([category, value]) => ({ category, total: value.total.toNumber(), count: value.count }))
     .sort((a, b) => b.total - a.total)
 
-  return { total, categories, items: sorted }
+  return { total: total.toNumber(), categories, items: sorted }
 }
 
 export function splitCashflow(items: CashflowItem[]): CashflowSections {
@@ -175,8 +177,8 @@ export function buildMonthlySeries(items: CashflowItem[], range: ReportRange): M
   for (const it of items) {
     const bucket = buckets.get(monthKey(new Date(it.created_at)))
     if (!bucket) continue
-    if (it.type === "income") bucket.income += it.amount
-    else bucket.expense += it.amount
+    if (it.type === "income") bucket.income = new Decimal(bucket.income).plus(it.amount).toNumber()
+    else bucket.expense = new Decimal(bucket.expense).plus(it.amount).toNumber()
   }
   return Array.from(buckets.values())
 }

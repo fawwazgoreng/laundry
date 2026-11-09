@@ -8,13 +8,15 @@ import type {
   ServiceAddonGroup,
   ServiceAddonOption,
 } from "../../lib/types"
+import { formatIDR } from "../../lib/format"
+import { toMoneyInput } from "../../lib/utils"
 import { addonApi, productApi, serviceApi } from "../../services/api"
 import { ApiError } from "../../services/apiClient"
 import { useToast } from "../../components/Toast"
 import { ErrorState, LoadingState } from "../../components/ui"
 import DeletePopup from "../../components/deletePopUp"
 
-type TargetType = "service"
+type TargetType = "service" | "product"
 
 export function AdminAddonManagementPage() {
   const { success: toastSuccess, error: toastError } = useToast()
@@ -177,7 +179,7 @@ export function AdminAddonManagementPage() {
     setOptionSaving(true)
     const payload: AddonOptionInput = {
       name: optionName.trim(),
-      price: Number(optionPrice),
+      price: toMoneyInput(optionPrice),
       price_mode: optionMode,
       is_default: false,
       is_active: optionActive,
@@ -337,7 +339,7 @@ export function AdminAddonManagementPage() {
                             {option.name} {!option.is_active && <span className="text-xs font-normal text-gray-400">(nonaktif)</span>}
                           </p>
                           <p className="text-xs text-gray-400">
-                            {option.price.toLocaleString("id-ID")} · {option.price_mode === "per_unit" ? "per unit" : "per order"}
+                            {formatIDR(option.price)} · {option.price_mode === "per_unit" ? "per unit" : "per order"}
                           </p>
                         </div>
                         <div className="flex gap-2">
@@ -383,6 +385,7 @@ export function AdminAddonManagementPage() {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <select value={targetType} onChange={(e) => { setTargetType(e.target.value as TargetType); setTargetId(0) }} className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-primary">
                   <option value="service">Layanan Laundry</option>
+                  <option value="product">Product Laundry</option>
                 </select>
                 <select value={targetId} onChange={(e) => setTargetId(Number(e.target.value))} className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-primary">
                   <option value={0}>Pilih item...</option>

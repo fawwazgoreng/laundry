@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react"
-import type { OrderStatus } from "../../../lib/types"
+import type { Money, OrderStatus } from "../../../lib/types"
 
 export interface DashboardStat {
   label: string
@@ -11,7 +11,7 @@ export interface Activity {
   id: string
   title: string
   date: string
-  price: number
+  price: Money
 }
 
 export interface CustomerAddress {
@@ -29,5 +29,5 @@ export interface HistoryRow {
   weightKg: string
   createdAt: string
   status: OrderStatus
-  total: number
+  total: Money
 }

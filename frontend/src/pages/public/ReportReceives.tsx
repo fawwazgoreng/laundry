@@ -117,6 +117,9 @@ export function ReportNotaPage() {
 
   const handlePrint = () => window.print()
 
+  const incomeVisible = sections.income.items.slice(0, 8)
+  const expenseVisible = sections.expense.items.slice(0, 8)
+
   if (loading) {
     return (
       <div className="flex min-h-[70vh] items-center justify-center">
@@ -292,7 +295,7 @@ export function ReportNotaPage() {
                 </tr>
               </thead>
               <tbody>
-                {sections.income.items.map((item) => (
+                {incomeVisible.map((item) => (
                   <tr key={item.id} className="border-b border-emerald-100 last:border-0">
                     <td className="px-4 py-2.5 text-gray-600">{formatShortDate(item.created_at)}</td>
                     <td className="px-4 py-2.5 font-medium text-ink-strong">
@@ -323,6 +326,9 @@ export function ReportNotaPage() {
                 </tr>
               </tfoot>
             </table>
+            <p className="px-4 py-3 text-xs text-gray-400">
+              Menampilkan {incomeVisible.length} dari {sections.income.items.length} transaksi.
+            </p>
           </section>
 
           <section className="report-section overflow-hidden rounded-xl border-2 border-red-700">
@@ -345,7 +351,7 @@ export function ReportNotaPage() {
                 </tr>
               </thead>
               <tbody>
-                {sections.expense.items.map((item) => (
+                {expenseVisible.map((item) => (
                   <tr key={item.id} className="border-b border-red-100 last:border-0">
                     <td className="px-4 py-2.5 text-gray-600">{formatShortDate(item.created_at)}</td>
                     <td className="px-4 py-2.5 font-medium text-ink-strong">
@@ -376,6 +382,9 @@ export function ReportNotaPage() {
                 </tr>
               </tfoot>
             </table>
+            <p className="px-4 py-3 text-xs text-gray-400">
+              Menampilkan {expenseVisible.length} dari {sections.expense.items.length} transaksi.
+            </p>
           </section>
 
           <section

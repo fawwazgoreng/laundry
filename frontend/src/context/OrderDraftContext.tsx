@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react"
 import type { ReactNode } from "react"
+import { Decimal } from "decimal.js"
 import type { PaymentMethod, Product, Service, ServiceAddonGroup, ServiceAddonOption } from "../lib/types"
 import { selectedAddonsSubtotal } from "../lib/serviceAddons"
 
@@ -119,25 +120,33 @@ export function OrderDraftProvider({ children }: { children: ReactNode }) {
     }, [])
 
     const value = useMemo(() => {
+        const sumAddons = (addons: DraftServiceAddon[], qty: number) =>
+            new Decimal(selectedAddonsSubtotal(addons, qty))
         const subtotalAddons = services.reduce(
-            (sum, s) => sum + selectedAddonsSubtotal(s.addons, s.qty),
-            0,
-        ) + products.reduce((sum, p) => sum + selectedAddonsSubtotal(p.addons, p.qty), 0)
+            (sum, s) => sum.plus(sumAddons(s.addons, s.qty)),
+            new Decimal(0),
+        ).plus(
+            products.reduce((sum, p) => sum.plus(sumAddons(p.addons, p.qty)), new Decimal(0)),
+        )
         const subtotalServices = services.reduce(
-            (sum, s) => sum + s.service.price_per_unit * s.qty + selectedAddonsSubtotal(s.addons, s.qty),
-            0,
+            (sum, s) => sum
+                .plus(new Decimal(s.service.price_per_unit).times(new Decimal(s.qty)))
+                .plus(sumAddons(s.addons, s.qty)),
+            new Decimal(0),
         )
         const subtotalProducts = products.reduce(
-            (sum, p) => sum + p.product.price * p.qty + selectedAddonsSubtotal(p.addons, p.qty),
-            0,
+            (sum, p) => sum
+                .plus(new Decimal(p.product.price).times(new Decimal(p.qty)))
+                .plus(sumAddons(p.addons, p.qty)),
+            new Decimal(0),
         )
         return {
             services,
             products,
             totalItems: services.length + products.reduce((sum, p) => sum + p.qty, 0),
-            subtotalServices,
-            subtotalAddons,
-            subtotalProducts,
+            subtotalServices: subtotalServices.toNumber(),
+            subtotalAddons: subtotalAddons.toNumber(),
+            subtotalProducts: subtotalProducts.toNumber(),
             addService,
             updateServiceQty,
             removeService,

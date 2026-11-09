@@ -125,7 +125,7 @@ function CashflowTable({ title, subtitle, tone, items, total, limit = 8 }: Cashf
       </div>
       {hiddenCount > 0 && (
         <p className="px-4 py-3 text-xs text-gray-400">
-          Menampilkan {visibleItems.length} dari {items.length} transaksi. Cetak laporan untuk daftar lengkap.
+          Menampilkan {visibleItems.length} dari {items.length} transaksi.
         </p>
       )}
     </section>

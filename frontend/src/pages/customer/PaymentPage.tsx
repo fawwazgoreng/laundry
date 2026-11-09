@@ -1,3 +1,4 @@
+import { Decimal } from "decimal.js"
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import { AlertTriangle, Box, Check, Copy, Hash, Info, RefreshCcw, ShieldCheck, Timer } from "lucide-react"
@@ -33,7 +34,7 @@ const terms = [
 
 interface SummaryRow {
   label: string
-  value: number
+  value: string
 }
 
 const paymentMethodLabel: Record<string, string> = {
@@ -71,7 +72,7 @@ export function PaymentPage() {
         const rows: SummaryRow[] = [
           {
             label: `Total Harga (${order.services.length + order.products.length} Barang)`,
-            value: order.total_laundry + order.total_product,
+            value: new Decimal(order.total_laundry).plus(order.total_product).toFixed(2),
           },
           { label: "Biaya Pengiriman", value: order.delivery_fee },
         ]
@@ -93,7 +94,7 @@ export function PaymentPage() {
     return () => clearInterval(interval)
   }, [])
 
-  const total = summary.reduce((acc, item) => acc + item.value, 0)
+  const total = summary.reduce((acc, item) => acc.plus(new Decimal(item.value)), new Decimal(0)).toNumber()
   const hours = String(Math.floor(secondsLeft / 3600)).padStart(2, "0")
   const minutes = String(Math.floor((secondsLeft % 3600) / 60)).padStart(2, "0")
   const seconds = String(secondsLeft % 60).padStart(2, "0")
@@ -192,9 +193,9 @@ export function PaymentPage() {
             {summary.map((row) => (
               <div key={row.label} className="flex justify-between">
                 <span className="text-gray-500">{row.label}</span>
-                <span className={`font-medium ${row.value < 0 ? "text-primary" : "text-ink-strong"}`}>
-                  {row.value < 0 ? "-" : ""}
-                  {formatIDR(Math.abs(row.value))}
+                <span className={`font-medium ${new Decimal(row.value).isNegative() ? "text-primary" : "text-ink-strong"}`}>
+                  {new Decimal(row.value).isNegative() ? "-" : ""}
+                  {formatIDR(new Decimal(row.value).abs().toNumber())}
                 </span>
               </div>
             ))}

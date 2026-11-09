@@ -1,11 +1,47 @@
+import { Decimal } from "decimal.js";
 import type { OrderStatus } from "./types";
 
-export function formatRupiah(value: number, withSymbol = true): string {
-    const rounded = Math.round(value ?? 0);
-    const normalized = Object.is(rounded, -0) ? 0 : rounded;
+Decimal.set({ rounding: Decimal.ROUND_HALF_UP });
+
+// Nilai uang dari API tiba sebagai string desimal ("12500.00"); format hanya untuk tampilan.
+export function parseMoney(value: number | string | null | undefined): Decimal {
+    if (value === null || value === undefined || value === "") return new Decimal(0);
+    try {
+        return new Decimal(String(value));
+    } catch {
+        return new Decimal(0);
+    }
+}
+
+export function moneyToNumber(value: number | string | null | undefined): number {
+    return Number(parseMoney(value));
+}
+
+// Normalisasi input form menjadi string uang 2 desimal yang dikirim ke API.
+export function toMoneyInput(value: number | string): string {
+    try {
+        return new Decimal(value === "" || value === null || value === undefined ? 0 : value)
+            .toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+            .toFixed(2);
+    } catch {
+        return "0.00";
+    }
+}
+
+export function formatRupiah(value: number | string, withSymbol = true): string {
+    let rounded: Decimal;
+    if (typeof value === "string") {
+        // Uang dari API sudah 2 desimal; tampilan Rupiah membulatkan ke bilangan bulat.
+        rounded = parseMoney(value);
+    } else {
+        // Nilai angka lama tetap dirapikan memakai rule pembulatan yang sama.
+        rounded = new Decimal(value ?? 0).toDecimalPlaces(0, Decimal.ROUND_HALF_UP);
+    }
+    if (!rounded.isFinite()) rounded = new Decimal(0);
+    const normalized = rounded.isZero() ? new Decimal(0) : rounded;
     const formatted = new Intl.NumberFormat("id-ID", {
         maximumFractionDigits: 0,
-    }).format(normalized);
+    }).format(normalized.toNumber());
     return withSymbol ? `Rp ${formatted}` : formatted;
 }
 

@@ -1,6 +1,6 @@
 import { formatRupiah } from "./utils"
 
-export function formatIDR(value: number): string {
+export function formatIDR(value: number | string): string {
     return formatRupiah(value)
 }
 

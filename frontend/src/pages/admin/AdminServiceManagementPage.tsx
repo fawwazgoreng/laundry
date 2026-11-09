@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react"
 import { Pencil, Trash2 } from "lucide-react"
-import type { Service } from "../../lib/types"
+import type { Money, Service } from "../../lib/types"
+import { formatIDR } from "../../lib/format"
+import { toMoneyInput } from "../../lib/utils"
 import { serviceApi } from "../../services/api"
 import { ApiError } from "../../services/apiClient"
 import { useToast } from "../../components/Toast"
@@ -11,7 +13,7 @@ interface ServiceRow {
   id: number
   name: string
   unit: string
-  pricePerUnit: number
+  pricePerUnit: Money
   description: string
   etaHours: number
   is_active: boolean
@@ -78,7 +80,7 @@ export function AdminServiceManagementPage() {
     setEditingId(service.id)
     setName(service.name)
     setUnit(service.unit)
-    setPrice(String(service.pricePerUnit))
+    setPrice(service.pricePerUnit)
     setEta(String(service.etaHours))
   }
 
@@ -92,7 +94,7 @@ export function AdminServiceManagementPage() {
       const payload = {
         name: name.trim(),
         unit: unit || "Kg",
-        price_per_unit: Number(price),
+        price_per_unit: toMoneyInput(price),
         description,
         estimated_duration_hours: eta ? Number(eta) : 24,
         is_active: true,
@@ -170,7 +172,7 @@ export function AdminServiceManagementPage() {
                 </div>
                 <p className="mt-2 text-sm text-gray-500">{service.description}</p>
                 <p className="mt-2 text-sm text-gray-500">
-                  {service.pricePerUnit.toLocaleString("id-ID")} per 1 unit ( {service.unit} )
+                  {formatIDR(service.pricePerUnit)} per 1 unit ( {service.unit} )
                 </p>
                 <p className="text-sm text-gray-500">estimasi selesai {service.etaHours} jam</p>
                 {service.addonGroups.length > 0 && (

@@ -3,7 +3,8 @@ import { useNavigate, useParams } from "react-router-dom"
 import { Check, CreditCard, Info, MessageCircle, RotateCcw, Trash2 } from "lucide-react"
 import { formatIDR } from "../../lib/format"
 import { paymentStatusLabel, paymentStatusStyle } from "../../lib/orderStatus"
-import type { OrderDetail, ServiceOrderAddon } from "../../lib/types"
+import type { Money, OrderDetail, ServiceOrderAddon } from "../../lib/types"
+import { moneyToNumber } from "../../lib/utils"
 import { orderApi, refundApi } from "../../services/api"
 import { useAuth } from "../../context/AuthContext"
 import { useToast } from "../../components/Toast"
@@ -56,9 +57,9 @@ interface OrderItemRow {
   qty: number
   unit: string
   weightKg: number
-  pricePerUnit: number
+  pricePerUnit: Money
   addons: ServiceOrderAddon[]
-  subtotal: number
+  subtotal: Money
 }
 
 export function OrderDetailPage() {
@@ -160,6 +161,16 @@ export function OrderDetailPage() {
     )
   }
 
+    function refundMessage(order: OrderDetail): string {
+    let error: string[] = []
+
+    if (order.order_type === "SERVICE") error.push("order bertipe product")
+    if (order.status !== "SELESAI") error.push("order belum selesai")
+    if (order.payment_method === "cod") error.push("order menggunakan metode cod")
+    if (error.length > 0) return `Refund tidak dapat diajukan karena ${error.join(", ")}.`
+    return "Refund dapat diajukan"
+  }
+
   const currentStepIndex = stepIndexByStatus[order.status] ?? -1
   const totalWeightKg = Number(
     (order.services.reduce((sum, s) => sum + s.qty, 0) || 0).toFixed(1),
@@ -184,7 +195,7 @@ export function OrderDetailPage() {
       unit: "Pcs",
       weightKg: 0,
       pricePerUnit: p.price,
-      addons: [],
+      addons: p.addons,
       subtotal: p.subtotal,
     })),
   ]
@@ -255,9 +266,7 @@ export function OrderDetailPage() {
           <div className="flex-1">
             <p>
               <span className="font-semibold">Kebijakan refund:</span>{" "}
-              {order.order_type === "PRODUCT"
-                ? "Order ini bertipe Product dan dapat diajukan refund setelah pembayaran lunas."
-                : "Refund hanya dapat dilakukan untuk order bertipe Product dan pembayaran menggunakan Bank. Order layanan atau campuran otomatis tidak memenuhi syarat refund."}
+              {refundMessage(order)}
             </p>
             {order.refund && (
               <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-white/70 p-3">
@@ -399,7 +408,7 @@ export function OrderDetailPage() {
               <span className="text-gray-500">Subtotal Laundry ({totalWeightKg} Kg)</span>
               <span className="font-medium text-ink-strong">{formatIDR(order.total_laundry)}</span>
             </div>
-            {order.total_addon > 0 && (
+            {moneyToNumber(order.total_addon) > 0 && (
               <div className="flex justify-between pl-3">
                 <span className="text-xs text-gray-400">Termasuk Add-on Layanan</span>
                 <span className="text-xs font-medium text-gray-500">{formatIDR(order.total_addon)}</span>

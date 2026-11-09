@@ -5,6 +5,7 @@ import { formatIDR } from "../../lib/format"
 import type { Address, Outlet, User, PaymentGate } from "../../lib/types"
 import { addressApi, authApi, orderApi, outletApi } from "../../services/api"
 import { useOrderDraft, type DraftServiceAddon } from "../../context/OrderDraftContext"
+import { Decimal } from "decimal.js"
 import { addonSubtotal } from "../../lib/serviceAddons"
 import { ErrorState, LoadingState } from "../../components/ui"
 import { ApiError } from "../../services/apiClient"
@@ -29,7 +30,7 @@ interface CartLine {
   desc: string
   qty: number
   unit: string
-  pricePerUnit: number
+  pricePerUnit: string
   image?: string
   notes: string
   addons: DraftServiceAddon[]
@@ -39,9 +40,11 @@ function isWeightUnit(unit: string): boolean {
   return unit.toLowerCase() === "kg"
 }
 
-function cartLineTotal(line: CartLine): number {
-  const addonTotal = line.addons.reduce((sum, addon) => sum + addonSubtotal(addon.option, line.qty), 0)
-  return line.qty * line.pricePerUnit + addonTotal
+function cartLineTotal(line: CartLine): string {
+  const addonTotal = new Decimal(
+    line.addons.reduce((sum, addon) => sum.plus(addonSubtotal(addon.option, line.qty)), new Decimal(0)),
+  )
+  return new Decimal(line.pricePerUnit).times(new Decimal(line.qty)).plus(addonTotal).toFixed(2)
 }
 
 interface DeliverAddress {
@@ -145,7 +148,9 @@ export function CheckoutPage() {
     else removeProduct(line.id)
   }
 
-  const itemsTotal = cart.reduce((sum, line) => sum + cartLineTotal(line), 0)
+  const itemsTotal = cart
+    .reduce((sum, line) => sum.plus(new Decimal(cartLineTotal(line))), new Decimal(0))
+    .toNumber()
   const deliveryFee = useMemo(() => {
     if (!primaryAddress) return 10000
     const distanceKm = 2.5

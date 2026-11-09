@@ -1,3 +1,4 @@
+import { moneyToNumber } from "../../lib/utils"
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import { ArrowLeft, CheckCircle2, Loader2, Printer, XCircle } from "lucide-react"
@@ -267,7 +268,7 @@ export function ReceiptPage() {
                 <span className="text-gray-500">Subtotal Laundry ({totalWeightKg} Kg)</span>
                 <span className="font-medium text-ink-strong">{formatIDR(order.total_laundry)}</span>
               </div>
-              {order.total_addon > 0 && (
+              {moneyToNumber(order.total_addon) > 0 && (
                 <div className="flex justify-between pl-3">
                   <span className="text-xs text-gray-400">Termasuk Add-on Layanan</span>
                   <span className="text-xs font-medium text-gray-500">{formatIDR(order.total_addon)}</span>
