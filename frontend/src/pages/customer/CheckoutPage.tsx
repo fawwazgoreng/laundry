@@ -9,10 +9,12 @@ import { Decimal } from "decimal.js"
 import { addonSubtotal } from "../../lib/serviceAddons"
 import { ErrorState, LoadingState } from "../../components/ui"
 import { ApiError } from "../../services/apiClient"
+import { calculateDistance } from "../../lib/distanceCalc"
 
 const progressSteps = ["Pilih Layanan", "Detail & Berat", "Jadwal & Alamat", "Konfirmasi & Bayar"]
 
 type BankCode = "bca" | "mandiri" | "bni" | "bri"
+type PaymentChoice = "transfer" | "cod"
 
 const banks: { code: BankCode; name: string; desc: string }[] = [
   { code: "bca", name: "BCA", desc: "BCA Virtual Account" },
@@ -20,6 +22,11 @@ const banks: { code: BankCode; name: string; desc: string }[] = [
   { code: "bni", name: "BNI", desc: "BNI Virtual Account" },
   { code: "bri", name: "BRI", desc: "BRI Virtual Account" },
 ]
+
+/** Tarif ongkir per km. Harus sama dengan perhitungan backend (orderEntity.computeDeliveryFee). */
+const FEE_PER_KM = 2000
+/** Masa tenggang refund (hari). Idealnya diambil dari satu config bersama dengan backend. */
+const REFUND_WINDOW_DAYS = 7
 
 interface CartLine {
   key: string
@@ -47,6 +54,23 @@ function cartLineTotal(line: CartLine): string {
   return new Decimal(line.pricePerUnit).times(new Decimal(line.qty)).plus(addonTotal).toFixed(2)
 }
 
+/**
+ * Qty baru setelah tombol +/-. Langkah 0,1 kg dihitung dengan Decimal agar tidak muncul
+ * galat floating-point (mis. 0.1 + 0.2 = 0.30000000000000004) yang ikut terkirim ke API.
+ */
+function nextQty(line: CartLine, delta: number): number {
+  const weight = isWeightUnit(line.unit)
+  const next = new Decimal(line.qty).plus(delta).toDecimalPlaces(weight ? 1 : 0, Decimal.ROUND_HALF_UP)
+  return Decimal.max(next, weight ? 0.1 : 1).toNumber()
+}
+
+/* ---------- Koordinat & ongkir ---------- */
+
+interface Coordinate {
+  latitude: number
+  longitude: number
+}
+
 interface DeliverAddress {
   id: number
   label: string
@@ -54,6 +78,84 @@ interface DeliverAddress {
   fullAddress: string
   recipientName: string
   phone: string
+  coordinate: Coordinate | null
+}
+
+/** Nilai dari API bisa number atau string desimal; null/kosong dianggap tidak valid (bukan 0). */
+function toNumber(value: unknown): number {
+  if (typeof value === "number") return value
+  if (typeof value === "string" && value.trim() !== "") return Number(value)
+  return Number.NaN
+}
+
+function toCoordinate(latitude: unknown, longitude: unknown): Coordinate | null {
+  const lat = toNumber(latitude)
+  const lng = toNumber(longitude)
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
+  return { latitude: lat, longitude: lng }
+}
+
+type DeliveryQuote =
+  | { status: "pending" }
+  | { status: "invalid" }
+  | { status: "out_of_range"; distanceKm: Decimal; maxKm: number }
+  | { status: "ok"; distanceKm: Decimal; fee: Decimal }
+
+const PENDING_QUOTE: DeliveryQuote = { status: "pending" }
+
+/**
+ * Estimasi ongkir: jarak (dibulatkan 2 desimal, sesuai kolom distance_km NUMERIC(6,2))
+ * x tarif per km, dibulatkan ke rupiah penuh. Backend tetap menjadi sumber kebenaran.
+ */
+function quoteDelivery(outlet: Outlet | null, address: DeliverAddress | undefined): DeliveryQuote {
+  if (!outlet || !address) return PENDING_QUOTE
+
+  const from = toCoordinate(outlet.latitude, outlet.longitude)
+  const maxKm = toNumber(outlet.max_coverage_km)
+  if (!from || !address.coordinate || !Number.isFinite(maxKm)) return { status: "invalid" }
+
+  const rawKm = Math.ceil(calculateDistance(from, address.coordinate))
+  if (!Number.isFinite(rawKm)) return { status: "invalid" }
+
+  const distanceKm = new Decimal(rawKm).toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
+  if (distanceKm.greaterThan(maxKm)) return { status: "out_of_range", distanceKm, maxKm }
+
+  const fee = distanceKm.times(FEE_PER_KM).toDecimalPlaces(0, Decimal.ROUND_HALF_UP)
+  return { status: "ok", distanceKm, fee }
+}
+
+function deliveryProblem(quote: DeliveryQuote, outletError: string | null): string | null {
+  if (outletError) return outletError
+  switch (quote.status) {
+    case "out_of_range":
+      return `Jarak alamat terlalu jauh (${quote.distanceKm.toFixed(2)} km, melebihi jangkauan ${quote.maxKm} km). Pilih alamat lain.`
+    case "invalid":
+      return "Koordinat alamat atau outlet tidak valid, ongkos kirim tidak dapat dihitung."
+    default:
+      return null
+  }
+}
+
+/* ---------- Kelayakan refund (pratinjau saat checkout) ---------- */
+
+interface RefundCheck {
+  eligible: boolean
+  reasons: string[]
+}
+
+/**
+ * Pratinjau syarat yang sudah bisa diketahui saat checkout. Syarat lain
+ * (status order Selesai, pembayaran PAID, masa tenggang) dicek server saat refund diajukan.
+ */
+function evaluateCheckoutRefund(cart: readonly CartLine[], method: PaymentChoice): RefundCheck {
+  const reasons: string[] = []
+  if (cart.some((line) => line.kind === "service")) {
+    reasons.push("Pesanan berisi layanan laundry (order campuran layanan + produk juga tidak dapat direfund).")
+  }
+  if (method === "cod") {
+    reasons.push("Pembayaran COD bukan payment gateway.")
+  }
+  return { eligible: reasons.length === 0, reasons }
 }
 
 export function CheckoutPage() {
@@ -92,11 +194,13 @@ export function CheckoutPage() {
   const [addresses, setAddresses] = useState<DeliverAddress[]>([])
   const [addressLoading, setAddressLoading] = useState(true)
   const [addressError, setAddressError] = useState<string | null>(null)
-  const [paymentMethod, setPaymentMethod] = useState<"transfer" | "cod">("transfer")
+  const [paymentMethod, setPaymentMethod] = useState<PaymentChoice>("transfer")
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [currentUser, setCurrentUser] = useState<User | null>(null)
-  const [choiceAddress, setChoiceAddress] = useState(addresses[0]?.id || 0)
+  const [choiceAddress, setChoiceAddress] = useState(0)
+  const [outlet, setOutlet] = useState<Outlet | null>(null)
+  const [outletError, setOutletError] = useState<string | null>(null)
 
   // State pop-up bank
   const [showBankModal, setShowBankModal] = useState(false)
@@ -106,13 +210,14 @@ export function CheckoutPage() {
     addressApi
       .list()
       .then((list: Address[]) => {
-        const mapped = list.map((a) => ({
+        const mapped: DeliverAddress[] = list.map((a) => ({
           id: a.id,
           label: a.label,
           isPrimary: a.is_primary,
           fullAddress: a.address_text,
           recipientName: a.label,
           phone: "",
+          coordinate: toCoordinate(a.latitude, a.longitude),
         }))
         setAddresses(mapped)
         // Tandai alamat utama (atau alamat pertama) sebagai pilihan bawaan
@@ -124,19 +229,26 @@ export function CheckoutPage() {
         setAddressError(err instanceof Error ? err.message : "Gagal memuat daftar alamat")
       })
       .finally(() => setAddressLoading(false))
+    outletApi
+      .getDefault()
+      .then((val) => {
+        setOutlet(val)
+        setOutletError(null)
+      })
+      .catch((err) => {
+        setOutletError(err instanceof Error ? err.message : "Gagal memuat data outlet")
+      })
     authApi
       .me()
       .then((user) => setCurrentUser(user))
       .catch(() => undefined)
   }, [])
 
-  const primaryAddress = addresses.find((a) => a.isPrimary) ?? addresses[0]
-
   function updateQty(key: string, delta: number) {
     setCart((prev) =>
       prev.map((line) =>
         line.key === key
-          ? { ...line, qty: Math.max(isWeightUnit(line.unit) ? 0.1 : 1, line.qty + delta) }
+          ? { ...line, qty: nextQty(line, delta) }
           : line,
       ),
     )
@@ -148,17 +260,21 @@ export function CheckoutPage() {
     else removeProduct(line.id)
   }
 
-  const itemsTotal = cart
-    .reduce((sum, line) => sum.plus(new Decimal(cartLineTotal(line))), new Decimal(0))
-    .toNumber()
-  const deliveryFee = useMemo(() => {
-    if (!primaryAddress) return 10000
-    const distanceKm = 2.5
-    return Math.round(Math.max(0, distanceKm) * 2000)
-  }, [primaryAddress])
+  // Jarak & ongkir untuk setiap alamat (ditampilkan di kartu alamat) dan untuk alamat terpilih.
+  const quotes = useMemo(
+    () => new Map(addresses.map((addr) => [addr.id, quoteDelivery(outlet, addr)] as const)),
+    [outlet, addresses],
+  )
+  const delivery = quotes.get(choiceAddress) ?? PENDING_QUOTE
+  const deliveryNote = deliveryProblem(delivery, outletError)
+  const deliveryFee = delivery.status === "ok" ? delivery.fee : null
+
+  const refundCheck = useMemo(() => evaluateCheckoutRefund(cart, paymentMethod), [cart, paymentMethod])
+
+  const itemsTotal = cart.reduce((sum, line) => sum.plus(cartLineTotal(line)), new Decimal(0))
   const memberDiscount = 0
   const voucherDiscount = 0
-  const total = itemsTotal + deliveryFee - memberDiscount - voucherDiscount
+  const total = itemsTotal.plus(deliveryFee ?? 0).minus(memberDiscount).minus(voucherDiscount)
 
   const pickupSchedule = useMemo(() => new Date(), [])
   const estimatedDelivery = useMemo(() => new Date(pickupSchedule.getTime() + 48 * 60 * 60 * 1000), [pickupSchedule])
@@ -174,17 +290,11 @@ export function CheckoutPage() {
   const deliveryText = formatDateTime(estimatedDelivery)
 
   async function handleCreateOrder(bank?: BankCode) {
-    if (!primaryAddress) return
+    if (delivery.status !== "ok" || !outlet) return
     setSubmitting(true)
     setError("")
     try {
-      const outlets = await outletApi.list()
-      const outlet: Outlet | undefined =
-        (outlets as Outlet[]).find((o) => o.max_coverage_km > 0) ?? (outlets as Outlet[])[0]
-      if (!outlet) throw new ApiError("Tidak ada outlet yang tersedia", 404)
-      const distance_km = 2.5
-      const paidDelivery = orderApi
-      const order: PaymentGate = await paidDelivery.create({
+      const order: PaymentGate = await orderApi.create({
         services: cart
           .filter((line) => line.kind === "service")
           .map((line) => ({
@@ -208,7 +318,7 @@ export function CheckoutPage() {
           })),
         user_address_id: choiceAddress,
         outlet_id: outlet.id,
-        distance_km,
+        distance_km: delivery.distanceKm.toNumber(),
         payment_method: paymentMethod === "cod" ? "cod" : "transfer_bank",
         bank,
         pickup_schedule: pickupSchedule.toISOString(),
@@ -256,13 +366,53 @@ export function CheckoutPage() {
         </p>
       </div>
 
-      <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
-        <Info size={18} className="mt-0.5 shrink-0" />
-        <p>
-          <span className="font-semibold">Kebijakan refund:</span> Refund hanya dapat dilakukan untuk order bertipe{" "}
-          <span className="font-semibold">Product</span> dan pembayaran melalui bank. Order layanan laundry atau campuran layanan + produk otomatis
-          tidak memenuhi syarat refund.
-        </p>
+      {/* Info kebijakan refund */}
+      <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <div className="flex gap-3">
+          <Info size={18} className="mt-0.5 shrink-0" />
+          <div className="space-y-1">
+            <p>
+              <span className="font-semibold">Kebijakan refund:</span> refund hanya berlaku untuk order yang seluruh
+              itemnya berupa <span className="font-semibold">Product</span> (produk fisik), dibayar melalui{" "}
+              <span className="font-semibold">Transfer Bank (Virtual Account)</span> dan sudah lunas, berstatus{" "}
+              <span className="font-semibold">Selesai</span>, serta diajukan dalam masa tenggang{" "}
+              <span className="font-semibold">{REFUND_WINDOW_DAYS} hari</span>.
+            </p>
+            <p>
+              Order layanan laundry, campuran layanan + produk, atau pembayaran COD otomatis tidak memenuhi syarat
+              refund.
+            </p>
+          </div>
+        </div>
+        {cart.length > 0 && (
+          <div
+            className={`flex gap-2 rounded-xl border px-3 py-2 ${
+              refundCheck.eligible
+                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "border-amber-300 bg-white text-amber-900"
+            }`}
+          >
+            {refundCheck.eligible ? (
+              <Check size={16} className="mt-0.5 shrink-0" />
+            ) : (
+              <X size={16} className="mt-0.5 shrink-0" />
+            )}
+            <div>
+              <p className="font-semibold">
+                {refundCheck.eligible
+                  ? "Pesanan ini memenuhi syarat refund (setelah berstatus Selesai)."
+                  : "Pesanan ini tidak memenuhi syarat refund."}
+              </p>
+              {!refundCheck.eligible && (
+                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-xs">
+                  {refundCheck.reasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Progres pemesanan */}
@@ -385,35 +535,53 @@ export function CheckoutPage() {
                 Belum ada alamat tersimpan. Tambahkan alamat terlebih dahulu.
               </p>
             ) : (
-              addresses.map((addr) => (
-                <div
-                  key={addr.id}
-                  onClick={() => setChoiceAddress(addr.id)}
-                  className={`mb-3 flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 sm:flex-row sm:items-center sm:gap-6 ${
-                    addr.id == choiceAddress ? "border-primary" : "border-gray-200"
-                  }`}
-                >
-                  <span
-                    className={`h-6 w-6 shrink-0 rounded-full border-2 ${
-                      choiceAddress === addr.id ? "border-primary bg-primary" : "border-gray-300"
+              addresses.map((addr) => {
+                const quote = quotes.get(addr.id)
+                return (
+                  <div
+                    key={addr.id}
+                    onClick={() => setChoiceAddress(addr.id)}
+                    className={`mb-3 flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 sm:flex-row sm:items-center sm:gap-6 ${
+                      addr.id === choiceAddress ? "border-primary" : "border-gray-200"
                     }`}
-                  />
-                  <span>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-ink-strong">{addr.label}</p>
-                      {addr.isPrimary && (
-                        <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
-                          Utama
-                        </span>
+                  >
+                    <span
+                      className={`h-6 w-6 shrink-0 rounded-full border-2 ${
+                        choiceAddress === addr.id ? "border-primary bg-primary" : "border-gray-300"
+                      }`}
+                    />
+                    <span>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-ink-strong">{addr.label}</p>
+                        {addr.isPrimary && (
+                          <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
+                            Utama
+                          </span>
+                        )}
+                      </div>
+                      <p className="mt-1 text-sm text-gray-500">
+                        {addr.recipientName} • {currentUser?.phone || "-"}
+                      </p>
+                      <p className="text-sm text-gray-500">{addr.fullAddress}</p>
+                      {quote?.status === "ok" && (
+                        <p className="mt-1 text-xs text-gray-400">
+                          ±{quote.distanceKm.toFixed(2)} km dari outlet · ongkir {formatIDR(quote.fee.toFixed(2))}
+                        </p>
                       )}
-                    </div>
-                    <p className="mt-1 text-sm text-gray-500">
-                      {addr.recipientName} • {currentUser?.phone || "-"}
-                    </p>
-                    <p className="text-sm text-gray-500">{addr.fullAddress}</p>
-                  </span>
-                </div>
-              ))
+                      {quote?.status === "out_of_range" && (
+                        <p className="mt-1 text-xs font-semibold text-red-600">
+                          Di luar jangkauan outlet ({quote.distanceKm.toFixed(2)} km, maks. {quote.maxKm} km)
+                        </p>
+                      )}
+                      {quote?.status === "invalid" && (
+                        <p className="mt-1 text-xs font-semibold text-red-600">
+                          Koordinat alamat belum valid, ongkir tidak dapat dihitung
+                        </p>
+                      )}
+                    </span>
+                  </div>
+                )
+              })
             )}
           </div>
 
@@ -480,21 +648,36 @@ export function CheckoutPage() {
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
               <span className="text-gray-500">Total Harga ({cart.length} Barang)</span>
-              <span className="font-medium text-ink-strong">{formatIDR(itemsTotal)}</span>
+              <span className="font-medium text-ink-strong">{formatIDR(itemsTotal.toFixed(2))}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-500">Biaya Pengiriman</span>
-              <span className="font-medium text-ink-strong">{formatIDR(deliveryFee)}</span>
+              <span className="font-medium text-ink-strong">
+                {deliveryFee ? formatIDR(deliveryFee.toFixed(2)) : "-"}
+              </span>
             </div>
+            {delivery.status === "ok" && (
+              <p className="text-right text-xs text-gray-400">
+                ±{delivery.distanceKm.toFixed(2)} km × {formatIDR(FEE_PER_KM.toFixed(2))}/km
+              </p>
+            )}
           </div>
           <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
             <span className="text-sm font-semibold text-ink-strong">Total Pembayaran</span>
-            <span className="text-lg font-bold text-primary">{formatIDR(total)}</span>
+            <span className="text-lg font-bold text-primary">{formatIDR(total.toFixed(2))}</span>
           </div>
+          {deliveryFee === null && !deliveryNote && cart.length > 0 && (
+            <p className="mt-3 text-xs text-gray-400">
+              Total belum termasuk ongkos kirim. Pilih alamat pengiriman untuk menghitungnya.
+            </p>
+          )}
+          {deliveryNote && (
+            <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{deliveryNote}</p>
+          )}
           {error && <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}
           <button
             onClick={handleSubmitClick}
-            disabled={submitting || !choiceAddress || (services.length === 0 && products.length === 0)}
+            disabled={submitting || cart.length === 0 || delivery.status !== "ok"}
             className="mt-5 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
           >
             {submitting ? "Membuat Pesanan..." : "Buat Pesanan Sekarang"}
@@ -551,7 +734,7 @@ export function CheckoutPage() {
 
             <div className="mb-4 flex items-center justify-between border-t border-gray-100 pt-4 text-sm">
               <span className="text-gray-500">Total Pembayaran</span>
-              <span className="font-bold text-primary">{formatIDR(total)}</span>
+              <span className="font-bold text-primary">{formatIDR(total.toFixed(2))}</span>
             </div>
 
             <div className="flex gap-3">

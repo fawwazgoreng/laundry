@@ -123,11 +123,9 @@ function CashflowTable({ title, subtitle, tone, items, total, limit = 8 }: Cashf
           </tfoot>
         </table>
       </div>
-      {hiddenCount > 0 && (
-        <p className="px-4 py-3 text-xs text-gray-400">
-          Menampilkan {visibleItems.length} dari {items.length} transaksi.
-        </p>
-      )}
+      <p className="px-4 py-3 text-xs text-gray-400">
+        Menampilkan {visibleItems.length} dari {items.length} transaksi.
+      </p>
     </section>
   )
 }
@@ -273,8 +271,8 @@ export function AdminReportPage() {
                 setRangeMode("preset")
               }}
               className={`cursor-pointer rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${rangeMode === "preset" && months === preset.months
-                  ? "bg-primary text-white shadow-sm"
-                  : "border border-gray-200 bg-white text-ink hover:bg-gray-50"
+                ? "bg-primary text-white shadow-sm"
+                : "border border-gray-200 bg-white text-ink hover:bg-gray-50"
                 }`}
             >
               {preset.label}

@@ -22,7 +22,7 @@ export function Topbar({ items }: { items: NavItem[] }) {
 
     return (
         <header className="sticky top-0 z-40 border-b border-gray-200 bg-white/95 backdrop-blur print:hidden">
-            <div className="mx-auto grid grid-cols-3 h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+            <div className="mx-auto grid grid-cols-2 md:grid-cols-3 h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
                 <div className="flex items-center gap-8 col-span-1">
                     <Link to={user ? (user.role === "admin" ? "/admin" : "/dashboard") : "/"} className="flex items-center gap-2">
                         <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary">
@@ -33,21 +33,21 @@ export function Topbar({ items }: { items: NavItem[] }) {
                 </div>
 
                 <nav className="hidden items-center justify-center gap-1 md:flex col-span-1">
-                        {items.map((item) => (
-                            <NavLink
-                                key={item.to}
-                                to={item.to}
-                                end={item.to === "/dashboard" || item.to === "/admin"}
-                                className={({ isActive }) =>
-                                    cx(
-                                        "rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
-                                        isActive ? "bg-primary-light text-primary" : "text-ink hover:bg-surface",
-                                    )
-                                }
-                            >
-                                {item.label}
-                            </NavLink>
-                        ))}
+                    {items.map((item) => (
+                        <NavLink
+                            key={item.to}
+                            to={item.to}
+                            end={item.to === "/dashboard" || item.to === "/admin"}
+                            className={({ isActive }) =>
+                                cx(
+                                    "rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
+                                    isActive ? "bg-primary-light text-primary" : "text-ink hover:bg-surface",
+                                )
+                            }
+                        >
+                            {item.label}
+                        </NavLink>
+                    ))}
                 </nav>
 
                 <div className="hidden items-center justify-end gap-3 md:flex col-span-1">
@@ -70,7 +70,7 @@ export function Topbar({ items }: { items: NavItem[] }) {
 
                 <button
                     onClick={() => setOpen((v) => !v)}
-                    className="rounded-lg p-2 text-ink-strong md:hidden"
+                    className="rounded-lg p-2 flex justify-end text-ink-strong md:hidden"
                 >
                     {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
                 </button>

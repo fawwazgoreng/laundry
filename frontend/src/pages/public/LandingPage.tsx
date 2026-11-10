@@ -27,9 +27,9 @@ const STEPS = [
 ]
 
 const footerCallUs = [
-    { icon: MapPin, desc: "Jl Kembang Kancilan no 45" },
-    { icon: PhoneCall, desc: "+62 896-3654-6423" },
-    { icon: Mail, desc: "fadarosi@gmail.com" }
+    { icon: MapPin, desc: "Jl Kembang Kancilan no 45", link: "https://www.google.com/maps/place/RaesPrinting%26Computer/@-6.4967737,110.8142478,18z/data=!3m1!4b1!4m6!3m5!1s0x2e71249955555555:0x6b8c0e019a4dd811!8m2!3d-6.4967737!4d110.8155379!16s%2Fg%2F1jkybyhkg?entry=ttu&g_ep=EgoyMDI2MTEwOC4wIKXMDSoASAFQAw%3D%3D" },
+    { icon: PhoneCall, desc: "+62 896-3654-6423", link: "https://wa.me/6289636546423" },
+    { icon: Mail, desc: "fadarosi@gmail.com", link: "mailto:fawwazqeui@email.com" }
 ]
 
 const BENEFITS = [
@@ -245,7 +245,7 @@ export default function LandingPage() {
                         <p className="font-semibold text-primary-light text-[16px]">Layanan Kami</p>
                         <span className="flex flex-col gap-4 py-4">
                             {layanan.map((service) => (
-                                <p className="text-ink text-[14px]" key={service.id}>{service.name}</p>
+                                <Link to={"/layanan"} className="text-ink text-[14px]" key={service.id}>{service.name}</Link>
                             ))}
                         </span>
                     </div>
@@ -253,10 +253,10 @@ export default function LandingPage() {
                         <div className="flex flex-col gap-4">
                             <p className="font-semibold text-primary-light text-[16px]">Hubungi Kami</p>
                             {footerCallUs.map((callUs, key) => (
-                                <span className="flex gap-4" key={key}>
+                                <Link to={callUs.link} className="flex gap-4" key={key}>
                                     <callUs.icon></callUs.icon>
                                     <p className="text-ink text-[14px] ">{callUs.desc}</p>
-                                </span>
+                                </Link>
                             ))}
                         </div>
                     </div>

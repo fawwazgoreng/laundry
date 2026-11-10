@@ -23,6 +23,7 @@ import { AppError } from "../../../helper/errorHandling/appError";
 import { logger } from "../../../helper/logging/logger";
 import { env } from "../../../config/env";
 import * as midtransClient from "midtrans-client";
+import { calculateFee } from "../../../lib/distanceCalc";
 
 export type coreChargeResponse = {
     transaction_id?: string
@@ -91,9 +92,14 @@ export class CreateOrderUseCase {
         const outlet = await this.outletRepository.findById(dto.outlet_id);
         if (!outlet) throw AppError.notFound("Outlet tidak ditemukan");
 
-        // Add-on per_order hanya ditagih sekali per pesanan. Set dipakai untuk
-        // mendeteksi tabrakan antar item (layanan maupun produk) dan mengikat
-        // pilihan tersebut ke item pertama yang memilihnya.
+        calculateFee({
+            latitude: outlet.latitude,
+            longitude: outlet.longitude
+        },{
+            latitude: address.latitude,
+            longitude: address.longitude
+        }, outlet.max_coverage_km)
+
         const perOrderAddonKeys = new Set<string>();
         const perOrderGroupCodes = new Set<string>();
 

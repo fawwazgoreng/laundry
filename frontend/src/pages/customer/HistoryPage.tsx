@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { ChevronLeft, ChevronRight, CreditCard, Eye, Info, MapPin, Receipt, Search, Trash2 } from "lucide-react"
 import { adminStatusLabel, adminStatusStyle, paymentStatusLabel, paymentStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
-import type { Money, OrderKind, OrderListItem, OrderStatus, Payment, RefundStatus } from "../../lib/types"
+import type { Money, OrderKind, OrderListItem, OrderStatus, Payment, PaymentMethod, RefundStatus } from "../../lib/types"
 import { orderApi, paymentApi } from "../../services/api"
 import { useToast } from "../../components/Toast"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
@@ -44,6 +44,7 @@ interface AdminOrderRow {
   refundEligible: boolean
   refundStatus: RefundStatus | null
   paymentStatus: Payment["status"] | null
+  paymendMethod: PaymentMethod
   total: Money
 }
 
@@ -90,6 +91,7 @@ export function UserOrderHistory() {
             refundEligible: o.refund_eligible,
             refundStatus: o.refund_status,
             paymentStatus: o.payment_status,
+            paymendMethod: o.payment_method,
             total: o.total_amount,
           })),
         )
@@ -309,10 +311,10 @@ export function UserOrderHistory() {
                       </span>
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                          order.orderType === "PRODUCT" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"
+                          (order.orderType === "PRODUCT" && order.paymendMethod === "transfer_bank") ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"
                         }`}
                       >
-                        {order.orderType === "PRODUCT" ? "Product · Refundable" : "Service · Non-refund"}
+                        {order.orderType === "SERVICE" ? "Service · Non-refund" : order.paymendMethod === "cod"  ? "Cod · Non-refund" : "Product · Refundable"}
                       </span>
                       {order.refundStatus && (
                         <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${refundStatusStyle[order.refundStatus]}`}>
