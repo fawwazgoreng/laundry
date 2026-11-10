@@ -139,7 +139,9 @@ export function UserOrderHistory() {
   const counts = useMemo(() => {
     const c: Record<string, number> = { semua: orders.length }
     for (const tab of tabs.slice(1)) c[tab.key] = 0
-    for (const o of orders) {
+    let filtered = orders
+    if (refundTab !== "semua") filtered = orders.filter((o) => o.refundStatus == refundTab)
+    for (const o of filtered) {
       if (o.status === "DITERIMA") c.diterima++
       if (o.status === "DIPROSES") c.diproses++
       if (o.status === "SIAP_ANTAR") c.siap_antar++
@@ -147,19 +149,21 @@ export function UserOrderHistory() {
       if (o.status === "DIBATALKAN") c.dibatalkan++
     }
     return c
-  }, [orders])
+  }, [orders, refundTab])
 
   const refundCounts = useMemo(() => {
     const c: Record<string, number> = { semua: orders.length }
     for (const tab of refundTabs.slice(1)) c[tab.key] = 0
-    for (const o of orders) {
+    let filtered = orders
+    if (activeTab !== "semua") filtered = orders.filter((o) => o.refundStatus == activeTab)
+    for (const o of filtered) {
       if (o.refundStatus === "REQUESTED") c.request++
       if (o.refundStatus === "APPROVED") c.approve++
       if (o.refundStatus === "REJECTED") c.reject++
       if (o.refundStatus === "REFUNDED") c.refunded++
     }
     return c
-  }, [orders])
+  }, [orders, activeTab])
 
   const filtered = useMemo(() => {
     let list = orders
