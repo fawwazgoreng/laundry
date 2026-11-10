@@ -59,13 +59,21 @@ export class pgProductRepository implements productRepository {
             return fns.and(...conditions);
         });
 
+        const rowsQuery = productQuery().where((p, { fns }) => {
+            const conditions = [p.is_active.eq(true)];
+            if (inStockOnly) conditions.push(p.stock.gt(0));
+            if (category !== "all") conditions.push(p.category.eq(varchar(category)));
+            if (search) conditions.push(p.name.ilike(`%${search}%`));
+            return fns.and(...conditions);
+        });
+
         const ordered = (() => {
             switch (sort) {
-                case "terbaru": return base.orderBy((p) => p.id.desc());
-                case "terlama": return base.orderBy((p) => p.id.asc());
-                case "termahal": return base.orderBy((p) => p.price.desc());
-                case "termurah": return base.orderBy((p) => p.price.asc());
-                default: return base.orderBy((p) => p.id.desc());
+                case "terbaru": return rowsQuery.orderBy((p) => p.id.desc());
+                case "terlama": return rowsQuery.orderBy((p) => p.id.asc());
+                case "termahal": return rowsQuery.orderBy((p) => p.price.desc());
+                case "termurah": return rowsQuery.orderBy((p) => p.price.asc());
+                default: return rowsQuery.orderBy((p) => p.id.desc());
             }
         })();
 

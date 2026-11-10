@@ -135,6 +135,8 @@ export const PRODUCT_CATEGORIES = [
     "Pewangi",
     "Pemutih",
     "Paket Hemat",
+    "Aksesoris",
+    "Pembersih Noda"
 ];
 
 export const SORT_OPTIONS = [

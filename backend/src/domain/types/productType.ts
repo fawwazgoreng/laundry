@@ -8,7 +8,9 @@ export type productCategory =
     | "Softener"
     | "Pewangi"
     | "Pemutih"
-    | "Paket Hemat";
+    | "Paket Hemat"
+    | "Aksesoris"
+    | "Pembersih Noda"
 
 export type productCreateType = {
     name: string

@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useMemo, useState } from "react
 import type { ReactNode } from "react"
 import { Decimal } from "decimal.js"
 import type { PaymentMethod, Product, Service, ServiceAddonGroup, ServiceAddonOption } from "../lib/types"
-import { selectedAddonsSubtotal } from "../lib/serviceAddons"
+import { dedupePerOrderAddons, selectedAddonsSubtotal } from "../lib/serviceAddons"
 
 export interface DraftServiceAddon {
     group: ServiceAddonGroup
@@ -120,30 +120,33 @@ export function OrderDraftProvider({ children }: { children: ReactNode }) {
     }, [])
 
     const value = useMemo(() => {
+        const taken = new Set<string>()
+        const effectiveServices = dedupePerOrderAddons(services, taken)
+        const effectiveProducts = dedupePerOrderAddons(products, taken)
         const sumAddons = (addons: DraftServiceAddon[], qty: number) =>
             new Decimal(selectedAddonsSubtotal(addons, qty))
-        const subtotalAddons = services.reduce(
+        const subtotalAddons = effectiveServices.reduce(
             (sum, s) => sum.plus(sumAddons(s.addons, s.qty)),
             new Decimal(0),
         ).plus(
-            products.reduce((sum, p) => sum.plus(sumAddons(p.addons, p.qty)), new Decimal(0)),
+            effectiveProducts.reduce((sum, p) => sum.plus(sumAddons(p.addons, p.qty)), new Decimal(0)),
         )
-        const subtotalServices = services.reduce(
+        const subtotalServices = effectiveServices.reduce(
             (sum, s) => sum
                 .plus(new Decimal(s.service.price_per_unit).times(new Decimal(s.qty)))
                 .plus(sumAddons(s.addons, s.qty)),
             new Decimal(0),
         )
-        const subtotalProducts = products.reduce(
+        const subtotalProducts = effectiveProducts.reduce(
             (sum, p) => sum
                 .plus(new Decimal(p.product.price).times(new Decimal(p.qty)))
                 .plus(sumAddons(p.addons, p.qty)),
             new Decimal(0),
         )
         return {
-            services,
-            products,
-            totalItems: services.length + products.reduce((sum, p) => sum + p.qty, 0),
+            services: effectiveServices,
+            products: effectiveProducts,
+            totalItems: effectiveServices.length + effectiveProducts.reduce((sum, p) => sum + p.qty, 0),
             subtotalServices: subtotalServices.toNumber(),
             subtotalAddons: subtotalAddons.toNumber(),
             subtotalProducts: subtotalProducts.toNumber(),

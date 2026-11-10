@@ -91,6 +91,12 @@ export class CreateOrderUseCase {
         const outlet = await this.outletRepository.findById(dto.outlet_id);
         if (!outlet) throw AppError.notFound("Outlet tidak ditemukan");
 
+        // Add-on per_order hanya ditagih sekali per pesanan. Set dipakai untuk
+        // mendeteksi tabrakan antar item (layanan maupun produk) dan mengikat
+        // pilihan tersebut ke item pertama yang memilihnya.
+        const perOrderAddonKeys = new Set<string>();
+        const perOrderGroupCodes = new Set<string>();
+
         let laundrySubtotal: Money = money(0);
         let addonSubtotal: Money = money(0);
         const services: Array<{
@@ -106,7 +112,7 @@ export class CreateOrderUseCase {
             const svc = await this.serviceRepository.findById(item.laundry_service_id);
             if (!svc) throw AppError.notFound(`Layanan id ${item.laundry_service_id} tidak ditemukan`);
             if (!svc.is_active) throw AppError.conflict("Layanan tidak tersedia");
-            const addons = this.resolveAddons(svc.addon_groups, item.addons ?? [], item.qty);
+            const addons = this.resolveAddons(svc.addon_groups, item.addons ?? [], item.qty, perOrderAddonKeys, perOrderGroupCodes);
             const itemAddonSubtotal = moneySum(addons.map((addon) => addon.subtotal));
             const subtotal = addMoney(multiplyMoney(svc.price_per_unit, item.qty), itemAddonSubtotal);
             laundrySubtotal = addMoney(laundrySubtotal, subtotal);
@@ -134,7 +140,7 @@ export class CreateOrderUseCase {
             if (!prod) throw AppError.notFound(`Produk id ${item.product_id} tidak ditemukan`);
             if (!prod.is_active) throw AppError.conflict("Produk tidak tersedia");
             if (prod.stock < item.qty) throw AppError.conflict(`Stok ${prod.name} tidak mencukupi`);
-            const addons = this.resolveAddons(prod.addon_groups, item.addons ?? [], item.qty);
+            const addons = this.resolveAddons(prod.addon_groups, item.addons ?? [], item.qty, perOrderAddonKeys, perOrderGroupCodes);
             const itemAddonSubtotal = moneySum(addons.map((addon) => addon.subtotal));
             const subtotal = addMoney(multiplyMoney(prod.price, item.qty), itemAddonSubtotal);
             productSubtotal = addMoney(productSubtotal, subtotal);
@@ -235,6 +241,8 @@ export class CreateOrderUseCase {
         groups: serviceAddonGroupType[],
         selections: serviceAddonInput[],
         serviceQty: number,
+        perOrderAddonKeys: Set<string>,
+        perOrderGroupCodes: Set<string>,
     ): serviceAddonRecord[] {
         const activeGroups = groups.filter((group) => group.is_active);
         const groupsByCode = new Map(activeGroups.map((group) => [group.code, group]));
@@ -269,7 +277,8 @@ export class CreateOrderUseCase {
         }
 
         for (const group of activeGroups) {
-            if (group.is_required && !selectionsByGroup.has(group.code)) {
+            const satisfiedAtOrderLevel = perOrderGroupCodes.has(group.code);
+            if (group.is_required && !selectionsByGroup.has(group.code) && !satisfiedAtOrderLevel) {
                 throw AppError.validation({ addons: `${group.name} wajib dipilih` });
             }
         }
@@ -279,6 +288,12 @@ export class CreateOrderUseCase {
             const group = groupsByCode.get(groupCode)!;
             for (const selection of picked) {
                 const option = group.options.find((candidate) => candidate.id === selection.option_id)!;
+                if (option.price_mode === "per_order") {
+                    const key = `${group.code}:${option.id}`;
+                    if (perOrderAddonKeys.has(key)) continue;
+                    perOrderAddonKeys.add(key);
+                    perOrderGroupCodes.add(group.code);
+                }
                 const qty = option.price_mode === "per_unit" ? serviceQty : 1;
                 records.push({
                     addon_option_id: option.id,

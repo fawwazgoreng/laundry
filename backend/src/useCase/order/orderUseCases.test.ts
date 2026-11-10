@@ -330,6 +330,84 @@ describe("CreateOrderUseCase", () => {
         expect(created.totals.total_amount).toBe("28000.00");
     });
 
+    it("binds a colliding per-order addon to the first item only", async () => {
+        const order = makeOrder();
+        const orderRepo = {
+            countByDatePrefix: mock(() => 0),
+            create: mock(() => order),
+            findByOrderId: mock(() => order),
+        } as unknown as orderRepository;
+        const prodWithAddons = {
+            ...prod,
+            addon_groups: svcWithAddons.addon_groups.filter((group) => group.code === "pewangi"),
+        };
+        const uc = new CreateOrderUseCase(
+            orderRepo,
+            { findById: mock(() => svcWithAddons), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
+            { findById: mock(() => prodWithAddons), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
+            { findById: mock(() => address) } as unknown as addressRepository,
+            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { create: mock(), confirm: mock(), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository,
+            { create: mock(async () => ({})) } as unknown as cashflowRepository,
+        );
+
+        await uc.execute("u-1", {
+            ...validInput(),
+            services: [{
+                laundry_service_id: svc.id,
+                qty: 2,
+                addons: [{ group_code: "pewangi", option_id: 21 }],
+            }],
+            products: [{
+                product_id: prod.id,
+                qty: 1,
+                addons: [{ group_code: "pewangi", option_id: 21 }],
+            }],
+        });
+
+        const created = (orderRepo.create as ReturnType<typeof mock>).mock.calls[0]![0];
+        expect(created.services[0].addons).toHaveLength(1);
+        expect(created.products[0].addons).toEqual([]);
+        expect(created.totals.total_addon).toBe("3000.00");
+    });
+
+    it("treats a required per-order group as satisfied across items", async () => {
+        const order = makeOrder();
+        const orderRepo = {
+            countByDatePrefix: mock(() => 0),
+            create: mock(() => order),
+            findByOrderId: mock(() => order),
+        } as unknown as orderRepository;
+        const requiredGroups = svcWithAddons.addon_groups.map((group) =>
+            group.code === "pewangi" ? { ...group, is_required: true } : group,
+        );
+        const svcRequired = { ...svcWithAddons, addon_groups: requiredGroups };
+        const prodRequired = { ...prod, addon_groups: requiredGroups.filter((group) => group.code === "pewangi") };
+        const uc = new CreateOrderUseCase(
+            orderRepo,
+            { findById: mock(() => svcRequired), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
+            { findById: mock(() => prodRequired), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
+            { findById: mock(() => address) } as unknown as addressRepository,
+            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { create: mock(), confirm: mock(), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository,
+            { create: mock(async () => ({})) } as unknown as cashflowRepository,
+        );
+
+        await uc.execute("u-1", {
+            ...validInput(),
+            services: [{
+                laundry_service_id: svc.id,
+                qty: 2,
+                addons: [{ group_code: "pewangi", option_id: 21 }],
+            }],
+            products: [{ product_id: prod.id, qty: 1, addons: [] }],
+        });
+
+        const created = (orderRepo.create as ReturnType<typeof mock>).mock.calls[0]![0];
+        expect(created.products[0].addons).toEqual([]);
+        expect(created.totals.total_addon).toBe("3000.00");
+    });
+
     it("rejects addons that are not linked to the selected service", async () => {
         const uc = new CreateOrderUseCase(
             { countByDatePrefix: mock(() => 0), create: mock(), findByOrderId: mock() } as unknown as orderRepository,

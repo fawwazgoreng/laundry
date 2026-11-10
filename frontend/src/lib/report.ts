@@ -6,6 +6,10 @@ import type { CashflowItem, OrderListItem } from "./types"
 
 export type ReportRangeMode = "preset" | "custom"
 
+// Cakupan cetak nota laporan: pendapatan saja, pengeluaran saja, atau keduanya
+// dalam satu dokumen.
+export type ReportPrintScope = "all" | "income" | "expense"
+
 export interface ReportRange {
   start: Date
   end: Date
@@ -57,9 +61,27 @@ export interface ReportNotaState {
   orders: OrderListItem[]
   lowStock: LowStockItem[]
   autoPrint: boolean
+  scope?: ReportPrintScope
 }
 
 export const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
+
+export function isReportPrintScope(value: unknown): value is ReportPrintScope {
+  return value === "all" || value === "income" || value === "expense"
+}
+
+export function reportScopeLabel(scope: ReportPrintScope): string {
+  if (scope === "income") return "Laporan Pendapatan"
+  if (scope === "expense") return "Laporan Pengeluaran"
+  return "Laporan Keuangan"
+}
+
+// Saring arus kas sesuai cakupan cetak. Nilai "all" mempertahankan keduanya
+// dalam satu dokumen, sedangkan income/expense hanya mengambil satu sisi.
+export function filterCashflowByScope(items: CashflowItem[], scope: ReportPrintScope): CashflowItem[] {
+  if (scope === "all") return items
+  return items.filter((item) => item.type === scope)
+}
 
 // Label kategori arus kas dari backend (VARCHAR) ke Bahasa Indonesia
 const CASHFLOW_CATEGORY_LABELS: Record<string, string> = {

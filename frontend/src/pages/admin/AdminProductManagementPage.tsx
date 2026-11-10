@@ -79,11 +79,11 @@ export function AdminProductManagementPage() {
     load()
   }, [])
 
-  // Kategori unik dari data untuk dropdown filter
-  const categories = useMemo(() => {
-    const set = new Set(products.map((p) => p.category))
-    return ["Semua", ...set]
-  }, [products])
+    const categories = useMemo(() => {
+      const fromData = [...new Set(products.map((p) => p.category))].filter(Boolean)
+      return Array.from(new Set(["Semua",...PRODUCT_CATEGORIES, ...fromData]))
+    }, [products])
+
 
   // Penyaringan daftar produk berdasarkan kategori & kata kunci pencarian
   const filtered = useMemo(() => {

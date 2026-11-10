@@ -16,11 +16,14 @@ import {
   buildMonthlySeries,
   cashflowCategoryLabel,
   filterByRange,
+  filterCashflowByScope,
   formatShortDate,
+  isReportPrintScope,
+  reportScopeLabel,
   resolveReportRange,
   splitCashflow,
 } from "../../lib/report"
-import type { LowStockItem, ReportNotaState, ReportRange, ReportRangeMode } from "../../lib/report"
+import type { LowStockItem, ReportNotaState, ReportPrintScope, ReportRange, ReportRangeMode } from "../../lib/report"
 import { formatRupiah } from "../../lib/utils"
 import type { CashflowItem, OrderListItem } from "../../lib/types"
 import { adminApi, orderApi } from "../../services/api"
@@ -31,6 +34,7 @@ interface NotaData {
   orders: OrderListItem[]
   lowStock: LowStockItem[]
   autoPrint: boolean
+  scope: ReportPrintScope
 }
 
 function isReportNotaState(value: unknown): value is ReportNotaState {
@@ -46,6 +50,7 @@ function fromRouterState(state: ReportNotaState): NotaData {
     orders: Array.isArray(state.orders) ? state.orders : [],
     lowStock: Array.isArray(state.lowStock) ? state.lowStock : [],
     autoPrint: Boolean(state.autoPrint),
+    scope: isReportPrintScope(state.scope) ? state.scope : "all",
   }
 }
 
@@ -62,6 +67,7 @@ export function ReportNotaPage() {
       months: Number.isFinite(months) && months > 0 ? months : 1,
       customStart: searchParams.get("dari") ?? "",
       customEnd: searchParams.get("sampai") ?? "",
+      scope: (isReportPrintScope(searchParams.get("jenis")) ? searchParams.get("jenis") : "all") as ReportPrintScope,
     }
   }, [searchParams])
 
@@ -85,6 +91,7 @@ export function ReportNotaPage() {
           orders: filterByRange(orderPage.data, range),
           lowStock: stats.low_stock_products.slice(0, 5),
           autoPrint: false,
+          scope: params.scope,
         })
       })
       .catch(() => {
@@ -105,13 +112,17 @@ export function ReportNotaPage() {
   }, [nota])
 
   useEffect(() => {
-    if (nota) document.title = `Laporan Keuangan - Fadarosi`
+    if (nota) document.title = `${reportScopeLabel(nota.scope)} - Fadarosi`
   }, [nota])
 
-  const sections = useMemo(() => splitCashflow(nota?.cashflow ?? []), [nota])
-  const monthlyData = useMemo(
-    () => buildMonthlySeries(nota?.cashflow ?? [], nota?.range ?? { start: new Date(), end: new Date() }),
+  const scopedCashflow = useMemo(
+    () => filterCashflowByScope(nota?.cashflow ?? [], nota?.scope ?? "all"),
     [nota],
+  )
+  const sections = useMemo(() => splitCashflow(scopedCashflow), [scopedCashflow])
+  const monthlyData = useMemo(
+    () => buildMonthlySeries(scopedCashflow, nota?.range ?? { start: new Date(), end: new Date() }),
+    [scopedCashflow, nota],
   )
   const netProfitPositive = sections.net_profit >= 0
 
@@ -150,25 +161,33 @@ export function ReportNotaPage() {
   const periodLabel = `${formatShortDate(nota.range.start)} s/d ${formatShortDate(nota.range.end)}`
 
   const statCards = [
-    {
-      label: "Pendapatan",
-      value: `+ ${formatRupiah(sections.income.total)}`,
-      icon: TrendingUp,
-      tone: "bg-emerald-100 text-emerald-700",
-    },
-    {
-      label: "Pengeluaran",
-      value: `- ${formatRupiah(sections.expense.total)}`,
-      icon: TrendingDown,
-      tone: "bg-red-100 text-red-700",
-    },
-    {
-      label: "Laba/Rugi Bersih",
-      value: `${netProfitPositive ? "+ " : ""}${formatRupiah(sections.net_profit)}`,
-      icon: Wallet,
-      tone: netProfitPositive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700",
-    },
-    { label: "Jumlah Pesanan", value: `${nota.orders.length} Pesanan`, icon: ShoppingBag, tone: "bg-gray-100 text-gray-600" },
+    ...(nota.scope !== "expense"
+      ? [{
+          label: "Pendapatan",
+          value: `+ ${formatRupiah(sections.income.total)}`,
+          icon: TrendingUp,
+          tone: "bg-emerald-100 text-emerald-700",
+        }]
+      : []),
+    ...(nota.scope !== "income"
+      ? [{
+          label: "Pengeluaran",
+          value: `- ${formatRupiah(sections.expense.total)}`,
+          icon: TrendingDown,
+          tone: "bg-red-100 text-red-700",
+        }]
+      : []),
+    ...(nota.scope === "all"
+      ? [
+          {
+            label: "Laba/Rugi Bersih",
+            value: `${netProfitPositive ? "+ " : ""}${formatRupiah(sections.net_profit)}`,
+            icon: Wallet,
+            tone: netProfitPositive ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700",
+          },
+          { label: "Jumlah Pesanan", value: `${nota.orders.length} Pesanan`, icon: ShoppingBag, tone: "bg-gray-100 text-gray-600" },
+        ]
+      : []),
   ]
 
   return (
@@ -202,7 +221,7 @@ export function ReportNotaPage() {
             </div>
           </div>
           <div className="text-left sm:text-right">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Laporan Keuangan</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">{reportScopeLabel(nota.scope)}</p>
             <p className="text-sm font-bold text-ink-strong">{periodLabel}</p>
             <p className="mt-1 text-xs text-gray-400">Dicetak pada {formatShortDate(new Date())}</p>
           </div>
@@ -231,7 +250,11 @@ export function ReportNotaPage() {
         <div className="grid grid-cols-1 gap-6 border-b border-gray-100 p-6 lg:grid-cols-3 sm:p-8">
           <div className="lg:col-span-2">
             <h2 className="mb-4 text-xs font-bold uppercase tracking-wider text-gray-400">
-              Pendapatan vs Pengeluaran (per Bulan)
+              {nota.scope === "income"
+                ? "Pendapatan (per Bulan)"
+                : nota.scope === "expense"
+                  ? "Pengeluaran (per Bulan)"
+                  : "Pendapatan vs Pengeluaran (per Bulan)"}
             </h2>
             <div className="h-56">
               <ResponsiveContainer width="100%" height="100%">
@@ -240,9 +263,13 @@ export function ReportNotaPage() {
                   <XAxis dataKey="label" tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={72} />
                   <Tooltip formatter={(value) => formatRupiah(Number(value))} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="income" name="Pendapatan" fill="#059669" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive={false} />
-                  <Bar dataKey="expense" name="Pengeluaran" fill="#dc2626" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive={false} />
+                  {nota.scope === "all" && <Legend wrapperStyle={{ fontSize: 12 }} />}
+                  {nota.scope !== "expense" && (
+                    <Bar dataKey="income" name="Pendapatan" fill="#059669" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive={false} />
+                  )}
+                  {nota.scope !== "income" && (
+                    <Bar dataKey="expense" name="Pengeluaran" fill="#dc2626" radius={[4, 4, 0, 0]} barSize={16} isAnimationActive={false} />
+                  )}
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -275,6 +302,7 @@ export function ReportNotaPage() {
         </div>
 
         <div className="space-y-6 border-b border-gray-100 p-6 sm:p-8">
+          {nota.scope !== "expense" && (
           <section className="report-section overflow-hidden rounded-xl border-2 border-emerald-600">
             <div className="report-income-header flex flex-col gap-2 bg-emerald-600 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -330,7 +358,9 @@ export function ReportNotaPage() {
               Menampilkan {incomeVisible.length} dari {sections.income.items.length} transaksi.
             </p>
           </section>
+          )}
 
+          {nota.scope !== "income" && (
           <section className="report-section overflow-hidden rounded-xl border-2 border-red-700">
             <div className="report-expense-header flex flex-col gap-2 bg-red-700 px-4 py-3 text-white sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -386,7 +416,9 @@ export function ReportNotaPage() {
               Menampilkan {expenseVisible.length} dari {sections.expense.items.length} transaksi.
             </p>
           </section>
+          )}
 
+          {nota.scope === "all" && (
           <section
             className={`report-net-summary rounded-xl border-4 bg-white p-5 ${netProfitPositive ? "border-emerald-700" : "border-red-700"}`}
           >
@@ -422,6 +454,7 @@ export function ReportNotaPage() {
               </div>
             </div>
           </section>
+          )}
         </div>
 
         {/* <div className="border-b border-gray-100 p-6 sm:p-8">
@@ -478,8 +511,11 @@ export function ReportNotaPage() {
           <div className="max-w-sm text-xs text-gray-500">
             <p className="font-semibold text-ink-strong">Keterangan</p>
             <p className="mt-1">
-              Laporan ini menampilkan seluruh transaksi arus kas dan pesanan pada periode {periodLabel}. Pendapatan
-              tercatat dari pembayaran yang masuk, pengeluaran dari biaya operasional laundry.
+              {nota.scope === "income"
+                ? `Laporan ini hanya menampilkan transaksi pendapatan pada periode ${periodLabel}. Pendapatan tercatat dari pembayaran yang masuk.`
+                : nota.scope === "expense"
+                  ? `Laporan ini hanya menampilkan transaksi pengeluaran pada periode ${periodLabel}. Pengeluaran tercatat dari biaya operasional laundry.`
+                  : `Laporan ini menampilkan seluruh transaksi pendapatan dan pengeluaran pada periode ${periodLabel}. Pendapatan tercatat dari pembayaran yang masuk, pengeluaran dari biaya operasional laundry.`}
             </p>
             <p className="mt-2">
               Dokumen ini dihasilkan otomatis oleh sistem Fadarosi dan sah tanpa tanda tangan basah.

@@ -7,3 +7,4 @@ ngrok.yml
 AUDIT_REPORT.md
 package.json
 bun.lock
+ARCHITECTURE_SUMMARY.txt

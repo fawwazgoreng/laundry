@@ -9,7 +9,6 @@ import { orderApi } from "../../services/api"
 
 // Label metode pembayaran dalam Bahasa Indonesia untuk tampilan Nota
 const paymentLabel: Record<PaymentMethod, string> = {
-  fadarosipay: "FADAROSI Pay / E-Wallet",
   transfer_bank: "Transfer Bank (Virtual Account)",
   cod: "Bayar di Tempat (COD)",
 }

@@ -5,6 +5,7 @@ import {
     assertRefundEligibility,
     evaluateRefundEligibility,
     type refundEligibilityInput,
+    type refundViolationCode,
 } from "./refundValidator";
 import { AppError } from "../../helper/errorHandling/appError";
 
@@ -53,7 +54,7 @@ function daysAgo(days: number): Date {
 type Row = {
     title: string
     input: (base: { order: orderDetailType }) => refundEligibilityInput
-    codes: string[]
+    codes: refundViolationCode[]
 };
 
 const rows: Row[] = [
@@ -160,5 +161,4 @@ describe("evaluateRefundEligibility (tabel)", () => {
         expect(captured!.statusCode).toBe(409);
         expect((captured!.details as { violations: string[] }).violations).toEqual(["ITEM_NOT_PRODUCT"]);
     });
-});
 });

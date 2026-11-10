@@ -12,7 +12,7 @@ import {
   splitCashflow,
   toDateInputValue,
 } from "../../lib/report"
-import type { LowStockItem, MonthlyPoint, ReportRangeMode } from "../../lib/report"
+import type { LowStockItem, MonthlyPoint, ReportPrintScope, ReportRangeMode } from "../../lib/report"
 import { formatIDR } from "../../lib/format"
 import type { CashflowItem, OrderListItem, OrderStatus } from "../../lib/types"
 import { adminApi, orderApi } from "../../services/api"
@@ -174,6 +174,7 @@ export function AdminReportPage() {
     return toDateInputValue(d)
   })
   const [customEnd, setCustomEnd] = useState<string>(() => toDateInputValue(new Date()))
+  const [printScope, setPrintScope] = useState<ReportPrintScope>("all")
 
   const [cashflowItems, setCashflowItems] = useState<CashflowItem[]>([])
   const [orders, setOrders] = useState<OrderListItem[]>([])
@@ -234,6 +235,7 @@ export function AdminReportPage() {
         cashflow: periodCashflow,
         lowStock,
         autoPrint: true,
+        scope: printScope,
       },
     })
   }
@@ -307,6 +309,18 @@ export function AdminReportPage() {
               />
             </label>
           </div>
+          <label className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-ink">
+            <span className="font-medium text-gray-500">Cetak</span>
+            <select
+              value={printScope}
+              onChange={(e) => setPrintScope(e.target.value as ReportPrintScope)}
+              className="cursor-pointer bg-transparent text-sm font-semibold text-ink focus:outline-none"
+            >
+              <option value="all">Pendapatan &amp; Pengeluaran</option>
+              <option value="income">Pendapatan saja</option>
+              <option value="expense">Pengeluaran saja</option>
+            </select>
+          </label>
           <button
             onClick={handlePrint}
             disabled={loading}

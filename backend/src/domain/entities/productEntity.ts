@@ -4,7 +4,7 @@ import { moneyInputSchema } from "../../lib/money";
 import { AppError } from "../../helper/errorHandling/appError";
 import type { productCategory, productCreateType, productUpdateType } from "../types/productType";
 
-const categories = ["Detergen", "Softener", "Pewangi", "Pemutih", "Paket Hemat"] as const;
+const categories = ["Detergen", "Softener", "Pewangi", "Pemutih", "Paket Hemat", "Aksesoris" , "Pembersih Noda"] as const;
 
 export class productEntity {
     private static readonly createSchema = z.object({

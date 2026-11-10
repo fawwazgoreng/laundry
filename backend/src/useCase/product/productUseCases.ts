@@ -13,6 +13,7 @@ export class ListProductsUseCase {
         const perPage = opts.perPage ?? 12;
         const result = await this.repository.list({ ...opts, page, perPage });
         logger.debug("products listed", { count: result.count, page, perPage, filter: opts.category ?? "all" });
+        logger.info("product list" , result)
         return { data: result.data, count: result.count, page, perPage };
     }
 }

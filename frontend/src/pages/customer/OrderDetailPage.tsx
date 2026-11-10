@@ -162,7 +162,7 @@ export function OrderDetailPage() {
   }
 
     function refundMessage(order: OrderDetail): string {
-    let error: string[] = []
+    const error: string[] = []
 
     if (order.order_type === "SERVICE") error.push("order bertipe product")
     if (order.status !== "SELESAI") error.push("order belum selesai")

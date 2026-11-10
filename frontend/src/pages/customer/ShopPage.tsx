@@ -3,11 +3,13 @@ import { Search, X } from "lucide-react"
 import { formatIDR } from "../../lib/format"
 import type { Money, Product, ServiceAddonGroup, ServiceAddonOption } from "../../lib/types"
 import { moneyToNumber } from "../../lib/utils"
+import { isPerOrderAddon, perOrderAddonKey } from "../../lib/serviceAddons"
 import { productApi } from "../../services/api"
 import { useOrderDraft } from "../../context/OrderDraftContext"
 import { PRODUCT_CATEGORIES } from "../../lib/utils"
 import { ErrorState, LoadingState } from "../../components/ui"
 import { useNavigate } from "react-router-dom"
+import { useToast } from "../../components/Toast"
 
 interface CardProduct {
   id: number
@@ -22,7 +24,8 @@ interface CardProduct {
 
 export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) => void }) {
   const navigate = useNavigate()
-  const { addProduct } = useOrderDraft()
+  const { addProduct, services: draftServices, products: draftProducts } = useOrderDraft()
+  const { success: toastSuccess, error: toastError } = useToast()
   const [products, setProducts] = useState<CardProduct[]>([])
   const [category, setCategory] = useState("Semua")
   const [search, setSearch] = useState("")
@@ -55,6 +58,19 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
       })
       .finally(() => setLoading(false))
   }, [])
+
+  // Add-on per_order yang sudah terikat ke item lain di pesanan. Pilihan
+  // duplikat di pop-up produk tidak akan ditagih ulang.
+  const takenPerOrder = useMemo(() => {
+    const keys = new Set<string>()
+    const groupCodes = new Set<string>()
+    for (const addon of [...draftServices.flatMap((s) => s.addons), ...draftProducts.flatMap((p) => p.addons)]) {
+      if (!isPerOrderAddon(addon)) continue
+      keys.add(perOrderAddonKey(addon))
+      groupCodes.add(addon.group.code)
+    }
+    return { keys, groupCodes }
+  }, [draftServices, draftProducts])
 
   const productCategories = useMemo(() => {
     const fromData = [...new Set(products.map((p) => p.category))].filter(Boolean)
@@ -116,17 +132,39 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
   function confirmAddWithAddons() {
     if (!addonProduct) return
     const requiredMissing = addonProduct.addon_groups.some(
-      (group) => group.is_required && (selections[group.code]?.length ?? 0) === 0,
+      (group) =>
+        group.is_active &&
+        group.is_required &&
+        (selections[group.code]?.length ?? 0) === 0 &&
+        !takenPerOrder.groupCodes.has(group.code),
     )
-    if (requiredMissing) return
-    const addons = addonProduct.addon_groups.flatMap((group) =>
+    if (requiredMissing) {
+      toastError("Lengkapi add-on wajib sebelum menambahkan produk")
+      return
+    }
+    const chosen = addonProduct.addon_groups.flatMap((group) =>
       (selections[group.code] ?? []).flatMap((optionId) => {
         const option = group.options.find((candidate) => candidate.id === optionId)
         return option ? [{ group, option }] : []
       }),
     )
+    // Add-on per_order yang sudah dipakai item lain dilewati (diikat ke item
+    // pertama) supaya tidak tertagih dua kali.
+    const addons = chosen.filter(
+      (addon) => !isPerOrderAddon(addon) || !takenPerOrder.keys.has(perOrderAddonKey(addon)),
+    )
+    const skipped = chosen.length - addons.length
     addProduct(addonProduct, 1, addons)
     onAddToOrder?.(addonProduct.id)
+    const baseMessage =
+      addons.length > 0
+        ? `${addonProduct.name} + ${addons.length} add-on ditambahkan ke pesanan`
+        : `${addonProduct.name} ditambahkan ke pesanan`
+    toastSuccess(
+      skipped > 0
+        ? `${baseMessage} (${skipped} add-on per order sudah terpasang di item lain)`
+        : baseMessage,
+    )
     setAddonProduct(null)
     navigate("/checkout")
   }
@@ -260,18 +298,29 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
                   <div className="space-y-2">
                     {group.options.filter((option) => option.is_active).map((option) => {
                       const checked = (selections[group.code] ?? []).includes(option.id)
+                      const takenElsewhere =
+                        isPerOrderAddon({ group, option }) &&
+                        takenPerOrder.keys.has(perOrderAddonKey({ group, option }))
                       return (
                         <button
                           key={option.id}
                           type="button"
+                          disabled={takenElsewhere}
                           onClick={() => toggleAddon(group, option)}
                           className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm ${
-                            checked ? "border-primary bg-primary-light/40" : "border-gray-200"
+                            takenElsewhere
+                              ? "cursor-not-allowed border-gray-100 opacity-50"
+                              : checked
+                                ? "border-primary bg-primary-light/40"
+                                : "border-gray-200"
                           }`}
                         >
                           <span className="flex items-center gap-2">
                             <span className={`h-4 w-4 rounded-full border-2 ${checked ? "border-primary bg-primary" : "border-gray-300"}`} />
                             {option.name}
+                            {takenElsewhere && (
+                              <span className="text-[10px] font-semibold text-gray-400">Sudah dipakai item lain</span>
+                            )}
                           </span>
                           <span className="text-xs text-gray-500">
                             +{formatIDR(option.price)}{option.price_mode === "per_unit" ? "/unit" : "/order"}
