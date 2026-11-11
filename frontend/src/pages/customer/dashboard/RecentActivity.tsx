@@ -10,7 +10,7 @@ export const RecentActivity = ({ items }: RecentActivityProps) => {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-6">
       <h2 className="text-sm font-semibold text-ink-strong">Aktivitas Terkini</h2>
-      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {items.map((item, idx) => (
           <div
             key={idx}

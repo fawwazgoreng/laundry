@@ -1,275 +1,275 @@
 // use prisma-8
-
 model User {
-    id              Uuid           @id @default(uuid())
-    role            VarChar(10)
-    username        VarChar(150)
-    email           String         @unique
-    password        String
-    phone           VarChar(20)
-    is_verified     Boolean        @default(true)
-    verified_at     DateTime       @default(now())
-    created_at      DateTime       @default(now())
-    user_address    User_address[]
-    refreshToken    Refresh_token? @relation(fields: [refresh_tokenId], references: [id])
-    refresh_tokenId Uuid?
-    accessToken     Access_token?  @relation(fields: [access_tokenId], references: [id])
-    access_tokenId  Uuid?
-    orders          Orders[]
-    refundRequests  Refund_requests[]
+  id              Uuid              @id @default(uuid())
+  role            VarChar(10)
+  username        VarChar(150)
+  email           String            @unique
+  password        String
+  phone           VarChar(20)
+  is_verified     Boolean           @default(true)
+  verified_at     DateTime          @default(now())
+  created_at      DateTime          @default(now())
+  user_address    User_address[]
+  refreshToken    Refresh_token?    @relation(fields: [refresh_tokenId], references: [id])
+  refresh_tokenId Uuid?
+  accessToken     Access_token?     @relation(fields: [access_tokenId], references: [id])
+  access_tokenId  Uuid?
+  orders          Orders[]
+  refundRequests  Refund_requests[]
 }
 
 model Refresh_token {
-    id         Uuid     @id @default(uuid())
-    user_id    Uuid
-    token      String
-    expired_at DateTime
-    created_at DateTime @default(now())
-    user       User[]
+  id         Uuid     @id @default(uuid())
+  user_id    Uuid
+  token      String
+  expired_at DateTime
+  created_at DateTime @default(now())
+  user       User[]
 }
 
 model Access_token {
-    id         Uuid     @id @default(uuid())
-    user_id    Uuid
-    token      String
-    expired_at DateTime
-    created_at DateTime @default(now())
-    user       User[]
+  id         Uuid     @id @default(uuid())
+  user_id    Uuid
+  token      String
+  expired_at DateTime
+  created_at DateTime @default(now())
+  user       User[]
 }
 
 model User_address {
-    id           Int      @id @default(autoincrement())
-    label        VarChar(30)
-    address_text String
-    latitude     Numeric(10, 8)
-    longitude    Numeric(11, 8)
-    is_primary   Boolean  @default(false)
-    user_id      Uuid
-    user         User     @relation(fields: [user_id], references: [id])
-    orders       Orders[]
+  id           Int            @id @default(autoincrement())
+  label        VarChar(30)
+  address_text String
+  latitude     Numeric(10, 8)
+  longitude    Numeric(11, 8)
+  is_primary   Boolean        @default(false)
+  user_id      Uuid
+  user         User           @relation(fields: [user_id], references: [id])
+  orders       Orders[]
 }
 
 model Outlets {
-    id               Int      @id @default(autoincrement())
-    name             String
-    phone            VarChar(20)?
-    address_text     String?
-    latitude         Numeric(10, 8)
-    longitude        Numeric(11, 8)
-    max_coverage_km  Numeric(5, 2)
-    min_order_amount Numeric(12, 2)
-    open_hours       String?
-    slot_date        String?
-    weekly_hours     String?
-    orders           Orders[]
+  id               Int            @id @default(autoincrement())
+  name             String
+  phone            VarChar(20)?
+  address_text     String?
+  latitude         Numeric(10, 8)
+  longitude        Numeric(11, 8)
+  max_coverage_km  Numeric(5, 2)
+  min_order_amount Numeric(12, 2)
+  open_hours       String?
+  slot_date        String?
+  weekly_hours     String?
+  orders           Orders[]
 }
 
 model Laundry_services {
-    id                       Int                            @id @default(autoincrement())
-    name                     VarChar(30)
-    unit                     VarChar(10)
-    price_per_unit           Numeric(12, 2)
-    description              String
-    estimated_duration_hours Int
-    is_active                Boolean
-    serviceOrderItems        Service_order_item[]
-    addonGroups              Laundry_service_addon_groups[]
+  id                       Int                            @id @default(autoincrement())
+  name                     VarChar(30)
+  unit                     VarChar(10)
+  price_per_unit           Numeric(12, 2)
+  description              String
+  estimated_duration_hours Int
+  is_active                Boolean
+  serviceOrderItems        Service_order_item[]
+  addonGroups              Laundry_service_addon_groups[]
 }
 
 model Service_addon_groups {
-    id             Int                            @id @default(autoincrement())
-    code           VarChar(30)                    @unique
-    name           VarChar(50)
-    selection_type VarChar(20)                    @default("single")
-    is_required    Boolean                        @default(false)
-    is_active      Boolean                        @default(true)
-    options        Service_addon_options[]
-    services       Laundry_service_addon_groups[]
-    productAddons  Product_addon_groups[]
+  id             Int                            @id @default(autoincrement())
+  code           VarChar(30)                    @unique
+  name           VarChar(50)
+  selection_type VarChar(20)                    @default("single")
+  is_required    Boolean                        @default(false)
+  is_active      Boolean                        @default(true)
+  options        Service_addon_options[]
+  services       Laundry_service_addon_groups[]
+  productAddons  Product_addon_groups[]
 }
 
 model Service_addon_options {
-    id              Int                          @id @default(autoincrement())
-    group_id        Int
-    name            VarChar(50)
-    price           Numeric(12, 2)               @default(0)
-    price_mode      VarChar(20)                  @default("per_unit")
-    is_default      Boolean                      @default(false)
-    is_active       Boolean                      @default(true)
-    group           Service_addon_groups         @relation(fields: [group_id], references: [id])
-    orderItemAddons Service_order_item_addons[]
+  id                Int                         @id @default(autoincrement())
+  group_id          Int
+  name              VarChar(50)
+  price             Numeric(12, 2)              @default(0)
+  price_mode        VarChar(20)                 @default("per_unit")
+  is_default        Boolean                     @default(false)
+  is_active         Boolean                     @default(true)
+  group             Service_addon_groups        @relation(fields: [group_id], references: [id])
+  orderItemAddons   Service_order_item_addons[]
+  productItemAddons Product_order_item_addons[]
 
-    @@unique([group_id, name])
+  @@unique([group_id, name])
 }
 
 model Laundry_service_addon_groups {
-    service_id Int
-    group_id   Int
-    service    Laundry_services       @relation(fields: [service_id], references: [id])
-    group      Service_addon_groups   @relation(fields: [group_id], references: [id])
+  service_id Int
+  group_id   Int
+  service    Laundry_services     @relation(fields: [service_id], references: [id])
+  group      Service_addon_groups @relation(fields: [group_id], references: [id])
 
-    @@id([service_id, group_id])
+  @@id([service_id, group_id])
 }
 
 model Products {
-    id                Int                  @id @default(autoincrement())
-    name              VarChar(30)               
-    category          VarChar(30)
-    price             Numeric(12, 2)
-    size              VarChar(10)
-    stock             Int
-    is_active         Boolean
-    image             String
-    productOrderItems Product_order_item[]
-    addonGroups       Product_addon_groups[]
+  id                Int                    @id @default(autoincrement())
+  name              VarChar(30)
+  category          VarChar(30)
+  price             Numeric(12, 2)
+  size              VarChar(10)
+  stock             Int
+  is_active         Boolean
+  image             String
+  productOrderItems Product_order_item[]
+  addonGroups       Product_addon_groups[]
 }
 
 model Product_addon_groups {
-    product_id                                  Int
-    group_id                                    Int
-    product                                     Products              @relation(fields: [product_id], references: [id])
-    group                                       Service_addon_groups  @relation(fields: [group_id], references: [id])
+  product_id Int
+  group_id   Int
+  product    Products             @relation(fields: [product_id], references: [id])
+  group      Service_addon_groups @relation(fields: [group_id], references: [id])
 
-    @@id([product_id, group_id])
+  @@id([product_id, group_id])
 }
 
 model Orders {
-    id                Uuid                 @id @default(uuid())
-    order_id          String               @unique
-    user_id           Uuid
-    outlet_id         Int
-    user_address_id   Int
-    distance_km       Numeric(6, 2)
-    delivery_fee      Numeric(10, 2)
-    total_laundry     Numeric(12, 2)
-    total_product     Numeric(12, 2)
-    total_addon       Numeric(12, 2)      @default(0)
-    total_amount      Numeric(12, 2)
-    status            VarChar(20)
-    payment_method    VarChar(20)
-    notes             String?
-    created_at        DateTime             @default(now())
-    updated_at        temporal.updatedAt() // Menggunakan standar pelacakan waktu mutakhir aplikasi Prisma 8
-    user              User                 @relation(fields: [user_id], references: [id])
-    outlet            Outlets              @relation(fields: [outlet_id], references: [id])
-    address           User_address         @relation(fields: [user_address_id], references: [id])
-    serviceOrderItems Service_order_item[]
-    productOrderItems Product_order_item[]
-    payments          Payments[]
-    orderTrackings    Order_trackings[]
-    cashFlows         Cash_flow[]
-    refundRequests    Refund_requests[]
+  id                Uuid                 @id @default(uuid())
+  order_id          String               @unique
+  user_id           Uuid
+  outlet_id         Int
+  user_address_id   Int
+  distance_km       Numeric(6, 2)
+  delivery_fee      Numeric(10, 2)
+  total_laundry     Numeric(12, 2)
+  total_product     Numeric(12, 2)
+  total_addon       Numeric(12, 2)       @default(0)
+  total_amount      Numeric(12, 2)
+  status            VarChar(20)
+  payment_method    VarChar(20)
+  notes             String?
+  created_at        DateTime             @default(now())
+  updated_at        temporal.updatedAt() // Menggunakan standar pelacakan waktu mutakhir aplikasi Prisma 8
+  user              User                 @relation(fields: [user_id], references: [id])
+  outlet            Outlets              @relation(fields: [outlet_id], references: [id])
+  address           User_address         @relation(fields: [user_address_id], references: [id])
+  serviceOrderItems Service_order_item[]
+  productOrderItems Product_order_item[]
+  payments          Payments[]
+  orderTrackings    Order_trackings[]
+  cashFlows         Cash_flow[]
+  refundRequests    Refund_requests[]
 }
 
 model Service_order_item {
-    id                 Uuid             @id @default(uuid())
-    order_id           String
-    laundry_service_id Int
-    qty                Numeric(6, 2)    // Kiloan laundry menggunakan pecahan desimal biner
-    price_per_unit     Numeric(12, 2)   @default(0)
-    addon_subtotal     Numeric(12, 2)   @default(0)
-    subtotal           Numeric(12, 2)
-    notes              String
-    service            Laundry_services @relation(fields: [laundry_service_id], references: [id])
-    order              Orders           @relation(fields: [order_id], references: [order_id])
-    addons             Service_order_item_addons[]
+  id                 Uuid                        @id @default(uuid())
+  order_id           String
+  laundry_service_id Int
+  qty                Numeric(6, 2) // Kiloan laundry menggunakan pecahan desimal biner
+  price_per_unit     Numeric(12, 2)              @default(0)
+  addon_subtotal     Numeric(12, 2)              @default(0)
+  subtotal           Numeric(12, 2)
+  notes              String
+  service            Laundry_services            @relation(fields: [laundry_service_id], references: [id])
+  order              Orders                      @relation(fields: [order_id], references: [order_id])
+  addons             Service_order_item_addons[]
 }
 
 model Service_order_item_addons {
-    id                    Uuid               @id @default(uuid())
-    service_order_item_id Uuid
-    addon_option_id       Int?
-    group_code            VarChar(30)
-    group_name            VarChar(50)
-    option_name           VarChar(50)
-    price                 Numeric(12, 2)    @default(0)
-    price_mode            VarChar(20)       @default("per_unit")
-    qty                   Numeric(6, 2)     @default(0)
-    subtotal              Numeric(12, 2)    @default(0)
-    serviceOrderItem      Service_order_item @relation(fields: [service_order_item_id], references: [id], onDelete: Cascade)
-    addonOption           Service_addon_options? @relation(fields: [addon_option_id], references: [id])
+  id                    Uuid                   @id @default(uuid())
+  service_order_item_id Uuid
+  addon_option_id       Int?
+  group_code            VarChar(30)
+  group_name            VarChar(50)
+  option_name           VarChar(50)
+  price                 Numeric(12, 2)         @default(0)
+  price_mode            VarChar(20)            @default("per_unit")
+  qty                   Numeric(6, 2)          @default(0)
+  subtotal              Numeric(12, 2)         @default(0)
+  serviceOrderItem      Service_order_item     @relation(fields: [service_order_item_id], references: [id], onDelete: Cascade)
+  addonOption           Service_addon_options? @relation(fields: [addon_option_id], references: [id])
 }
 
 model Product_order_item {
-    id         Uuid           @id @default(uuid())
-    order_id   String
-    product_id Int
-    qty        Int
-    subtotal   Numeric(12, 2)
-    product    Products @relation(fields: [product_id], references: [id])
-    order      Orders   @relation(fields: [order_id], references: [order_id])
-    addons     Product_order_item_addons[]
+  id         Uuid                        @id @default(uuid())
+  order_id   String
+  product_id Int
+  qty        Int
+  subtotal   Numeric(12, 2)
+  product    Products                    @relation(fields: [product_id], references: [id])
+  order      Orders                      @relation(fields: [order_id], references: [order_id])
+  addons     Product_order_item_addons[]
 }
 
 model Product_order_item_addons {
-    id                    Uuid               @id @default(uuid())
-    product_order_item_id Uuid
-    addon_option_id       Int?
-    group_code            VarChar(30)
-    group_name            VarChar(50)
-    option_name           VarChar(50)
-    price                 Numeric(12, 2)     @default(0)
-    price_mode            VarChar(20)        @default("per_unit")
-    qty                   Numeric(6, 2)      @default(0)
-    subtotal              Numeric(12, 2)     @default(0)
-    productOrderItem      Product_order_item @relation(fields: [product_order_item_id], references: [id], onDelete: Cascade)
-    addonOption           Service_addon_options? @relation(fields: [addon_option_id], references: [id])
+  id                    Uuid                   @id @default(uuid())
+  product_order_item_id Uuid
+  addon_option_id       Int?
+  group_code            VarChar(30)
+  group_name            VarChar(50)
+  option_name           VarChar(50)
+  price                 Numeric(12, 2)         @default(0)
+  price_mode            VarChar(20)            @default("per_unit")
+  qty                   Numeric(6, 2)          @default(0)
+  subtotal              Numeric(12, 2)         @default(0)
+  productOrderItem      Product_order_item     @relation(fields: [product_order_item_id], references: [id], onDelete: Cascade)
+  addonOption           Service_addon_options? @relation(fields: [addon_option_id], references: [id])
 }
 
 model Payments {
-    id             Uuid      @id @default(uuid())
-    order_id       String
-    transaction_id String
-    payment_type   VarChar(20)
-    gross_amount   Numeric(12, 2)
-    status         VarChar(30)
-    va_number      String?
-    paid_at        DateTime?
-    raw_response   Json?
-    created_at     DateTime  @default(now())
-    order          Orders    @relation(fields: [order_id], references: [order_id])
-    refundRequests Refund_requests[]
+  id             Uuid              @id @default(uuid())
+  order_id       String
+  transaction_id String
+  payment_type   VarChar(20)
+  gross_amount   Numeric(12, 2)
+  status         VarChar(30)
+  va_number      String?
+  paid_at        DateTime?
+  raw_response   Json?
+  created_at     DateTime          @default(now())
+  order          Orders            @relation(fields: [order_id], references: [order_id])
+  refundRequests Refund_requests[]
 }
 
 model Refund_requests {
-    id               Uuid      @id @default(uuid())
-    order_id         String
-    user_id          Uuid
-    payment_id       Uuid?
-    amount           Numeric(12, 2)
-    reason           String
-    status           VarChar(20) @default("REQUESTED")
-    gateway_ref      String?
-    gateway_response Json?
-    requested_at     DateTime  @default(now())
-    processed_at     DateTime?
-    processed_by     Uuid?
-    order            Orders    @relation(fields: [order_id], references: [order_id])
-    user             User      @relation(fields: [user_id], references: [id])
-    payment          Payments? @relation(fields: [payment_id], references: [id])
+  id               Uuid           @id @default(uuid())
+  order_id         String
+  user_id          Uuid
+  payment_id       Uuid?
+  amount           Numeric(12, 2)
+  reason           String
+  status           VarChar(20)    @default("REQUESTED")
+  gateway_ref      String?
+  gateway_response Json?
+  requested_at     DateTime       @default(now())
+  processed_at     DateTime?
+  processed_by     Uuid?
+  order            Orders         @relation(fields: [order_id], references: [order_id])
+  user             User           @relation(fields: [user_id], references: [id])
+  payment          Payments?      @relation(fields: [payment_id], references: [id])
 
-    @@index([order_id, status])
+  @@index([order_id, status])
 }
 
 model Order_trackings {
-    id                        Uuid     @id @default(uuid())
-    order_id                  String
-    status                    VarChar(20)
-    estimated_completion_time DateTime @default(now())
-    notes                     String
-    created_at                DateTime @default(now())
-    order                     Orders   @relation(fields: [order_id], references: [order_id])
+  id                        Uuid        @id @default(uuid())
+  order_id                  String
+  status                    VarChar(20)
+  estimated_completion_time DateTime    @default(now())
+  notes                     String
+  created_at                DateTime    @default(now())
+  order                     Orders      @relation(fields: [order_id], references: [order_id])
 }
 
 model Cash_flow {
-    id          Int      @id @default(autoincrement())
-    order_id    String?
-    type        VarChar(20)
-    category    VarChar(40)
-    amount      Numeric(12, 2)
-    description String
-    created_at  DateTime @default(now())
-    order       Orders?  @relation(fields: [order_id], references: [order_id])
+  id          Int            @id @default(autoincrement())
+  order_id    String?
+  type        VarChar(20)
+  category    VarChar(40)
+  amount      Numeric(12, 2)
+  description String
+  created_at  DateTime       @default(now())
+  order       Orders?        @relation(fields: [order_id], references: [order_id])
 
-    @@unique([order_id, type])
+  @@unique([order_id, type])
 }

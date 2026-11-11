@@ -149,7 +149,7 @@ export function OrderDetailPage() {
 
   if (!order) {
     return (
-      <div className="mx-auto max-w-6xl px-6 py-8">
+      <div className="mx-auto max-w-6xl px-6 py-8 2xl:max-w-7xl">
         {loadError ? (
           <ErrorState message={loadError} onRetry={() => setReloadKey((k) => k + 1)} />
         ) : (
@@ -201,7 +201,7 @@ export function OrderDetailPage() {
   ]
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-6 py-8 2xl:max-w-7xl">
       <nav className="text-xs text-gray-400">
         Layanan / Riwayat Pesanan / <span className="text-ink-strong">Detail Pesanan</span>
       </nav>

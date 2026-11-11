@@ -45,7 +45,7 @@ export function OrderTrackingPage() {
 
   if (!order) {
     return (
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-6 py-8 2xl:max-w-[1600px]">
         {loadError ? (
           <ErrorState message={loadError} onRetry={() => setReloadKey((k) => k + 1)} />
         ) : (
@@ -77,7 +77,7 @@ export function OrderTrackingPage() {
   }))
 
   return (
-    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-2">
+    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-2 2xl:max-w-[1600px]">
       <div className="space-y-6">
         <div className="rounded-2xl border border-gray-200 bg-white p-6">
           <div className="flex items-center justify-between">

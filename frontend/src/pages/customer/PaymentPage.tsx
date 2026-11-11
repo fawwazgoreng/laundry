@@ -110,7 +110,7 @@ export function PaymentPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-6 py-8">
+    <div className="mx-auto max-w-4xl space-y-6 px-6 py-8 2xl:max-w-5xl">
       <div>
         <h1 className="text-2xl font-bold text-ink-strong">Pembayaran</h1>
         <p className="text-sm text-gray-500">selesaikan pembayaran untuk {orderId}</p>

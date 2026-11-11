@@ -163,7 +163,7 @@ export function AdminSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-6 py-8">
+    <div className="mx-auto max-w-5xl space-y-6 px-6 py-8 2xl:max-w-6xl">
       {/* --- Profil Outlet --- */}
       <section className="rounded-2xl border border-gray-200 bg-white p-6">
         <h2 className="mb-4 text-base font-bold text-ink-strong">Profil Outlet Cleanora</h2>

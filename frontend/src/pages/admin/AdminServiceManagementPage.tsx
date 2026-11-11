@@ -133,7 +133,7 @@ export function AdminServiceManagementPage() {
   }
 
   return (
-    <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[1fr_360px]">
+    <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[1fr_360px] 2xl:max-w-[1600px] 2xl:grid-cols-[1fr_420px]">
       {/* Daftar layanan */}
       <div>
         <h1 className="text-2xl font-bold text-ink-strong">Manajemen Layanan</h1>

@@ -259,11 +259,13 @@ export function Pagination({
     page,
     totalPages,
     count,
+    perPage,
     onChange,
 }: {
     page: number
     totalPages: number
     count?: number
+    perPage?: number
     onChange: (page: number) => void
 }) {
     if (totalPages <= 1 && !count) return null
@@ -271,11 +273,17 @@ export function Pagination({
     const start = Math.max(1, page - 2)
     const end = Math.min(totalPages, start + 4)
     for (let i = start; i <= end; i++) pages.push(i)
+    const rangeStart = count ? (page - 1) * (perPage ?? count) + 1 : 0
+    const rangeEnd = count && perPage ? Math.min(page * perPage, count) : (count ?? 0)
 
     return (
         <div className="flex items-center justify-between gap-3 pt-4">
             <p className="text-xs text-gray-500">
-                {count !== undefined ? `Menampilkan ${count} data` : `Halaman ${page}`}
+                {count !== undefined
+                    ? perPage
+                        ? `Menampilkan ${rangeStart}–${rangeEnd} dari ${count} data`
+                        : `Menampilkan ${count} data`
+                    : `Halaman ${page}`}
             </p>
             <div className="flex items-center gap-1">
                 <Button

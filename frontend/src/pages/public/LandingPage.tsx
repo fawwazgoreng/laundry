@@ -81,7 +81,7 @@ export default function LandingPage() {
                     </span>
                     <span className=" font-extrabold tracking-tight text-ink-strong text-[20px] uppercase">Fadarosi</span>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 sm:gap-4">
                     {user ? (
                         <Link className="px-4 py-2 rounded-xl font-semibold text-white bg-primary" to={startTo}>Buka Aplikasi</Link>
                     ) : (

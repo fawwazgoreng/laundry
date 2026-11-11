@@ -65,7 +65,6 @@ const CASHFLOW_TONE = {
 function CashflowTable({ title, subtitle, tone, items, total, limit = 8 }: CashflowTableProps) {
   const style = CASHFLOW_TONE[tone]
   const visibleItems = items.slice(0, limit)
-  const hiddenCount = Math.max(0, items.length - visibleItems.length)
 
   return (
     <section className={`report-section overflow-hidden rounded-2xl border-2 bg-white ${style.border}`}>
@@ -239,7 +238,7 @@ export function AdminReportPage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-2 py-8 sm:px-6">
+    <div className="mx-auto max-w-7xl space-y-6 px-2 py-8 sm:px-6 2xl:max-w-[1600px]">
       {/* Header cetak (khusus tampilan print) */}
       <div className="hidden print:block space-y-1 border-b border-gray-200 pb-4">
         <h1 className="text-2xl font-bold text-ink-strong">Laporan Fadarosi</h1>

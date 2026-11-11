@@ -47,17 +47,17 @@ export class DecideRefundUseCase {
 
         let gatewayRef: string | null = null;
         let gatewayResponse: Record<string, unknown> | null = null;
-        if (order.payment_method === "transfer_bank") {
-            const transactionId = payment.transaction_id;
-            if (!transactionId) throw AppError.conflict("Transaksi gateway tidak ditemukan");
-            await this.cashflowRepository.create({
-                order_id: order.id,
-                type: "expense",
-                category: "refund",
-                amount: order.total_amount,
-                description: `Customer ${order.customer.username} melakukan refund sejumlah ${order.total_amount}`
-            })
-        }
+        // if (order.payment_method === "transfer_bank") {
+        //     const transactionId = payment.transaction_id;
+        //     if (!transactionId) throw AppError.conflict("Transaksi gateway tidak ditemukan");
+        //     await this.cashflowRepository.create({
+        //         order_id: order.id,
+        //         type: "expense",
+        //         category: "refund",
+        //         amount: order.total_amount,
+        //         description: `Customer ${order.customer.username} melakukan refund sejumlah ${order.total_amount}`
+        //     })
+        // }
 
         await this.paymentRepository.updateStatus(payment.id, "REFUNDED");
         try {

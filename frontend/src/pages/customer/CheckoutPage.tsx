@@ -358,7 +358,7 @@ export function CheckoutPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 px-6 py-8">
+    <div className="mx-auto max-w-6xl space-y-6 px-6 py-8 2xl:max-w-7xl">
       <div>
         <h1 className="text-2xl font-bold text-ink-strong">Buat Pesanan &amp; Checkout</h1>
         <p className="text-sm text-gray-500">

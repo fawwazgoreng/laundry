@@ -170,7 +170,7 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
   }
 
   return (
-    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[240px_1fr]">
+    <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 md:grid-cols-[200px_1fr] lg:grid-cols-[240px_1fr] 2xl:max-w-[1600px]">
       <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-4">
         <h2 className="mb-3 px-2 text-sm font-semibold text-ink-strong">Kategori Produk</h2>
         <nav className="flex flex-col gap-1">
@@ -222,7 +222,7 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
           </select>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {loading ? (
             <div className="col-span-full">
               <LoadingState message="Memuat produk..." />

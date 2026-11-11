@@ -2,14 +2,18 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import type { ChangeEvent } from "react"
 import { Box, Search, UploadCloud } from "lucide-react"
 import { formatIDR } from "../../lib/format"
+import { fetchAllPages, pageSlice } from "../../lib/pagination"
 import { toMoneyInput } from "../../lib/utils"
 import { PRODUCT_CATEGORIES } from "../../lib/utils"
 import type { Money, Product } from "../../lib/types"
 import { productApi } from "../../services/api"
 import { ApiError } from "../../services/apiClient"
 import { useToast } from "../../components/Toast"
-import { ErrorState, LoadingState } from "../../components/ui"
+import { ErrorState, LoadingState, Pagination } from "../../components/ui"
 import DeletePopup from "../../components/deletePopUp"
+
+const PER_PAGE = 12
+const FETCH_PER_PAGE = 100
 
 // Batas ukuran & format foto sesuai aturan backend (maksimal 2MB, JPG/PNG/WEBP)
 const MAX_IMAGE_SIZE = 2 * 1024 * 1024
@@ -34,6 +38,7 @@ export function AdminProductManagementPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [products, setProducts] = useState<ProductCard[]>([])
+  const [page, setPage] = useState(1)
   const [search, setSearch] = useState("")
   const [category, setCategory] = useState("Semua")
   const [loading, setLoading] = useState(false)
@@ -55,11 +60,13 @@ export function AdminProductManagementPage() {
 
   // Muat ulang daftar produk dari backend
   const load = () =>
-    productApi
-      .list({ perPage: 100 })
-      .then((page) => {
+    fetchAllPages(
+      (page, perPage) => productApi.list({ page, perPage }),
+      FETCH_PER_PAGE,
+    )
+      .then((all) => {
         setProducts(
-          page.data.map((p: Product) => ({
+          all.map((p: Product) => ({
             id: p.id,
             name: p.name,
             category: p.category,
@@ -92,6 +99,8 @@ export function AdminProductManagementPage() {
     if (search.trim()) list = list.filter((p) => p.name.toLowerCase().includes(search.trim().toLowerCase()))
     return list
   }, [products, category, search])
+
+  const { items: pagedProducts, totalPages, safePage } = pageSlice(filtered, page, PER_PAGE)
 
   // Produk yang sedang diedit (untuk melengkapi form / pratinjau gambar)
   const editingProduct = products.find((p) => p.id === editingId) ?? null
@@ -200,7 +209,7 @@ export function AdminProductManagementPage() {
   }
 
   return (
-    <div className="mx-auto grid w-full grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[1fr_360px]">
+    <div className="mx-auto grid w-full grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-[1fr_360px] 2xl:max-w-[1600px] 2xl:grid-cols-[1fr_420px]">
       {/* Daftar produk */}
       <div>
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -208,7 +217,7 @@ export function AdminProductManagementPage() {
             <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1) }}
               placeholder="Cari produk..."
               className="w-full rounded-xl border border-gray-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-primary"
             />
@@ -216,7 +225,7 @@ export function AdminProductManagementPage() {
           <div className="flex items-center gap-3">
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={(e) => { setCategory(e.target.value); setPage(1) }}
               className="rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm text-ink outline-none"
             >
               {categories.map((c) => (
@@ -229,7 +238,7 @@ export function AdminProductManagementPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {listLoading ? (
             <div className="col-span-full">
               <LoadingState message="Memuat produk..." />
@@ -240,7 +249,7 @@ export function AdminProductManagementPage() {
             </div>
           ) : (
             <>
-              {filtered.map((product) => (
+              {pagedProducts.map((product) => (
                 <div key={product.id} className="flex flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white">
                   <div className="aspect-square w-full overflow-hidden bg-gray-100">
                     {product.image ? (
@@ -280,6 +289,18 @@ export function AdminProductManagementPage() {
             </>
           )}
         </div>
+
+        {!listLoading && !listError && filtered.length > 0 && (
+          <div className="mt-2 border-t-2 border-gray-200">
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              count={filtered.length}
+              perPage={PER_PAGE}
+              onChange={setPage}
+            />
+          </div>
+        )}
       </div>
 
       {/* Form Tambah / Edit produk (menjadi kolom kanan yang tetap saat digulir di layar lebar) */}

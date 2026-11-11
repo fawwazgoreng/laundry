@@ -117,7 +117,7 @@ export const DashboardPage = () => {
   }))
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
+    <div className="mx-auto max-w-7xl space-y-6 px-6 py-8 2xl:max-w-[1600px]">
       <div>
         <h1 className="text-2xl font-bold text-ink-strong">Pengaturan akun &amp; aktivitas pelanggan</h1>
         <p className="text-sm text-gray-500">Kelola profil, alamat, dan lihat riwayat pesanan laundry Anda.</p>

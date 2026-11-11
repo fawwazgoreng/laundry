@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useState } from "react"
-import { ChevronLeft, ChevronRight, CreditCard, Eye, Info, MapPin, Receipt, Search, Trash2 } from "lucide-react"
+import { CreditCard, Eye, Info, MapPin, Receipt, Search, Trash2 } from "lucide-react"
 import { adminStatusLabel, adminStatusStyle, paymentStatusLabel, paymentStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
+import { fetchAllPages, pageSlice } from "../../lib/pagination"
 import type { Money, OrderKind, OrderListItem, OrderStatus, Payment, PaymentMethod, RefundStatus } from "../../lib/types"
 import { orderApi, paymentApi } from "../../services/api"
 import { useToast } from "../../components/Toast"
 import { ConfirmDialog } from "../../components/ConfirmDialog"
-import { ErrorState, LoadingState } from "../../components/ui"
+import { ErrorState, LoadingState, Pagination } from "../../components/ui"
 import { Link, useNavigate } from "react-router-dom"
 
+const PER_PAGE = 10
+const FETCH_PER_PAGE = 100
 const PAYMENT_WINDOW_HOURS = 24
 
 function hasActivePayment(payment: Payment): boolean {
@@ -69,6 +72,7 @@ export function UserOrderHistory() {
   const [refundTab, setRefundTab] = useState("semua")
   const [search, setSearch] = useState("")
   const [orders, setOrders] = useState<AdminOrderRow[]>([])
+  const [page, setPage] = useState(1)
   const [checkingPayment, setCheckingPayment] = useState<string | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<AdminOrderRow | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -76,11 +80,13 @@ export function UserOrderHistory() {
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const load = () =>
-    orderApi
-      .list({ perPage: 100 })
-      .then((page) => {
+    fetchAllPages(
+      (page, perPage) => orderApi.list({ page, perPage }),
+      FETCH_PER_PAGE,
+    )
+      .then((all) => {
         setOrders(
-          page.data.map((o: OrderListItem) => ({
+          all.map((o: OrderListItem) => ({
             id: o.order_id,
             customer: o.customer_name,
             phone: o.customer_phone,
@@ -187,8 +193,10 @@ export function UserOrderHistory() {
     return list
   }, [orders, activeTab, refundTab, search])
 
+  const { items: pagedOrders, totalPages, safePage } = pageSlice(filtered, page, PER_PAGE)
+
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
+    <div className="mx-auto max-w-7xl space-y-6 px-6 py-8 2xl:max-w-[1600px]">
       <div>
         <h1 className="text-2xl font-bold text-ink-strong">Riwayat Pesanan</h1>
         <p className="text-sm text-gray-500">Pantau status pesanan, pembayaran, dan pengajuan refund Anda.</p>
@@ -212,7 +220,7 @@ export function UserOrderHistory() {
             return (
               <button
                 key={tab.key}
-                onClick={() => setActiveTab(tab.key)}
+                onClick={() => { setActiveTab(tab.key); setPage(1) }}
                 className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
                   isActive
                     ? "border-primary bg-primary text-white"
@@ -242,7 +250,7 @@ export function UserOrderHistory() {
             return (
               <button
                 key={tab.key}
-                onClick={() => setRefundTab(tab.key)}
+                onClick={() => { setRefundTab(tab.key); setPage(1) }}
                 className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
                   isActive
                     ? "border-amber-600 bg-amber-600 text-white"
@@ -268,7 +276,7 @@ export function UserOrderHistory() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             placeholder="Cari nomor order atau nama pelanggan..."
             className="w-full rounded-xl border bg-white border-gray-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-primary"
           />
@@ -296,7 +304,7 @@ export function UserOrderHistory() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((order) => (
+              {pagedOrders.map((order) => (
                 <tr key={order.id} className="border-b border-gray-50 last:border-0">
                   <td className="px-2 py-4 font-semibold text-ink-strong">{order.id}</td>
                   <td className="px-2 py-4 text-gray-600">{order.customer}</td>
@@ -378,17 +386,14 @@ export function UserOrderHistory() {
             </tbody>
           </table>
         </div>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-3 mt-2 border-t-2 border-gray-200">
-          <p className="text-sm text-gray-400">Menampilkan {filtered.length} dari {orders.length} pesanan</p>
-          <div className="flex items-center gap-2">
-            <button className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:bg-gray-50">
-              <ChevronLeft size={16} />
-            </button>
-            <button className="h-8 w-8 rounded-lg bg-primary text-sm font-semibold text-white">1</button>
-            <button className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:bg-gray-50">
-              <ChevronRight size={16} />
-            </button>
-          </div>
+        <div className="mt-2 border-t-2 border-gray-200">
+          <Pagination
+            page={safePage}
+            totalPages={totalPages}
+            count={filtered.length}
+            perPage={PER_PAGE}
+            onChange={setPage}
+          />
         </div>
         </>
         )}

@@ -117,7 +117,7 @@ export function LaundryWizardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
+    <div className="mx-auto max-w-6xl px-6 py-8 2xl:max-w-7xl">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_340px]">
         <div className="space-y-6">
           <div className="rounded-2xl border border-gray-200 bg-white p-6">

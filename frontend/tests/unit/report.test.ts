@@ -4,8 +4,11 @@ import {
     buildMonthlySeries,
     cashflowCategoryLabel,
     filterByRange,
+    filterCashflowByScope,
     formatShortDate,
+    isReportPrintScope,
     isWithinRange,
+    reportScopeLabel,
     resolveReportRange,
     splitCashflow,
     summarizeCashflow,
@@ -180,5 +183,36 @@ describe("toDateInputValue", () => {
 describe("formatShortDate", () => {
     it("memuat tahun pada hasil format", () => {
         expect(formatShortDate(new Date(2024, 2, 5))).toContain("2024");
+    });
+});
+
+describe("cakupan cetak laporan", () => {
+    const items = [
+        cashflowItem({ id: 1, created_at: "2024-03-01T00:00:00.000Z", type: "income", amount: 50_000 }),
+        cashflowItem({ id: 2, created_at: "2024-03-02T00:00:00.000Z", type: "expense", amount: 20_000 }),
+        cashflowItem({ id: 3, created_at: "2024-03-03T00:00:00.000Z", type: "income", amount: 10_000 }),
+    ];
+
+    it("memvalidasi nilai cakupan dari state router atau query", () => {
+        expect(isReportPrintScope("all")).toBe(true);
+        expect(isReportPrintScope("income")).toBe(true);
+        expect(isReportPrintScope("expense")).toBe(true);
+        expect(isReportPrintScope("both")).toBe(false);
+        expect(isReportPrintScope(undefined)).toBe(false);
+    });
+
+    it("memberi label dokumen sesuai cakupan", () => {
+        expect(reportScopeLabel("all")).toBe("Laporan Keuangan");
+        expect(reportScopeLabel("income")).toBe("Laporan Pendapatan");
+        expect(reportScopeLabel("expense")).toBe("Laporan Pengeluaran");
+    });
+
+    it("all mempertahankan semua baris tanpa menyalin array", () => {
+        expect(filterCashflowByScope(items, "all")).toBe(items);
+    });
+
+    it("income dan expense hanya mengambil sisi yang dipilih", () => {
+        expect(filterCashflowByScope(items, "income").map((item) => item.id)).toEqual([1, 3]);
+        expect(filterCashflowByScope(items, "expense").map((item) => item.id)).toEqual([2]);
     });
 });
