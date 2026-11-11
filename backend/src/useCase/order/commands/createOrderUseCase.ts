@@ -23,7 +23,7 @@ import { AppError } from "../../../helper/errorHandling/appError";
 import { logger } from "../../../helper/logging/logger";
 import { env } from "../../../config/env";
 import * as midtransClient from "midtrans-client";
-import { calculateFee } from "../../../lib/distanceCalc";
+import { assertWithinCoverage, roundDistanceKm, selectFarthestOutlet } from "../../../lib/distanceCalc";
 
 export type coreChargeResponse = {
     transaction_id?: string
@@ -88,17 +88,20 @@ export class CreateOrderUseCase {
         }
 
         const address = await this.addressRepository.findById(userId, dto.user_address_id);
-        if (!address) throw AppError.notFound("Alamat pengiriman tidak ditemukan");
-        const outlet = await this.outletRepository.findById(dto.outlet_id);
-        if (!outlet) throw AppError.notFound("Outlet tidak ditemukan");
+        if (!address) throw AppError.notFound("Alamat penjemputan tidak ditemukan");
 
-        calculateFee({
-            latitude: outlet.latitude,
-            longitude: outlet.longitude
-        },{
-            latitude: address.latitude,
-            longitude: address.longitude
-        }, outlet.max_coverage_km)
+        const hasDeliveryPoint = dto.latitude !== undefined && dto.longitude !== undefined;
+        const deliveryPoint = hasDeliveryPoint
+            ? { latitude: dto.latitude as number, longitude: dto.longitude as number }
+            : { latitude: address.latitude, longitude: address.longitude };
+
+        const outlets = await this.outletRepository.list();
+        if (outlets.length === 0) throw AppError.notFound("Outlet belum dikonfigurasi");
+        const farthest = selectFarthestOutlet(deliveryPoint, outlets);
+        if (!farthest) throw AppError.notFound("Outlet belum dikonfigurasi");
+        const outlet = farthest.outlet;
+        const distanceKm = Math.ceil(roundDistanceKm(farthest.distanceKm));
+        assertWithinCoverage(distanceKm, outlet.max_coverage_km);
 
         const perOrderAddonKeys = new Set<string>();
         const perOrderGroupCodes = new Set<string>();
@@ -158,7 +161,7 @@ export class CreateOrderUseCase {
             });
         }
 
-        const deliveryFee = orderEntity.computeDeliveryFee(dto.distance_km);
+        const deliveryFee = orderEntity.computeDeliveryFee(distanceKm);
         const totals = orderEntity.computeTotals({
             laundrySubtotal,
             productSubtotal,
@@ -183,9 +186,11 @@ export class CreateOrderUseCase {
                 order = await this.orderRepository.create({
                     order_id: orderId,
                     user_id: userId,
-                    outlet_id: dto.outlet_id,
+                    outlet_id: outlet.id,
                     user_address_id: dto.user_address_id,
-                    distance_km: dto.distance_km,
+                    distance_km: distanceKm,
+                    latitude: deliveryPoint.latitude,
+                    longitude: deliveryPoint.longitude,
                     delivery_fee: totals.delivery_fee,
                     payment_method: dto.payment_method,
                     notes: dto.notes,

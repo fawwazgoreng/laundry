@@ -1,15 +1,16 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Check, Info, Minus, Plus, Trash2, Wallet, Landmark, WashingMachine, X } from "lucide-react"
+import { Check, Info, MapPin, Minus, Plus, Trash2, Wallet, Landmark, WashingMachine, X } from "lucide-react"
 import { formatIDR } from "../../lib/format"
-import type { Address, Outlet, User, PaymentGate } from "../../lib/types"
+import type { Address, DeliveryQuote, PaymentGate, User } from "../../lib/types"
 import { addressApi, authApi, orderApi, outletApi } from "../../services/api"
 import { useOrderDraft, type DraftServiceAddon } from "../../context/OrderDraftContext"
 import { Decimal } from "decimal.js"
 import { addonSubtotal } from "../../lib/serviceAddons"
 import { ErrorState, LoadingState } from "../../components/ui"
 import { ApiError } from "../../services/apiClient"
-import { calculateDistance } from "../../lib/distanceCalc"
+import { MapClickPicker } from "../../components/mapClickPicker"
+import { reverseGeocode } from "../../lib/geoCode"
 
 const progressSteps = ["Pilih Layanan", "Detail & Berat", "Jadwal & Alamat", "Konfirmasi & Bayar"]
 
@@ -95,42 +96,45 @@ function toCoordinate(latitude: unknown, longitude: unknown): Coordinate | null 
   return { latitude: lat, longitude: lng }
 }
 
-type DeliveryQuote =
+type DeliveryState =
   | { status: "pending" }
   | { status: "invalid" }
-  | { status: "out_of_range"; distanceKm: Decimal; maxKm: number }
-  | { status: "ok"; distanceKm: Decimal; fee: Decimal }
+  | { status: "out_of_range"; distanceKm: number; maxKm: number }
+  | { status: "ok"; distanceKm: number; fee: number; outletName: string }
 
-const PENDING_QUOTE: DeliveryQuote = { status: "pending" }
+const PENDING_DELIVERY: DeliveryState = { status: "pending" }
 
-/**
- * Estimasi ongkir: jarak (dibulatkan 2 desimal, sesuai kolom distance_km NUMERIC(6,2))
- * x tarif per km, dibulatkan ke rupiah penuh. Backend tetap menjadi sumber kebenaran.
- */
-function quoteDelivery(outlet: Outlet | null, address: DeliverAddress | undefined): DeliveryQuote {
-  if (!outlet || !address) return PENDING_QUOTE
-
-  const from = toCoordinate(outlet.latitude, outlet.longitude)
-  const maxKm = toNumber(outlet.max_coverage_km)
-  if (!from || !address.coordinate || !Number.isFinite(maxKm)) return { status: "invalid" }
-
-  const rawKm = Math.ceil(calculateDistance(from, address.coordinate))
-  if (!Number.isFinite(rawKm)) return { status: "invalid" }
-
-  const distanceKm = new Decimal(rawKm).toDecimalPlaces(2, Decimal.ROUND_HALF_UP)
-  if (distanceKm.greaterThan(maxKm)) return { status: "out_of_range", distanceKm, maxKm }
-
-  const fee = distanceKm.times(FEE_PER_KM).toDecimalPlaces(0, Decimal.ROUND_HALF_UP)
-  return { status: "ok", distanceKm, fee }
+function toDeliverAddress(address: Address): DeliverAddress {
+  return {
+    id: address.id,
+    label: address.label,
+    isPrimary: address.is_primary,
+    fullAddress: address.address_text,
+    recipientName: address.label,
+    phone: "",
+    coordinate: toCoordinate(address.latitude, address.longitude),
+  }
 }
 
-function deliveryProblem(quote: DeliveryQuote, outletError: string | null): string | null {
-  if (outletError) return outletError
-  switch (quote.status) {
+/** Backend memilih outlet terjauh dan menghitung ongkir; UI hanya menampilkan hasilnya. */
+function toDeliveryState(quote: DeliveryQuote): DeliveryState {
+  const distanceKm = Math.ceil(Number(quote.distance_km))
+  const fee = Math.ceil(Number(quote.delivery_fee))
+  const maxKm = Number(quote.max_coverage_km)
+  if (!Number.isFinite(distanceKm) || !Number.isFinite(fee || !Number.isFinite(maxKm))) {
+    return { status: "invalid" }
+  }
+  if (!quote.in_range) return { status: "out_of_range", distanceKm, maxKm }
+  return { status: "ok", distanceKm, fee, outletName: quote.outlet.name }
+}
+
+function deliveryProblem(delivery: DeliveryState, quoteError: string | null): string | null {
+  if (quoteError) return quoteError
+  switch (delivery.status) {
     case "out_of_range":
-      return `Jarak alamat terlalu jauh (${quote.distanceKm.toFixed(2)} km, melebihi jangkauan ${quote.maxKm} km). Pilih alamat lain.`
+      return `Jarak alamat terlalu jauh (${delivery.distanceKm.toFixed(2)} km, melebihi jangkauan ${delivery.maxKm} km). Pilih alamat atau titik lain.`
     case "invalid":
-      return "Koordinat alamat atau outlet tidak valid, ongkos kirim tidak dapat dihitung."
+      return "Koordinat titik pengantaran atau outlet tidak valid, ongkos kirim tidak dapat dihitung."
     default:
       return null
   }
@@ -160,7 +164,7 @@ function evaluateCheckoutRefund(cart: readonly CartLine[], method: PaymentChoice
 
 export function CheckoutPage() {
   const navigate = useNavigate()
-  const { services, products, removeProduct, removeService } = useOrderDraft()
+  const { services, products, removeProduct, removeService, clear } = useOrderDraft()
 
   const [cart, setCart] = useState<CartLine[]>(() => [
     ...services.map((s) => ({
@@ -199,8 +203,11 @@ export function CheckoutPage() {
   const [error, setError] = useState("")
   const [currentUser, setCurrentUser] = useState<User | null>(null)
   const [choiceAddress, setChoiceAddress] = useState(0)
-  const [outlet, setOutlet] = useState<Outlet | null>(null)
-  const [outletError, setOutletError] = useState<string | null>(null)
+  const [deliveryMode, setDeliveryMode] = useState<"pickup" | "map">("pickup")
+  const [deliveryPoint, setDeliveryPoint] = useState<Coordinate | null>(null)
+  const [deliveryAddressText, setDeliveryAddressText] = useState("")
+  const [deliveryLoading, setDeliveryLoading] = useState(false)
+  const [quoteResult, setQuoteResult] = useState<{ key: string; state: DeliveryState; error: string | null } | null>(null)
 
   // State pop-up bank
   const [showBankModal, setShowBankModal] = useState(false)
@@ -210,15 +217,7 @@ export function CheckoutPage() {
     addressApi
       .list()
       .then((list: Address[]) => {
-        const mapped: DeliverAddress[] = list.map((a) => ({
-          id: a.id,
-          label: a.label,
-          isPrimary: a.is_primary,
-          fullAddress: a.address_text,
-          recipientName: a.label,
-          phone: "",
-          coordinate: toCoordinate(a.latitude, a.longitude),
-        }))
+        const mapped = list.map(toDeliverAddress)
         setAddresses(mapped)
         // Tandai alamat utama (atau alamat pertama) sebagai pilihan bawaan
         const primary = mapped.find((a) => a.isPrimary) ?? mapped[0]
@@ -229,20 +228,53 @@ export function CheckoutPage() {
         setAddressError(err instanceof Error ? err.message : "Gagal memuat daftar alamat")
       })
       .finally(() => setAddressLoading(false))
-    outletApi
-      .getDefault()
-      .then((val) => {
-        setOutlet(val)
-        setOutletError(null)
-      })
-      .catch((err) => {
-        setOutletError(err instanceof Error ? err.message : "Gagal memuat data outlet")
-      })
     authApi
       .me()
       .then((user) => setCurrentUser(user))
       .catch(() => undefined)
   }, [])
+
+  const pickupAddress = addresses.find((addr) => addr.id === choiceAddress)
+  const deliveryCoordinate = deliveryMode === "pickup" ? pickupAddress?.coordinate ?? null : deliveryPoint
+  const deliveryLat = deliveryCoordinate?.latitude
+  const deliveryLng = deliveryCoordinate?.longitude
+  const deliveryKey = deliveryLat !== undefined && deliveryLng !== undefined ? `${deliveryLat},${deliveryLng}` : null
+
+  // Ongkir dihitung backend (outlet terjauh) dari titik pengantaran terpilih.
+  useEffect(() => {
+    if (deliveryLat === undefined || deliveryLng === undefined) return
+    const key = `${deliveryLat},${deliveryLng}`
+    let active = true
+    outletApi
+      .deliveryQuote(deliveryLat, deliveryLng)
+      .then((quote) => {
+        if (!active) return
+        setQuoteResult({ key, state: toDeliveryState(quote), error: null })
+      })
+      .catch((err) => {
+        if (!active) return
+        setQuoteResult({
+          key,
+          state: { status: "invalid" },
+          error: err instanceof Error ? err.message : "Gagal menghitung ongkos kirim",
+        })
+      })
+    return () => {
+      active = false
+    }
+  }, [deliveryLat, deliveryLng])
+
+  function handleMapPick(coords: { lat: number; lng: number }) {
+    const point = { latitude: coords.lat, longitude: coords.lng }
+    setDeliveryPoint(point)
+    setDeliveryLoading(true)
+    reverseGeocode(point.latitude, point.longitude)
+      .then((result) => setDeliveryAddressText(result.displayName))
+      .catch(() =>
+        setDeliveryAddressText(`Lokasi ${point.latitude.toFixed(6)}, ${point.longitude.toFixed(6)}`),
+      )
+      .finally(() => setDeliveryLoading(false))
+  }
 
   function updateQty(key: string, delta: number) {
     setCart((prev) =>
@@ -260,13 +292,9 @@ export function CheckoutPage() {
     else removeProduct(line.id)
   }
 
-  // Jarak & ongkir untuk setiap alamat (ditampilkan di kartu alamat) dan untuk alamat terpilih.
-  const quotes = useMemo(
-    () => new Map(addresses.map((addr) => [addr.id, quoteDelivery(outlet, addr)] as const)),
-    [outlet, addresses],
-  )
-  const delivery = quotes.get(choiceAddress) ?? PENDING_QUOTE
-  const deliveryNote = deliveryProblem(delivery, outletError)
+  const delivery = deliveryKey && quoteResult?.key === deliveryKey ? quoteResult.state : PENDING_DELIVERY
+  const quoteError = deliveryKey && quoteResult?.key === deliveryKey ? quoteResult.error : null
+  const deliveryNote = deliveryProblem(delivery, quoteError)
   const deliveryFee = delivery.status === "ok" ? delivery.fee : null
 
   const refundCheck = useMemo(() => evaluateCheckoutRefund(cart, paymentMethod), [cart, paymentMethod])
@@ -290,7 +318,7 @@ export function CheckoutPage() {
   const deliveryText = formatDateTime(estimatedDelivery)
 
   async function handleCreateOrder(bank?: BankCode) {
-    if (delivery.status !== "ok" || !outlet) return
+    if (delivery.status !== "ok" || !choiceAddress || !deliveryCoordinate) return
     setSubmitting(true)
     setError("")
     try {
@@ -317,8 +345,8 @@ export function CheckoutPage() {
             })),
           })),
         user_address_id: choiceAddress,
-        outlet_id: outlet.id,
-        distance_km: delivery.distanceKm.toNumber(),
+        latitude: deliveryCoordinate.latitude,
+        longitude: deliveryCoordinate.longitude,
         payment_method: paymentMethod === "cod" ? "cod" : "transfer_bank",
         bank,
         pickup_schedule: pickupSchedule.toISOString(),
@@ -343,6 +371,7 @@ export function CheckoutPage() {
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Terjadi kesalahan saat membuat pesanan")
     } finally {
+      clear()
       setSubmitting(false)
       setShowBankModal(false)
     }
@@ -387,8 +416,8 @@ export function CheckoutPage() {
         {cart.length > 0 && (
           <div
             className={`flex gap-2 rounded-xl border px-3 py-2 ${refundCheck.eligible
-                ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "border-amber-300 bg-white text-amber-900"
+              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+              : "border-amber-300 bg-white text-amber-900"
               }`}
           >
             {refundCheck.eligible ? (
@@ -517,10 +546,10 @@ export function CheckoutPage() {
             </div>
           </div>
 
-          {/* Alamat */}
+          {/* Alamat Penjemputan */}
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-ink-strong">Alamat Pengiriman &amp; Penjemputan</h2>
+              <h2 className="text-sm font-semibold text-ink-strong">Alamat Penjemputan</h2>
               <Link to={"/dashboard#alamat"} className="text-xs font-semibold text-primary">
                 + Tambah Alamat
               </Link>
@@ -530,57 +559,120 @@ export function CheckoutPage() {
             ) : addressError ? (
               <ErrorState message={addressError} />
             ) : addresses.length === 0 ? (
-              <p className="py-6 text-center text-sm text-gray-400">
-                Belum ada alamat tersimpan. Tambahkan alamat terlebih dahulu.
+              <p className="py-4 text-center text-sm text-gray-400">
+                Belum ada alamat penjemputan tersimpan. Tambahkan alamat terlebih dahulu.
               </p>
             ) : (
-              addresses.map((addr) => {
-                const quote = quotes.get(addr.id)
-                return (
-                  <div
-                    key={addr.id}
-                    onClick={() => setChoiceAddress(addr.id)}
-                    className={`mb-3 flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 sm:flex-row sm:items-center sm:gap-6 ${addr.id === choiceAddress ? "border-primary" : "border-gray-200"
+              addresses.map((addr) => (
+                <div
+                  key={addr.id}
+                  onClick={() => setChoiceAddress(addr.id)}
+                  className={`mb-3 flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 sm:flex-row sm:items-center sm:gap-6 ${addr.id === choiceAddress ? "border-primary" : "border-gray-200"
+                    }`}
+                >
+                  <span
+                    className={`h-6 w-6 shrink-0 rounded-full border-2 ${choiceAddress === addr.id ? "border-primary bg-primary" : "border-gray-300"
                       }`}
-                  >
-                    <span
-                      className={`h-6 w-6 shrink-0 rounded-full border-2 ${choiceAddress === addr.id ? "border-primary bg-primary" : "border-gray-300"
-                        }`}
-                    />
-                    <span>
-                      <div className="flex items-center gap-2">
-                        <p className="text-sm font-semibold text-ink-strong">{addr.label}</p>
-                        {addr.isPrimary && (
-                          <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
-                            Utama
-                          </span>
-                        )}
-                      </div>
-                      <p className="mt-1 text-sm text-gray-500">
-                        {addr.recipientName} • {currentUser?.phone || "-"}
-                      </p>
-                      <p className="text-sm text-gray-500">{addr.fullAddress}</p>
-                      {quote?.status === "ok" && (
-                        <p className="mt-1 text-xs text-gray-400">
-                          ±{quote.distanceKm.toFixed(2)} km dari outlet · ongkir {formatIDR(quote.fee.toFixed(2))}
-                        </p>
+                  />
+                  <span>
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-semibold text-ink-strong">{addr.label}</p>
+                      {addr.isPrimary && (
+                        <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
+                          Utama
+                        </span>
                       )}
-                      {quote?.status === "out_of_range" && (
-                        <p className="mt-1 text-xs font-semibold text-red-600">
-                          Di luar jangkauan outlet ({quote.distanceKm.toFixed(2)} km, maks. {quote.maxKm} km)
-                        </p>
-                      )}
-                      {quote?.status === "invalid" && (
-                        <p className="mt-1 text-xs font-semibold text-red-600">
-                          Koordinat alamat belum valid, ongkir tidak dapat dihitung
-                        </p>
-                      )}
-                    </span>
-                  </div>
-                )
-              })
+                    </div>
+                    <p className="mt-1 text-sm text-gray-500">
+                      {addr.recipientName} • {currentUser?.phone || "-"}
+                    </p>
+                    <p className="text-sm text-gray-500">{addr.fullAddress}</p>
+                  </span>
+                </div>
+              ))
             )}
           </div>
+
+          {/* Alamat Pengantaran */}
+          {cart.filter((item) => item.kind === "service").length > 0 && (
+          <div className="rounded-2xl border border-gray-200 bg-white p-6">
+            <h2 className="text-sm font-semibold text-ink-strong">Alamat Pengantaran</h2>
+            <p className="mt-1 text-xs text-gray-500">
+              Ongkos kirim dihitung dari titik pengantaran yang dipilih.
+            </p>
+            <div className="mt-3 space-y-3">
+              <button
+                type="button"
+                onClick={() => setDeliveryMode("pickup")}
+                className={`flex w-full items-start gap-3 rounded-xl border-2 p-4 text-left ${deliveryMode === "pickup" ? "border-primary" : "border-gray-200"
+                  }`}
+              >
+                <span
+                  className={`mt-0.5 h-6 w-6 shrink-0 rounded-full border-2 ${deliveryMode === "pickup" ? "border-primary bg-primary" : "border-gray-300"
+                    }`}
+                />
+                <span>
+                  <p className="text-sm font-semibold text-ink-strong">Ikuti alamat penjemputan</p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {pickupAddress ? pickupAddress.fullAddress : "Pilih alamat penjemputan terlebih dahulu."}
+                  </p>
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setDeliveryMode("map")}
+                className={`flex w-full items-start gap-3 rounded-xl border-2 p-4 text-left ${deliveryMode === "map" ? "border-primary" : "border-gray-200"
+                  }`}
+              >
+                <span
+                  className={`mt-0.5 h-6 w-6 shrink-0 rounded-full border-2 ${deliveryMode === "map" ? "border-primary bg-primary" : "border-gray-300"
+                    }`}
+                />
+                <span>
+                  <p className="flex items-center gap-1.5 text-sm font-semibold text-ink-strong">
+                    <MapPin size={14} /> Pilih titik di peta
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {deliveryPoint
+                      ? deliveryAddressText || `${deliveryPoint.latitude.toFixed(6)}, ${deliveryPoint.longitude.toFixed(6)}`
+                      : "Tentukan titik pengantaran pada peta."}
+                  </p>
+                </span>
+              </button>
+            </div>
+
+            {deliveryMode === "map" && (
+              <div className="mt-3 space-y-3 rounded-xl border border-gray-200 p-4">
+                <MapClickPicker
+                  key={deliveryPoint ? `${deliveryPoint.latitude}-${deliveryPoint.longitude}` : "checkout-map"}
+                  defaultCenter={
+                    deliveryPoint
+                      ? { lat: deliveryPoint.latitude, lng: deliveryPoint.longitude }
+                      : { lat: -6.496861119036644, lng: 110.90468997753888 }
+                  }
+                  onChange={handleMapPick}
+                />
+                <p className="text-xs text-gray-500">
+                  {deliveryLoading
+                    ? "Mencari alamat..."
+                    : deliveryAddressText || "Klik peta untuk memilih titik lokasi pengantaran."}
+                </p>
+                {deliveryPoint && (
+                  <p className="text-xs text-gray-400">
+                    {deliveryPoint.latitude.toFixed(6)}, {deliveryPoint.longitude.toFixed(6)}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {delivery.status === "ok" && (
+              <p className="mt-3 text-xs text-gray-400">
+                ±{delivery.distanceKm.toFixed(2)} km dari {delivery.outletName} · ongkir{" "}
+                {formatIDR(delivery.fee.toFixed(2))}
+              </p>
+            )}
+          </div>
+          )}
 
           {/* Jadwal */}
           <div className="rounded-2xl border border-gray-200 bg-white p-6">
@@ -651,7 +743,7 @@ export function CheckoutPage() {
             </div>
             {delivery.status === "ok" && (
               <p className="text-right text-xs text-gray-400">
-                ±{delivery.distanceKm.toFixed(2)} km × {formatIDR(FEE_PER_KM.toFixed(2))}/km
+                ±{Math.ceil(delivery.distanceKm).toFixed(2)} km × {formatIDR(FEE_PER_KM.toFixed(2))}/km
               </p>
             )}
           </div>

@@ -76,8 +76,8 @@ const outlet = {
     name: "Fadarosi Cabang Test",
     phone: null,
     address_text: "Kota",
-    latitude: -6.1,
-    longitude: 106.8,
+    latitude: -6.182034,
+    longitude: 106.7,
     max_coverage_km: 5,
     min_order_amount: 0,
     weekly_hours: null,
@@ -97,11 +97,13 @@ function makeOrder(overrides: Partial<orderDetailType> = {}): orderDetailType {
         delivery_fee: "4000.00",
         total_amount: "19000.00",
         distance_km: 2,
+        latitude: -6.2,
+        longitude: 106.7,
         notes: null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         customer: { id: "u-1", username: "Budi", phone: "081" },
-        address: { id: 4, label: "Rumah", address_text: "Jl. Kebon Jeruk" },
+        address: { id: 4, label: "Rumah", address_text: "Jl. Kebon Jeruk", latitude: -6.2, longitude: 106.7 },
         outlet: { id: 3, name: "Fadarosi Cabang Test", latitude: -6.1, longitude: 106.8 },
         services: [],
         products: [],
@@ -121,8 +123,6 @@ function validInput() {
         services: [{ laundry_service_id: svc.id, qty: 3 }],
         products: [],
         user_address_id: address.id,
-        outlet_id: outlet.id,
-        distance_km: 2,
         payment_method: "fadarosipay",
     };
 }
@@ -158,12 +158,19 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => svc), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             paymentRepo,
             cashflowRepo,
         );
 
-        const result = await uc.execute("u-1", validInput());
+        const result = await uc.execute("u-1", {
+            ...validInput(),
+            outlet_id: 999,
+            distance_km: 99,
+            latitude: -6.191017,
+            longitude: 106.7,
+        });
+        if (!result) throw new Error("expected an order");
 
         expect(result.order_id).toBe(orderEntity.generateOrderId(1));
         expect(result.token).toBe("");
@@ -171,7 +178,11 @@ describe("CreateOrderUseCase", () => {
         expect(orderRepo.create).toHaveBeenCalled();
         const created = (orderRepo.create as ReturnType<typeof mock>).mock.calls[0]![0];
         expect(created.status).toBe("BARU");
-        expect(created.delivery_fee).toBe("4000.00");
+        expect(created.outlet_id).toBe(outlet.id);
+        expect(created.distance_km).toBe(1);
+        expect(created.latitude).toBe(-6.191017);
+        expect(created.longitude).toBe(106.7);
+        expect(created.delivery_fee).toBe("2000.00");
         expect(created.payment.payment_type).toBe("fadarosipay");
         expect(created.payment.status).toBe("PENDING");
         expect(created.cashflow.type).toBe("income");
@@ -206,7 +217,7 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => svc), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             paymentRepo,
             { create: mock(async () => ({})) } as unknown as cashflowRepository,
         );
@@ -247,7 +258,7 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => svc), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             paymentRepo,
             { create: mock(async () => ({})) } as unknown as cashflowRepository,
         );
@@ -282,7 +293,7 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => svcWithAddons), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             paymentRepo,
             { create: mock(async () => ({})) } as unknown as cashflowRepository,
         );
@@ -346,7 +357,7 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => svcWithAddons), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => prodWithAddons), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             { create: mock(), confirm: mock(), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository,
             { create: mock(async () => ({})) } as unknown as cashflowRepository,
         );
@@ -388,7 +399,7 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => svcRequired), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => prodRequired), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             { create: mock(), confirm: mock(), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository,
             { create: mock(async () => ({})) } as unknown as cashflowRepository,
         );
@@ -414,7 +425,7 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => svcWithAddons), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             { create: mock(), confirm: mock(), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository,
             { create: mock() } as unknown as cashflowRepository,
         );
@@ -443,7 +454,7 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => svc), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             paymentRepo,
             { create: mock(async () => ({})) } as unknown as cashflowRepository,
         );
@@ -463,7 +474,7 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => svc), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => ({ ...prod, stock: 1 })), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             { create: mock(), confirm: mock(), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository,
             { create: mock() } as unknown as cashflowRepository,
         );
@@ -483,7 +494,7 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => ({ ...svc, is_active: false })), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             { create: mock(), confirm: mock(), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository,
             { create: mock() } as unknown as cashflowRepository,
         );
@@ -536,7 +547,7 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => svc), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             paymentRepo,
             { create: mock(async () => ({})) } as unknown as cashflowRepository,
             coreApiFake,
@@ -554,6 +565,7 @@ describe("CreateOrderUseCase", () => {
         expect(attachArgs[0]).toBe("pay-1");
         expect(attachArgs[1].transaction_id).toBe("TRX-123456");
         expect(attachArgs[1].va_number).toBe("7001212345678901");
+        if (!result) throw new Error("expected an order");
         expect(result.va_number).toBe("7001212345678901");
         expect(result.order_id).toBe(orderEntity.generateOrderId(1));
     });
@@ -569,7 +581,7 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => svc), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             { create: mock(), confirm: mock(), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository,
             { create: mock() } as unknown as cashflowRepository,
         );
@@ -599,12 +611,13 @@ describe("CreateOrderUseCase", () => {
             { findById: mock(() => svc), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
             { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
             { findById: mock(() => address) } as unknown as addressRepository,
-            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { findById: mock(() => outlet), list: mock(() => [outlet]) } as unknown as outletRepository,
             paymentRepo,
             { create: mock(async () => ({})) } as unknown as cashflowRepository,
         );
 
         const result = await uc.execute("u-1", { ...validInput(), payment_method: "cod" });
+        if (!result) throw new Error("expected an order");
 
         expect(createCalls).toBe(3);
         expect(result.order_id).toBe(orderEntity.generateOrderId(3));

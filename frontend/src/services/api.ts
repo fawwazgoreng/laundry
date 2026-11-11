@@ -7,6 +7,7 @@ import type {
     AdminStats,
     AuthPayload,
     CashflowSummary,
+    DeliveryQuote,
     OrderCreateInput,
     OrderDetail,
     OrderListItem,
@@ -88,6 +89,8 @@ export const addonApi = {
 export const outletApi = {
     list: () => api.get<Outlet[]>("/outlets"),
     getDefault: () => api.get<Outlet>("/outlets/default"),
+    deliveryQuote: (latitude: number, longitude: number) =>
+        api.get<DeliveryQuote>("/outlets/delivery-quote", { latitude, longitude }),
     get: (id: number) => api.get<Outlet>(`/outlets/${id}`),
     update: (id: number, data: OutletInput) => api.put<Outlet>(`/outlets/${id}`, data),
 }

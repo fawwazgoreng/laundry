@@ -16,3 +16,11 @@ export interface outletType {
 }
 
 export type outletUpdateType = patchType<Omit<outletPatchSource, "id">>
+
+export interface deliveryQuoteType {
+    outlet: outletType
+    distance_km: number
+    delivery_fee: Money
+    max_coverage_km: number
+    in_range: boolean
+}

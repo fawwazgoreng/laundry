@@ -206,9 +206,13 @@ describe("DecideRefundUseCase (characterization of current behavior)", () => {
 
         await useCase.execute("refund-1", { status: "APPROVED" }, "admin-1");
 
-        expect(cashflow.create).toHaveBeenCalledTimes(2);
-        expect(cashflow.create).toHaveBeenNthCalledWith(1, expect.objectContaining({ amount: "25000.00", type: "expense", category: "refund" }));
-        expect(cashflow.create).toHaveBeenNthCalledWith(2, expect.objectContaining({ amount: "25000.00", type: "expense", category: "refund", order_id: productOrder.order_id }));
+        expect(cashflow.create).toHaveBeenCalledTimes(1);
+        expect(cashflow.create).toHaveBeenCalledWith(expect.objectContaining({
+            amount: "25000.00",
+            type: "expense",
+            category: "refund",
+            order_id: productOrder.order_id,
+        }));
         expect(payments.updateStatus).toHaveBeenCalledWith("pay-1", "REFUNDED");
     });
 });

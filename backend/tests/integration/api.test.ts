@@ -91,7 +91,7 @@ beforeAll(async () => {
                 label: "Rumah Siti",
                 address_text: "Jl. Kebon Jeruk No. 12, Jakarta Barat",
                 latitude: -6.2001,
-                longitude: 106.7839,
+                longitude: 106.7864,
             },
         }),
     );
@@ -119,6 +119,18 @@ describe("public catalog", () => {
         const res = await api("GET", "/api/outlets", { ip: `10.0.2.${Math.floor(Math.random() * 250) + 1}` });
         expect(res.status).toBe(200);
         expect((await json(res)).data[0].name).toContain("Test Outlet");
+    });
+
+    it("quotes delivery from the farthest outlet", async () => {
+        const res = await api("GET", "/api/outlets/delivery-quote?latitude=-6.2&longitude=106.7864", {
+            ip: `10.0.3.${Math.floor(Math.random() * 250) + 1}`,
+        });
+        expect(res.status).toBe(200);
+        const body = await json(res);
+        expect(body.data.outlet.name).toContain("Test Outlet");
+        expect(body.data.distance_km).toBeCloseTo(1.5, 2);
+        expect(body.data.delivery_fee).toBe("3000.00");
+        expect(body.data.in_range).toBe(true);
     });
 
     it("lists services", async () => {
@@ -202,6 +214,9 @@ describe("orders", () => {
         const detail = await json(await api("GET", `/api/orders/${body.data.order_id}`, { token: customerToken }));
         expect(detail.data.status).toBe("BARU");
         expect(detail.data.delivery_fee).toBe(3000);
+        expect(detail.data.distance_km).toBeCloseTo(1.5, 2);
+        expect(detail.data.latitude).toBeCloseTo(-6.2001, 4);
+        expect(detail.data.longitude).toBeCloseTo(106.7864, 4);
         expect(detail.data.payment.status).toBe("PENDING");
         expect(detail.data.payment.payment_type).toBe("transfer_bank");
         expect(detail.data.payment.transaction_id).toBe(body.data.token);

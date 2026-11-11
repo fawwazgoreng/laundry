@@ -150,6 +150,8 @@ model Orders {
   notes             String?
   created_at        DateTime             @default(now())
   updated_at        temporal.updatedAt() // Menggunakan standar pelacakan waktu mutakhir aplikasi Prisma 8
+  longitude         Numeric(11, 8)?
+  latitude          Numeric(10, 8)?
   user              User                 @relation(fields: [user_id], references: [id])
   outlet            Outlets              @relation(fields: [outlet_id], references: [id])
   address           User_address         @relation(fields: [user_address_id], references: [id])

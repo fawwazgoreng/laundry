@@ -161,7 +161,7 @@ export function OrderDetailPage() {
     )
   }
 
-    function refundMessage(order: OrderDetail): string {
+  function refundMessage(order: OrderDetail): string {
     const error: string[] = []
 
     if (order.order_type === "SERVICE") error.push("order bertipe product")
@@ -323,34 +323,34 @@ export function OrderDetailPage() {
         <h2 className="mb-6 text-sm font-semibold text-ink-strong">Status Pengerjaan</h2>
         <div className="overflow-x-auto pb-1">
           <div className="flex min-w-[520px] items-center">
-          {steps.map((step, idx) => (
-            <div key={step} className="flex flex-1 items-center last:flex-none">
-              <div className="flex flex-col items-center gap-2">
-                <span
-                  className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${idx < currentStepIndex
+            {steps.map((step, idx) => (
+              <div key={step} className="flex flex-1 items-center last:flex-none">
+                <div className="flex flex-col items-center gap-2">
+                  <span
+                    className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${idx < currentStepIndex
                       ? "bg-primary text-white"
                       : idx === currentStepIndex
                         ? "bg-primary text-white"
                         : "bg-gray-100 text-gray-400"
-                    }`}
-                >
-                  {idx < currentStepIndex ? <Check size={15} /> : idx + 1}
-                </span>
-                <span
-                  className={`text-xs font-medium ${idx <= currentStepIndex ? "text-primary" : "text-gray-400"
-                    }`}
-                >
-                  {step}
-                </span>
+                      }`}
+                  >
+                    {idx < currentStepIndex ? <Check size={15} /> : idx + 1}
+                  </span>
+                  <span
+                    className={`text-xs font-medium ${idx <= currentStepIndex ? "text-primary" : "text-gray-400"
+                      }`}
+                  >
+                    {step}
+                  </span>
+                </div>
+                {idx < steps.length - 1 && (
+                  <span
+                    className={`mx-2 h-0.5 flex-1 ${idx < currentStepIndex ? "bg-primary" : "bg-gray-200"
+                      }`}
+                  />
+                )}
               </div>
-              {idx < steps.length - 1 && (
-                <span
-                  className={`mx-2 h-0.5 flex-1 ${idx < currentStepIndex ? "bg-primary" : "bg-gray-200"
-                    }`}
-                />
-              )}
-            </div>
-          ))}
+            ))}
           </div>
         </div>
       </div>

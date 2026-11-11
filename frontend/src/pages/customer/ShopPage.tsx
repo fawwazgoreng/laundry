@@ -174,25 +174,23 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
       <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-4">
         <h2 className="mb-3 px-2 text-sm font-semibold text-ink-strong">Kategori Produk</h2>
         <nav className="flex flex-col gap-1">
-              <button
-              onClick={() => setCategory("Semua")}
-              className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors cursor-pointer ${
-                category === "Semua"
-                  ? "bg-primary-light text-primary"
-                  : "text-ink hover:bg-gray-50"
+          <button
+            onClick={() => setCategory("Semua")}
+            className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors cursor-pointer ${category === "Semua"
+                ? "bg-primary-light text-primary"
+                : "text-ink hover:bg-gray-50"
               }`}
-            >
-              Semua
-            </button>
+          >
+            Semua
+          </button>
           {productCategories.map((c) => (
             <button
               key={c}
               onClick={() => setCategory(c)}
-              className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors cursor-pointer ${
-                category === c
+              className={`rounded-lg px-3 py-2 text-left text-sm font-semibold transition-colors cursor-pointer ${category === c
                   ? "bg-primary-light text-primary"
                   : "text-ink hover:bg-gray-50"
-              }`}
+                }`}
             >
               {c}
             </button>
@@ -307,13 +305,12 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
                           type="button"
                           disabled={takenElsewhere}
                           onClick={() => toggleAddon(group, option)}
-                          className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm ${
-                            takenElsewhere
+                          className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm ${takenElsewhere
                               ? "cursor-not-allowed border-gray-100 opacity-50"
                               : checked
                                 ? "border-primary bg-primary-light/40"
                                 : "border-gray-200"
-                          }`}
+                            }`}
                         >
                           <span className="flex items-center gap-2">
                             <span className={`h-4 w-4 rounded-full border-2 ${checked ? "border-primary bg-primary" : "border-gray-300"}`} />

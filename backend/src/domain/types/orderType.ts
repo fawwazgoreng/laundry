@@ -41,6 +41,8 @@ export type serviceAddonRecord = {
     price_mode: addonPriceMode
     qty: number
     subtotal: Money
+    latitude?: number
+    longitude?: number
 }
 
 export type productOrderItemInput = {
@@ -64,8 +66,10 @@ export type orderCreateType = {
     services: serviceOrderItemInput[]
     products: productOrderItemInput[]
     user_address_id: number
-    outlet_id: number
-    distance_km: number
+    outlet_id?: number | undefined
+    distance_km?: number | undefined
+    latitude?: number | undefined
+    longitude?: number | undefined
     delivery_fee?: Money | undefined
     payment_method: paymentMethod
     bank?: "bca" | "bni" | "bri" | "permata" | "mandiri" | undefined
@@ -151,6 +155,8 @@ export interface orderDetailType {
     delivery_fee: Money
     total_amount: Money
     distance_km: number
+    latitude: number | null
+    longitude: number | null
     notes: string | null
     created_at: string
     updated_at: string
@@ -164,6 +170,8 @@ export interface orderDetailType {
         id: number
         label: string
         address_text: string
+        latitude: number
+        longitude: number
     } | null
     outlet: {
         id: number
@@ -244,6 +252,8 @@ export type orderNewRecordType = {
     outlet_id: number
     user_address_id: number
     distance_km: number
+    latitude: number
+    longitude: number
     delivery_fee: Money
     payment_method: paymentMethod
     notes?: string | undefined

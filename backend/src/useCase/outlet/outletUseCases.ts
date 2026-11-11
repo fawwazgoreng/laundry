@@ -1,8 +1,10 @@
 import { z } from "zod";
 import type { outletRepository } from "../../domain/repositories/outletRepository";
-import type { outletType, outletUpdateType } from "../../domain/types/outletType";
+import type { deliveryQuoteType, outletType, outletUpdateType } from "../../domain/types/outletType";
+import { orderEntity } from "../../domain/entities/orderEntity";
 import { AppError } from "../../helper/errorHandling/appError";
 import { moneyInputSchema } from "../../lib/money";
+import { roundDistanceKm, selectFarthestOutlet } from "../../lib/distanceCalc";
 import { logger } from "../../helper/logging/logger";
 
 export class ListOutletsUseCase {
@@ -28,6 +30,37 @@ export class GetOutletUseCase {
         const outlet = await this.repository.findFirst();
         if (!outlet) throw AppError.notFound("Outlet belum dikonfigurasi");
         return outlet;
+    }
+}
+
+const deliveryQuoteSchema = z.object({
+    latitude: z.coerce.number().min(-90, "Invalid latitude").max(90, "Invalid latitude"),
+    longitude: z.coerce.number().min(-180, "Invalid longitude").max(180, "Invalid longitude"),
+});
+
+export class GetDeliveryQuoteUseCase {
+    constructor(private readonly repository: outletRepository) {}
+
+    async execute(input: unknown): Promise<deliveryQuoteType> {
+        const parsed = deliveryQuoteSchema.safeParse(input);
+        if (!parsed.success) {
+            throw AppError.validation(parsed.error.flatten() as unknown as Record<string, unknown>);
+        }
+
+        const outlets = await this.repository.list();
+        if (outlets.length === 0) throw AppError.notFound("Outlet belum dikonfigurasi");
+
+        const farthest = selectFarthestOutlet(parsed.data, outlets);
+        if (!farthest) throw AppError.notFound("Outlet belum dikonfigurasi");
+
+        const distanceKm = roundDistanceKm(farthest.distanceKm);
+        return {
+            outlet: farthest.outlet,
+            distance_km: distanceKm,
+            delivery_fee: orderEntity.computeDeliveryFee(Math.ceil(distanceKm)),
+            max_coverage_km: farthest.outlet.max_coverage_km,
+            in_range: distanceKm <= farthest.outlet.max_coverage_km,
+        };
     }
 }
 

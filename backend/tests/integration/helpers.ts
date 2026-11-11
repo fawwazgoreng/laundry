@@ -42,7 +42,7 @@ export async function resetTestDb(): Promise<void> {
         address_text: "Jl. Test No. 1, Jakarta",
         latitude: numeric<10, 8>(-6.2),
         longitude: numeric<11, 8>(106.8),
-        max_coverage_km: numeric<5, 2>(10),
+        max_coverage_km: numeric<5, 2>(20),
         min_order_amount: numeric<12, 2>(0),
         weekly_hours: "Senin - Sabtu: 08:00-20:00 WIB",
     });

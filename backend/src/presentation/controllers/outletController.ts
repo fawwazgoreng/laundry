@@ -1,7 +1,7 @@
 import type { Context } from "hono";
 import { ok } from "../../helper/response/apiResponse";
 import { parseIdParam } from "../../helper/http/queryParams";
-import { GetOutletUseCase, ListOutletsUseCase, UpdateOutletUseCase } from "../../useCase/outlet/outletUseCases";
+import { GetDeliveryQuoteUseCase, GetOutletUseCase, ListOutletsUseCase, UpdateOutletUseCase } from "../../useCase/outlet/outletUseCases";
 import type { AppVariables } from "../types";
 
 type AuthContext = Context<{ Variables: AppVariables }>;
@@ -11,6 +11,7 @@ export class outletController {
         private readonly listUseCase: ListOutletsUseCase,
         private readonly getUseCase: GetOutletUseCase,
         private readonly updateUseCase: UpdateOutletUseCase,
+        private readonly deliveryQuoteUseCase: GetDeliveryQuoteUseCase,
     ) {}
 
     async list(c: Context): Promise<Response> {
@@ -26,6 +27,14 @@ export class outletController {
     async getDefault(c: Context): Promise<Response> {
         const data = await this.getUseCase.executeDefault();
         return ok(c, data, "Profil outlet");
+    }
+
+    async deliveryQuote(c: Context): Promise<Response> {
+        const data = await this.deliveryQuoteUseCase.execute({
+            latitude: c.req.query("latitude"),
+            longitude: c.req.query("longitude"),
+        });
+        return ok(c, data, "Estimasi ongkir");
     }
 
     async update(c: AuthContext): Promise<Response> {

@@ -114,6 +114,8 @@ type OrderDetailRow = {
     delivery_fee: string
     total_amount: string
     distance_km: string
+    latitude: string | null
+    longitude: string | null
     notes: string | null
     created_at: Temporal.Instant
     updated_at: Temporal.Instant
@@ -127,6 +129,8 @@ type OrderDetailRow = {
         id: number
         label: string
         address_text: string
+        latitude: string
+        longitude: string
     } | null
     outlet: {
         id: number
@@ -278,6 +282,8 @@ function toOrderDetail(row: OrderDetailRow): orderDetailType {
         delivery_fee: money(row.delivery_fee),
         total_amount: money(row.total_amount),
         distance_km: Number(row.distance_km),
+        latitude: row.latitude === null ? null : Number(row.latitude),
+        longitude: row.longitude === null ? null : Number(row.longitude),
         notes: row.notes,
         created_at: fromInstant(row.created_at).toISOString(),
         updated_at: fromInstant(row.updated_at).toISOString(),
@@ -288,7 +294,13 @@ function toOrderDetail(row: OrderDetailRow): orderDetailType {
             email: user.email,
         },
         address: row.address
-            ? { id: row.address.id, label: row.address.label, address_text: row.address.address_text }
+            ? {
+                id: row.address.id,
+                label: row.address.label,
+                address_text: row.address.address_text,
+                latitude: Number(row.address.latitude),
+                longitude: Number(row.address.longitude),
+            }
             : null,
         outlet: row.outlet
             ? { id: row.outlet.id, name: row.outlet.name, latitude: Number(row.outlet.latitude), longitude: Number(row.outlet.longitude) }
@@ -307,7 +319,7 @@ function toOrderDetail(row: OrderDetailRow): orderDetailType {
 const orderDetailQuery = () =>
     prisma.orm.public.Orders
         .include("user", (u) => u.select("id", "username", "phone", "email"))
-        .include("address", (a) => a.select("id", "label", "address_text"))
+        .include("address", (a) => a.select("id", "label", "address_text", "latitude", "longitude"))
         .include("outlet", (o) => o.select("id", "name", "latitude", "longitude"))
         .include("payments", (p) => p.orderBy((r) => r.created_at.desc()).limit(1))
         .include("serviceOrderItems", (s) => s.include("service").include("addons"))
@@ -332,6 +344,8 @@ export class pgOrderRepository implements orderRepository {
                 outlet_id: input.outlet_id,
                 user_address_id: input.user_address_id,
                 distance_km: numeric<6, 2>(input.distance_km),
+                latitude: numeric<10, 8>(input.latitude),
+                longitude: numeric<11, 8>(input.longitude),
                 delivery_fee: numeric<10, 2>(input.delivery_fee),
                 total_laundry: numeric<12, 2>(input.totals.total_laundry),
                 total_product: numeric<12, 2>(input.totals.total_product),

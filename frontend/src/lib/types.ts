@@ -130,6 +130,14 @@ export interface Outlet {
     weekly_hours: string | null
 }
 
+export interface DeliveryQuote {
+    outlet: Outlet
+    distance_km: number
+    delivery_fee: Money
+    max_coverage_km: number
+    in_range: boolean
+}
+
 export type OutletInput = {
     name?: string
     phone?: string
@@ -238,13 +246,15 @@ export interface OrderDetail {
     discount_voucher: number
     total_amount: Money
     distance_km: number
+    latitude: number | null
+    longitude: number | null
     pickup_schedule: string | null
     estimated_delivery: string | null
     notes: string | null
     created_at: string
     updated_at: string
     customer: { id: string; username: string; phone: string }
-    address: { id: number; label: string; address_text: string } | null
+    address: { id: number; label: string; address_text: string; latitude: number; longitude: number } | null
     outlet: { id: number; name: string; latitude: number; longitude: number } | null
     services: ServiceOrderItem[]
     products: ProductOrderItem[]
@@ -287,8 +297,8 @@ export type OrderCreateInput = {
     }>
     products: Array<{ product_id: number; qty: number; addons?: Array<{ group_code: string; option_id: number }> }>
     user_address_id: number
-    outlet_id: number
-    distance_km: number
+    latitude?: number
+    longitude?: number
     payment_method: PaymentMethod
     discount_member?: number
     discount_voucher?: number
