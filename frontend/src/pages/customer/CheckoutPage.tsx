@@ -386,11 +386,10 @@ export function CheckoutPage() {
         </div>
         {cart.length > 0 && (
           <div
-            className={`flex gap-2 rounded-xl border px-3 py-2 ${
-              refundCheck.eligible
+            className={`flex gap-2 rounded-xl border px-3 py-2 ${refundCheck.eligible
                 ? "border-emerald-200 bg-emerald-50 text-emerald-700"
                 : "border-amber-300 bg-white text-amber-900"
-            }`}
+              }`}
           >
             {refundCheck.eligible ? (
               <Check size={16} className="mt-0.5 shrink-0" />
@@ -541,14 +540,12 @@ export function CheckoutPage() {
                   <div
                     key={addr.id}
                     onClick={() => setChoiceAddress(addr.id)}
-                    className={`mb-3 flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 sm:flex-row sm:items-center sm:gap-6 ${
-                      addr.id === choiceAddress ? "border-primary" : "border-gray-200"
-                    }`}
+                    className={`mb-3 flex cursor-pointer flex-col gap-3 rounded-xl border-2 p-4 sm:flex-row sm:items-center sm:gap-6 ${addr.id === choiceAddress ? "border-primary" : "border-gray-200"
+                      }`}
                   >
                     <span
-                      className={`h-6 w-6 shrink-0 rounded-full border-2 ${
-                        choiceAddress === addr.id ? "border-primary bg-primary" : "border-gray-300"
-                      }`}
+                      className={`h-6 w-6 shrink-0 rounded-full border-2 ${choiceAddress === addr.id ? "border-primary bg-primary" : "border-gray-300"
+                        }`}
                     />
                     <span>
                       <div className="flex items-center gap-2">
@@ -606,14 +603,12 @@ export function CheckoutPage() {
             <div className="space-y-3">
               <button
                 onClick={() => setPaymentMethod("transfer")}
-                className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left ${
-                  paymentMethod === "transfer" ? "border-primary" : "border-gray-200"
-                }`}
+                className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left ${paymentMethod === "transfer" ? "border-primary" : "border-gray-200"
+                  }`}
               >
                 <span
-                  className={`h-4 w-4 rounded-full border-2 ${
-                    paymentMethod === "transfer" ? "border-primary bg-primary" : "border-gray-300"
-                  }`}
+                  className={`h-4 w-4 rounded-full border-2 ${paymentMethod === "transfer" ? "border-primary bg-primary" : "border-gray-300"
+                    }`}
                 />
                 <Landmark size={18} className="text-gray-400" />
                 <div>
@@ -623,14 +618,12 @@ export function CheckoutPage() {
               </button>
               <button
                 onClick={() => setPaymentMethod("cod")}
-                className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left ${
-                  paymentMethod === "cod" ? "border-primary" : "border-gray-200"
-                }`}
+                className={`flex w-full items-center gap-3 rounded-xl border p-4 text-left ${paymentMethod === "cod" ? "border-primary" : "border-gray-200"
+                  }`}
               >
                 <span
-                  className={`h-4 w-4 rounded-full border-2 ${
-                    paymentMethod === "cod" ? "border-primary bg-primary" : "border-gray-300"
-                  }`}
+                  className={`h-4 w-4 rounded-full border-2 ${paymentMethod === "cod" ? "border-primary bg-primary" : "border-gray-300"
+                    }`}
                 />
                 <Wallet size={18} className="text-gray-400" />
                 <div>
@@ -714,14 +707,12 @@ export function CheckoutPage() {
                 <button
                   key={b.code}
                   onClick={() => setSelectedBank(b.code)}
-                  className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border-2 p-4 text-left transition-colors ${
-                    selectedBank === b.code ? "border-primary bg-primary-light/40" : "border-gray-200"
-                  }`}
+                  className={`flex w-full cursor-pointer items-center gap-3 rounded-xl border-2 p-4 text-left transition-colors ${selectedBank === b.code ? "border-primary bg-primary-light/40" : "border-gray-200"
+                    }`}
                 >
                   <span
-                    className={`h-4 w-4 shrink-0 rounded-full border-2 ${
-                      selectedBank === b.code ? "border-primary bg-primary" : "border-gray-300"
-                    }`}
+                    className={`h-4 w-4 shrink-0 rounded-full border-2 ${selectedBank === b.code ? "border-primary bg-primary" : "border-gray-300"
+                      }`}
                   />
                   <Landmark size={18} className="text-gray-400" />
                   <div>

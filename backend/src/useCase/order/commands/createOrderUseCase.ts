@@ -81,7 +81,7 @@ export class CreateOrderUseCase {
         private readonly coreApi: midtransCoreApiClient = defaultMidtransCoreApi(),
     ) { }
 
-    async execute(userId: string, input: unknown): Promise<paymentGate> {
+    async execute(userId: string, input: unknown): Promise<paymentGate | null> {
         const dto = orderEntity.validateCreate(input);
         if (dto.payment_method == "transfer_bank") {
             await this.assertNoActivePending(userId);
@@ -174,7 +174,6 @@ export class CreateOrderUseCase {
                 : "Pesanan diterima. Menunggu konfirmasi outlet.";
 
         const initialPayment = this.buildInitialPayment(dto.payment_method, totals.total_amount);
-
         let orderId = "";
         let order: orderDetailType | null = null;
         for (let attempt = 0; attempt < 3; attempt++) {

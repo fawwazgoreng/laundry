@@ -27,7 +27,13 @@ export class orderEntity {
         products: z.array(
             z.object({
                 product_id: z.coerce.number().int().positive(),
-                qty: z.coerce.number().int().positive()
+                qty: z.coerce.number().int().positive(),
+                addons: z.array(
+                    z.object({
+                        group_code: z.string().trim().min(1, "Grup add-on wajib dipilih"),
+                        option_id: z.coerce.number().int().positive(),
+                    }),
+                ).optional().default([]),
             }),
         ).optional().default([]),
         user_address_id: z.coerce.number().int().positive(),
