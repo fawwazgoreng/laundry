@@ -43,6 +43,7 @@ type ServiceItemRow = {
         name: string
         unit: string
         price_per_unit: string
+        estimated_duration_hours: number
     } | null
     addons: ServiceAddonRow[]
 };
@@ -200,6 +201,7 @@ function toServiceItem(row: ServiceItemRow): serviceOrderItemType {
         service_id: row.laundry_service_id,
         service_name: service.name,
         unit: service.unit,
+        estimated_duration_hours: service.estimated_duration_hours,
         qty: Number(row.qty),
         price_per_unit: money(new Decimal(row.price_per_unit).isZero() ? new Decimal(service.price_per_unit) : new Decimal(row.price_per_unit)),
         addon_subtotal: money(row.addon_subtotal),

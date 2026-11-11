@@ -92,6 +92,7 @@ export interface serviceOrderItemType {
     service_id: number
     service_name: string
     unit: string
+    estimated_duration_hours: number
     qty: number
     price_per_unit: Money
     addon_subtotal: Money

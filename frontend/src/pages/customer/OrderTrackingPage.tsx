@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
-import { Clock, Home, Warehouse } from "lucide-react"
+import { Clock } from "lucide-react"
 import { formatIDR } from "../../lib/format"
+import { DELIVERY_BUFFER_HOURS, estimateDeliveryTime } from "../../lib/deliveryEstimate"
 import type { OrderDetail } from "../../lib/types"
 import { orderApi } from "../../services/api"
 import { ErrorState } from "../../components/ui"
+import { RouteMap } from "../../components/map"
 
 const stepMeta: Record<string, { label: string; description: string }> = {
   BARU: { label: "Pesanan Dibuat", description: "Pesanan diterima dan menunggu konfirmasi outlet." },
@@ -22,6 +24,49 @@ interface TrackingStep {
   description: string
   done: boolean
   active: boolean
+}
+
+interface MapPoint {
+  latitude: number
+  longitude: number
+  label: string
+}
+
+function formatDateTime(value: Date): string {
+  const day = value.toLocaleDateString("id-ID", { weekday: "long" })
+  const date = value.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })
+  const time = value.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false })
+  return `${day}, ${date} · ${time} WIB`
+}
+
+function RouteCard({
+  title,
+  description,
+  from,
+  to,
+  color,
+}: {
+  title: string
+  description: string
+  from: MapPoint | null
+  to: MapPoint | null
+  color: string
+}) {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-6">
+      <h2 className="text-sm font-semibold text-ink-strong">{title}</h2>
+      <p className="mt-1 text-xs text-gray-400">{description}</p>
+      {from && to ? (
+        <div className="mt-4 h-64 overflow-hidden rounded-xl border border-gray-200">
+          <RouteMap from={from} to={to} color={color} />
+        </div>
+      ) : (
+        <p className="mt-4 rounded-xl bg-gray-50 px-3 py-6 text-center text-xs text-gray-400">
+          Lokasi rute belum tersedia.
+        </p>
+      )}
+    </div>
+  )
 }
 
 export function OrderTrackingPage() {
@@ -76,6 +121,41 @@ export function OrderTrackingPage() {
     active: t.status === order.status,
   }))
 
+  const hasServices = order.services.length > 0
+  const serviceHours = order.services.reduce(
+    (max, service) => Math.max(max, service.estimated_duration_hours),
+    0,
+  )
+  const savedEstimate = order.estimated_delivery ? new Date(order.estimated_delivery) : null
+  const estimate = savedEstimate && !Number.isNaN(savedEstimate.getTime())
+    ? savedEstimate
+    : estimateDeliveryTime(new Date(order.created_at), serviceHours)
+  const totalWeight = order.services.reduce((sum, service) => sum + service.qty, 0)
+  const itemSummary =
+    [
+      ...order.services.map((service) => `${service.service_name} (${service.qty} ${service.unit})`),
+      ...order.products.map((product) => `${product.product_name} (${product.qty} ${product.size})`),
+    ].join(", ") || "-"
+
+  const outletPoint: MapPoint | null = order.outlet
+    ? {
+        latitude: order.outlet.latitude,
+        longitude: order.outlet.longitude,
+        label: order.outlet.name,
+      }
+    : null
+  const pickupPoint: MapPoint | null = order.address
+    ? {
+        latitude: order.address.latitude,
+        longitude: order.address.longitude,
+        label: order.address.label,
+      }
+    : null
+  const deliveryPoint: MapPoint | null =
+    order.latitude !== null && order.longitude !== null
+      ? { latitude: order.latitude, longitude: order.longitude, label: "Titik Pengantaran" }
+      : pickupPoint
+
   return (
     <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 py-8 lg:grid-cols-2 2xl:max-w-[1600px]">
       <div className="space-y-6">
@@ -92,15 +172,13 @@ export function OrderTrackingPage() {
               <p className="text-sm font-semibold text-ink-strong">{order.customer.username}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">Layanan Terpilih</p>
-              <p className="text-sm font-semibold text-ink-strong">
-                {order.services.map((s) => s.service_name).join(", ") || "Produk Toko"}
-              </p>
+              <p className="text-xs text-gray-400">Item Pesanan</p>
+              <p className="text-sm font-semibold text-ink-strong">{itemSummary}</p>
             </div>
             <div>
               <p className="text-xs text-gray-400">Berat Cucian</p>
               <p className="text-sm font-semibold text-ink-strong">
-                {order.services.reduce((sum, s) => sum + s.qty, 0)} Kg
+                {totalWeight > 0 ? `${totalWeight} Kg` : "-"}
               </p>
             </div>
             <div>
@@ -144,51 +222,38 @@ export function OrderTrackingPage() {
         </div>
       </div>
 
-      <div className="rounded-2xl border relative border-gray-200 bg-white">
-        <div className="mb-4 flex items-center absolute z-100 gap-2 top-4 left-4 rounded-xl bg-white px-4 py-3">
-          <Clock size={16} className="text-primary" />
+      <div className="space-y-6">
+        <div className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white p-6">
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-primary-light text-primary">
+            <Clock size={18} />
+          </span>
           <div>
-            <p className="text-xs text-gray-500">Estimasi Tiba</p>
-            <p className="text-sm font-bold text-ink-strong">17:30 WIB</p>
+            <p className="text-xs text-gray-400">Estimasi Tiba</p>
+            <p className="text-sm font-bold text-ink-strong">{formatDateTime(estimate)}</p>
+            <p className="text-xs text-gray-400">
+              {hasServices
+                ? `Durasi layanan ${serviceHours} jam + ${DELIVERY_BUFFER_HOURS} jam proses pengantaran`
+                : "Estimasi pengantaran produk"}
+            </p>
           </div>
         </div>
 
-        <div className="relative h-96 overflow-hidden rounded-xl bg-gray-200">
-          <svg viewBox="0 0 400 400" className="h-full w-full">
-            <path
-              d="M 40 340 C 120 300, 140 260, 120 220 S 200 140, 240 120 S 320 70, 340 40"
-              fill="none"
-              stroke="#374151"
-              strokeWidth="3"
-              strokeDasharray="8 6"
-            />
-          </svg>
-
-          <div className="absolute bottom-8 left-8 flex flex-col items-center">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-ink-strong text-white">
-              <Warehouse size={16} />
-            </span>
-            <span className="mt-1 rounded bg-white px-2 py-0.5 text-[10px] font-semibold shadow">
-              {order.outlet?.name ?? "Starting Outlet"}
-            </span>
-          </div>
-
-          <div className="absolute right-10 top-10 flex flex-col items-center">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-white">
-              <Home size={16} />
-            </span>
-            <span className="mt-1 rounded bg-white px-2 py-0.5 text-[10px] font-semibold shadow">
-              Home Delivery
-            </span>
-          </div>
-
-          <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center">
-            <span className="h-4 w-4 rounded-full border-2 border-white bg-primary shadow" />
-            <span className="mt-1 rounded bg-primary px-2 py-0.5 text-[10px] font-semibold text-white shadow">
-              {order.address?.label ?? "Rumah Anda"}
-            </span>
-          </div>
-        </div>
+        {hasServices && (
+          <RouteCard
+            title="Rute Penjemputan"
+            description="Dari outlet menuju alamat penjemputan."
+            from={outletPoint}
+            to={pickupPoint}
+            color="#374151"
+          />
+        )}
+        <RouteCard
+          title="Rute Pengantaran"
+          description="Dari outlet menuju titik pengantaran pesanan."
+          from={outletPoint}
+          to={deliveryPoint}
+          color="#2563eb"
+        />
       </div>
     </div>
   )

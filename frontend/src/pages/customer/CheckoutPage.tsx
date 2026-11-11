@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Check, Info, MapPin, Minus, Plus, Trash2, Wallet, Landmark, WashingMachine, X } from "lucide-react"
 import { formatIDR } from "../../lib/format"
+import { estimateDeliveryTime } from "../../lib/deliveryEstimate"
 import type { Address, DeliveryQuote, PaymentGate, User } from "../../lib/types"
 import { addressApi, authApi, orderApi, outletApi } from "../../services/api"
 import { useOrderDraft, type DraftServiceAddon } from "../../context/OrderDraftContext"
@@ -38,6 +39,7 @@ interface CartLine {
   desc: string
   qty: number
   unit: string
+  estimatedHours?: number
   pricePerUnit: string
   image?: string
   notes: string
@@ -176,6 +178,7 @@ export function CheckoutPage() {
       desc: s.service.description,
       qty: s.qty,
       unit: s.service.unit,
+      estimatedHours: s.service.estimated_duration_hours,
       pricePerUnit: s.service.price_per_unit,
       notes: s.notes,
       addons: s.addons,
@@ -305,7 +308,14 @@ export function CheckoutPage() {
   const total = itemsTotal.plus(deliveryFee ?? 0).minus(memberDiscount).minus(voucherDiscount)
 
   const pickupSchedule = useMemo(() => new Date(), [])
-  const estimatedDelivery = useMemo(() => new Date(pickupSchedule.getTime() + 48 * 60 * 60 * 1000), [pickupSchedule])
+  const serviceHours = cart.reduce(
+    (max, line) => (line.kind === "service" ? Math.max(max, line.estimatedHours ?? 0) : max),
+    0,
+  )
+  const estimatedDelivery = useMemo(
+    () => estimateDeliveryTime(pickupSchedule, serviceHours),
+    [pickupSchedule, serviceHours],
+  )
 
   function formatDateTime(date: Date) {
     const day = date.toLocaleDateString("id-ID", { weekday: "long" })

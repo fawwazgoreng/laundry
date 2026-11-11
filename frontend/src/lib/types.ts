@@ -180,6 +180,7 @@ export interface ServiceOrderItem extends OrderItem {
     service_id: number
     service_name: string
     unit: string
+    estimated_duration_hours: number
     price_per_unit: Money
     addon_subtotal: Money
     addons: ServiceOrderAddon[]

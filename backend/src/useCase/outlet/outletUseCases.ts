@@ -53,11 +53,12 @@ export class GetDeliveryQuoteUseCase {
         const farthest = selectFarthestOutlet(parsed.data, outlets);
         if (!farthest) throw AppError.notFound("Outlet belum dikonfigurasi");
 
-        const distanceKm = roundDistanceKm(farthest.distanceKm);
+        // ceil for easy calculate and payment
+        const distanceKm = Math.ceil(roundDistanceKm(farthest.distanceKm));
         return {
             outlet: farthest.outlet,
             distance_km: distanceKm,
-            delivery_fee: orderEntity.computeDeliveryFee(Math.ceil(distanceKm)),
+            delivery_fee: orderEntity.computeDeliveryFee(distanceKm),
             max_coverage_km: farthest.outlet.max_coverage_km,
             in_range: distanceKm <= farthest.outlet.max_coverage_km,
         };

@@ -352,7 +352,7 @@ export function UserOrderHistory() {
                       <button
                         type="button"
                         onClick={() => handlePaymentClick(order.id)}
-                        disabled={checkingPayment === order.id}
+                        disabled={checkingPayment === order.id || order.paymendMethod === "cod"}
                         aria-label="Buka halaman pembayaran"
                         className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary disabled:opacity-50"
                       >
