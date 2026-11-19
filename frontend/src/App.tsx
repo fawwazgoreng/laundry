@@ -15,6 +15,7 @@ import { OrderTrackingPage } from "./pages/customer/OrderTrackingPage"
 import { PaymentPage } from "./pages/customer/PaymentPage"
 import { AdminDashboardPage } from "./pages/admin/AdminDashboardPage"
 import { AdminOrderManagementPage } from "./pages/admin/AdminOrderManagementPage"
+import { AdminAddonManagementPage } from "./pages/admin/AdminAddonManagementPage"
 import { AdminProductManagementPage } from "./pages/admin/AdminProductManagementPage"
 import { AdminServiceManagementPage } from "./pages/admin/AdminServiceManagementPage"
 import { AdminSettingsPage } from "./pages/admin/AdminSettingsPage"
@@ -76,6 +77,7 @@ export default function App() {
                         <Route path="/admin/layanan" element={<AdminServiceManagementPage />} />
                         <Route path="/admin/laporan" element={<AdminReportPage />} />
                         <Route path="/admin/produk" element={<AdminProductManagementPage />} />
+                        <Route path="/admin/pilihan" element={<AdminAddonManagementPage />} />
                         <Route path="/admin/riwayat/:orderId" element={<OrderDetailPage />} />
                         <Route path="/admin/tracking/:orderId" element={<OrderTrackingPage />} />
                         <Route path="/admin/pengaturan" element={<AdminSettingsPage />} />

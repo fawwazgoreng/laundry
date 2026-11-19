@@ -115,11 +115,11 @@ export default function LandingPage() {
                                     Pesan Sekarang
                                 </Button>
                             </Link>
-                            <a href="#langkah">
+                            <Link to={"/layanan"}>
                                 <Button variant="outline" size="lg">
                                     Lihat Layanan
                                 </Button>
-                            </a>
+                            </Link>
                         </div>
                     </div>
 
@@ -161,7 +161,7 @@ export default function LandingPage() {
                             Bawa keharuman <b className="text-primary">Premium</b><br /> ke rumah
                         </h2>
                     </div>
-                    <Link to={"/toko"} className="flex gap-2 text-primary">
+                    <Link to={"/produk"} className="flex gap-2 text-primary">
                             Lihat Semua Produk
                         <ArrowRight></ArrowRight>
                         </Link>
@@ -179,7 +179,7 @@ export default function LandingPage() {
                                     <h3 className="mt-0.5 font-bold text-ink-strong text-[18px]">{p.name}</h3>
                                     <span className="flex items-center justify-between">
                                         <h3 className="mt-2 leading-relaxed text-ink-strong font-bold text-[18px]">{formatRupiah(p.price)}</h3>
-                                        <Link to={""} className="w-9 h-9 bg-primary rounded-xl text-white flex items-center justify-center">
+                                        <Link to={"/produk"} className="w-9 h-9 bg-primary rounded-xl text-white flex items-center justify-center">
                                             <ShoppingCart className="text-[12px] font-extrabold"></ShoppingCart>
                                         </Link>
                                     </span>

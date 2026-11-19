@@ -1,4 +1,6 @@
+import type { addonPriceMode } from "./serviceType";
 import type { paymentStatus } from "./paymentType";
+import type { refundSummaryType, refundStatus } from "./refundType";
 
 export const ORDER_STATUSES = [
     "BARU",
@@ -14,19 +16,47 @@ export type orderStatus = (typeof ORDER_STATUSES)[number];
 export const PAYMENT_METHODS = ["fadarosipay", "transfer_bank", "cod"] as const;
 export type paymentMethod = (typeof PAYMENT_METHODS)[number];
 
+export const ORDER_KINDS = ["PRODUCT", "SERVICE"] as const;
+export type orderKind = (typeof ORDER_KINDS)[number];
+
+export type serviceAddonInput = {
+    group_code: string
+    option_id: number
+}
+
 export type serviceOrderItemInput = {
     laundry_service_id: number
     qty: number
     notes?: string
+    addons?: serviceAddonInput[]
+}
+
+export type serviceAddonRecord = {
+    addon_option_id: number
+    group_code: string
+    group_name: string
+    option_name: string
+    price: number
+    price_mode: addonPriceMode
+    qty: number
+    subtotal: number
 }
 
 export type productOrderItemInput = {
     product_id: number
     qty: number
+    addons?: serviceAddonInput[]
 }
 
-export type serviceItemRecord = serviceOrderItemInput & { subtotal: number }
-export type productItemRecord = productOrderItemInput & { subtotal: number }
+export type serviceItemRecord = Omit<serviceOrderItemInput, "addons"> & {
+    price_per_unit: number
+    addon_subtotal: number
+    addons: serviceAddonRecord[]
+    subtotal: number
+}
+export type productItemRecord = Omit<productOrderItemInput, "addons"> & {
+    subtotal: number
+}
 
 export type orderCreateType = {
     services: serviceOrderItemInput[]
@@ -36,8 +66,19 @@ export type orderCreateType = {
     distance_km: number
     delivery_fee?: number
     payment_method: paymentMethod
-    bank?: "bca" | "bni" | "bri" | "permata"
+    bank?: "bca" | "bni" | "bri" | "permata" | "mandiri"
     notes?: string
+}
+
+export interface serviceOrderAddonType {
+    id: string
+    group_code: string
+    group_name: string
+    option_name: string
+    price: number
+    price_mode: addonPriceMode
+    qty: number
+    subtotal: number
 }
 
 export interface serviceOrderItemType {
@@ -47,6 +88,8 @@ export interface serviceOrderItemType {
     unit: string
     qty: number
     price_per_unit: number
+    addon_subtotal: number
+    addons: serviceOrderAddonType[]
     subtotal: number
     notes: string
 }
@@ -66,6 +109,7 @@ export interface productOrderItemType {
 export interface orderSummaryType {
     total_laundry: number
     total_product: number
+    total_addon: number
     delivery_fee: number
     total_amount: number
     item_count: number
@@ -95,9 +139,12 @@ export interface orderDetailType {
     id: string
     order_id: string
     status: orderStatus
+    order_type: orderKind
+    refund_eligible: boolean
     payment_method: paymentMethod
     total_laundry: number
     total_product: number
+    total_addon: number
     delivery_fee: number
     total_amount: number
     distance_km: number
@@ -124,6 +171,7 @@ export interface orderDetailType {
     services: serviceOrderItemType[]
     products: productOrderItemType[]
     payment: paymentSummaryType | null
+    refund: refundSummaryType | null
     trackings: orderTrackingType[]
 }
 
@@ -136,6 +184,7 @@ export interface paymentGate {
 
 export type orderListFilters = {
     search?: string
+    customer?: string
     status?: orderStatus | "all"
     service?: string
     page?: number
@@ -146,9 +195,14 @@ export interface orderListItemType {
     id: string
     order_id: string
     status: orderStatus
+    order_type: orderKind
+    refund_eligible: boolean
+    refund_status: refundStatus | null
     total_amount: number
     payment_method: paymentMethod
+    payment_status: string | null
     created_at: string
+    customer_id: string
     customer_name: string
     customer_phone: string
     items_summary: string
@@ -158,6 +212,7 @@ export interface orderListItemType {
 export interface orderTotalsType {
     total_laundry: number
     total_product: number
+    total_addon: number
     delivery_fee: number
     total_amount: number
     item_count: number

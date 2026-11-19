@@ -1,9 +1,9 @@
+
 export type productCategory =
     | "Detergen"
     | "Softener"
     | "Pewangi"
     | "Pemutih"
-    | "Minyak Goreng"
     | "Paket Hemat";
 
 export type productCreateType = {

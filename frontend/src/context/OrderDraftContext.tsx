@@ -1,16 +1,24 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react"
 import type { ReactNode } from "react"
-import type { PaymentMethod, Product, Service } from "../lib/types"
+import type { PaymentMethod, Product, Service, ServiceAddonGroup, ServiceAddonOption } from "../lib/types"
+import { selectedAddonsSubtotal } from "../lib/serviceAddons"
+
+export interface DraftServiceAddon {
+    group: ServiceAddonGroup
+    option: ServiceAddonOption
+}
 
 export interface DraftService {
     service: Service
     qty: number
     notes: string
+    addons: DraftServiceAddon[]
 }
 
 export interface DraftProduct {
     product: Product
     qty: number
+    addons: DraftServiceAddon[]
 }
 
 interface OrderDraftContextValue {
@@ -18,11 +26,12 @@ interface OrderDraftContextValue {
     products: DraftProduct[]
     totalItems: number
     subtotalServices: number
+    subtotalAddons: number
     subtotalProducts: number
-    addService: (service: Service, qty?: number) => void
+    addService: (service: Service, qty?: number, addons?: DraftServiceAddon[]) => void
     updateServiceQty: (serviceId: number, qty: number) => void
     removeService: (serviceId: number) => void
-    addProduct: (product: Product) => void
+    addProduct: (product: Product, qty?: number, addons?: DraftServiceAddon[]) => void
     updateProductQty: (productId: number, qty: number) => void
     removeProduct: (productId: number) => void
     setServiceQty: (serviceId: number, qty: number) => void
@@ -36,15 +45,17 @@ export function OrderDraftProvider({ children }: { children: ReactNode }) {
     const [services, setServices] = useState<DraftService[]>([])
     const [products, setProducts] = useState<DraftProduct[]>([])
 
-    const addService = useCallback((service: Service, qty = 1) => {
+    const addService = useCallback((service: Service, qty = 1, addons?: DraftServiceAddon[]) => {
         setServices((prev) => {
             const existing = prev.find((s) => s.service.id === service.id)
             if (existing) {
                 return prev.map((s) =>
-                    s.service.id === service.id ? { ...s, qty: s.qty + qty } : s,
+                    s.service.id === service.id
+                        ? { ...s, qty: s.qty + qty, addons: addons ?? s.addons }
+                        : s,
                 )
             }
-            return [...prev, { service, qty, notes: "" }]
+            return [...prev, { service, qty, notes: "", addons: addons ?? [] }]
         })
     }, [])
 
@@ -64,13 +75,17 @@ export function OrderDraftProvider({ children }: { children: ReactNode }) {
         setServices((prev) => prev.filter((s) => s.service.id !== serviceId))
     }, [])
 
-    const addProduct = useCallback((product: Product) => {
+    const addProduct = useCallback((product: Product, qty = 1, addons?: DraftServiceAddon[]) => {
         setProducts((prev) => {
             const existing = prev.find((p) => p.product.id === product.id)
             if (existing) {
-                return prev.map((p) => (p.product.id === product.id ? { ...p, qty: p.qty + 1 } : p))
+                return prev.map((p) =>
+                    p.product.id === product.id
+                        ? { ...p, qty: p.qty + qty, addons: addons ?? p.addons }
+                        : p,
+                )
             }
-            return [...prev, { product, qty: 1 }]
+            return [...prev, { product, qty, addons: addons ?? [] }]
         })
     }, [])
 
@@ -80,7 +95,7 @@ export function OrderDraftProvider({ children }: { children: ReactNode }) {
             for (const product of items) {
                 const existing = next.find((p) => p.product.id === product.id)
                 if (existing) existing.qty += 1
-                else next.push({ product, qty: 1 })
+                else next.push({ product, qty: 1, addons: [] })
             }
             return next
         })
@@ -104,13 +119,24 @@ export function OrderDraftProvider({ children }: { children: ReactNode }) {
     }, [])
 
     const value = useMemo(() => {
-        const subtotalServices = services.reduce((sum, s) => sum + s.service.price_per_unit * s.qty, 0)
-        const subtotalProducts = products.reduce((sum, p) => sum + p.product.price * p.qty, 0)
+        const subtotalAddons = services.reduce(
+            (sum, s) => sum + selectedAddonsSubtotal(s.addons, s.qty),
+            0,
+        ) + products.reduce((sum, p) => sum + selectedAddonsSubtotal(p.addons, p.qty), 0)
+        const subtotalServices = services.reduce(
+            (sum, s) => sum + s.service.price_per_unit * s.qty + selectedAddonsSubtotal(s.addons, s.qty),
+            0,
+        )
+        const subtotalProducts = products.reduce(
+            (sum, p) => sum + p.product.price * p.qty + selectedAddonsSubtotal(p.addons, p.qty),
+            0,
+        )
         return {
             services,
             products,
             totalItems: services.length + products.reduce((sum, p) => sum + p.qty, 0),
             subtotalServices,
+            subtotalAddons,
             subtotalProducts,
             addService,
             updateServiceQty,

@@ -23,6 +23,24 @@ export interface ReportTotals {
   balance: number
 }
 
+export interface CashflowCategoryTotal {
+  category: string
+  total: number
+  count: number
+}
+
+export interface CashflowSection {
+  total: number
+  categories: CashflowCategoryTotal[]
+  items: CashflowItem[]
+}
+
+export interface CashflowSections {
+  income: CashflowSection
+  expense: CashflowSection
+  net_profit: number
+}
+
 export interface LowStockItem {
   id: number
   name: string
@@ -107,11 +125,38 @@ export function filterByRange<T extends { created_at: string }>(rows: T[], range
   return rows.filter((row) => isWithinRange(row.created_at, range))
 }
 
+// Pisahkan transaksi menjadi section Pendapatan dan Pengeluaran.
+// Nilai mentah tidak pernah dicampur: setiap section punya item, kategori, dan subtotal sendiri.
+export function buildCashflowSection(items: CashflowItem[]): CashflowSection {
+  const sorted = items.slice().sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  const totals = new Map<string, { total: number; count: number }>()
+  let total = 0
+
+  for (const item of sorted) {
+    total += item.amount
+    const current = totals.get(item.category) ?? { total: 0, count: 0 }
+    current.total += item.amount
+    current.count += 1
+    totals.set(item.category, current)
+  }
+
+  const categories = Array.from(totals.entries())
+    .map(([category, value]) => ({ category, total: value.total, count: value.count }))
+    .sort((a, b) => b.total - a.total)
+
+  return { total, categories, items: sorted }
+}
+
+export function splitCashflow(items: CashflowItem[]): CashflowSections {
+  const income = buildCashflowSection(items.filter((it) => it.type === "income"))
+  const expense = buildCashflowSection(items.filter((it) => it.type === "expense"))
+  return { income, expense, net_profit: income.total - expense.total }
+}
+
 // Total pendapatan, pengeluaran, dan saldo bersih dari arus kas yang sudah difilter
 export function summarizeCashflow(items: CashflowItem[]): ReportTotals {
-  const income = items.filter((it) => it.type === "income").reduce((sum, it) => sum + it.amount, 0)
-  const expense = items.filter((it) => it.type === "expense").reduce((sum, it) => sum + it.amount, 0)
-  return { income, expense, balance: income - expense }
+  const { income, expense, net_profit } = splitCashflow(items)
+  return { income: income.total, expense: expense.total, balance: net_profit }
 }
 
 // Deret data grafik Pendapatan vs Pengeluaran per bulan untuk rentang periode

@@ -19,6 +19,37 @@ const svc = {
     description: "",
     estimated_duration_hours: 24,
     is_active: true,
+    addon_groups: [],
+};
+const svcWithAddons = {
+    ...svc,
+    addon_groups: [
+        {
+            id: 1,
+            code: "detergen",
+            name: "Detergen",
+            selection_type: "single" as const,
+            is_required: false,
+            is_active: true,
+            sort_order: 1,
+            options: [
+                { id: 11, name: "Premium", price: 2000, price_mode: "per_unit" as const, is_default: false, is_active: true, sort_order: 1 },
+                { id: 12, name: "Standard", price: 1000, price_mode: "per_unit" as const, is_default: false, is_active: true, sort_order: 2 },
+            ],
+        },
+        {
+            id: 2,
+            code: "pewangi",
+            name: "Pewangi",
+            selection_type: "single" as const,
+            is_required: false,
+            is_active: true,
+            sort_order: 2,
+            options: [
+                { id: 21, name: "Premium", price: 3000, price_mode: "per_order" as const, is_default: false, is_active: true, sort_order: 1 },
+            ],
+        },
+    ],
 };
 const prod = {
     id: 7,
@@ -29,6 +60,7 @@ const prod = {
     stock: 5,
     is_active: true,
     image: "",
+    addon_groups: [],
 };
 const address = {
     id: 4,
@@ -56,9 +88,12 @@ function makeOrder(overrides: Partial<orderDetailType> = {}): orderDetailType {
         id: "ord-1",
         order_id: "CLN-20260908-001",
         status: "BARU",
+        order_type: "SERVICE",
+        refund_eligible: false,
         payment_method: "fadarosipay",
         total_laundry: 15000,
         total_product: 0,
+        total_addon: 0,
         delivery_fee: 4000,
         total_amount: 19000,
         distance_km: 2,
@@ -71,6 +106,7 @@ function makeOrder(overrides: Partial<orderDetailType> = {}): orderDetailType {
         services: [],
         products: [],
         payment: null,
+        refund: null,
         trackings: [],
     };
     return { ...base, ...overrides };
@@ -92,7 +128,7 @@ function validInput() {
 }
 
 describe("CreateOrderUseCase", () => {
-    it("creates an order and charges fadarosipay immediately", async () => {
+    it("creates an order and books fadarosipay immediately", async () => {
         const order = makeOrder();
         const orderRepo = {
             countByDatePrefix: mock(() => 0),
@@ -137,7 +173,7 @@ describe("CreateOrderUseCase", () => {
         expect(created.status).toBe("BARU");
         expect(created.delivery_fee).toBe(4000);
         expect(created.payment.payment_type).toBe("fadarosipay");
-        expect(created.payment.status).toBe("PAID");
+        expect(created.payment.status).toBe("PENDING");
         expect(created.cashflow.type).toBe("income");
         expect(created.cashflow.category).toBe("sales");
         expect(paymentRepo.create).not.toHaveBeenCalled();
@@ -217,7 +253,7 @@ describe("CreateOrderUseCase", () => {
         );
 
         try {
-            await uc.execute("u-1", validInput());
+            await uc.execute("u-1", { ...validInput(), payment_method: "transfer_bank", bank: "bca" });
             expect.unreachable("expected conflict error");
         } catch (error) {
             const appError = error as { statusCode: number; details?: Record<string, unknown> };
@@ -227,6 +263,92 @@ describe("CreateOrderUseCase", () => {
             expect(appError.details?.["remaining_seconds"]).toBeGreaterThan(0);
         }
         expect(orderRepo.create).not.toHaveBeenCalled();
+    });
+
+    it("prices per-unit and per-order addons on each service line", async () => {
+        const order = makeOrder();
+        const orderRepo = {
+            countByDatePrefix: mock(() => 0),
+            create: mock(() => order),
+            findByOrderId: mock(() => order),
+        } as unknown as orderRepository;
+        const paymentRepo = {
+            create: mock(),
+            confirm: mock(() => null),
+            findActivePendingByUser: mock(() => null),
+        } as unknown as paymentRepository;
+        const uc = new CreateOrderUseCase(
+            orderRepo,
+            { findById: mock(() => svcWithAddons), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
+            { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
+            { findById: mock(() => address) } as unknown as addressRepository,
+            { findById: mock(() => outlet) } as unknown as outletRepository,
+            paymentRepo,
+            { create: mock(async () => ({})) } as unknown as cashflowRepository,
+        );
+
+        await uc.execute("u-1", {
+            ...validInput(),
+            services: [{
+                laundry_service_id: svc.id,
+                qty: 3,
+                addons: [
+                    { group_code: "detergen", option_id: 11 },
+                    { group_code: "pewangi", option_id: 21 },
+                ],
+            }],
+        });
+
+        const created = (orderRepo.create as ReturnType<typeof mock>).mock.calls[0][0];
+        expect(created.services[0].price_per_unit).toBe(5000);
+        expect(created.services[0].addon_subtotal).toBe(9000);
+        expect(created.services[0].subtotal).toBe(24000);
+        expect(created.services[0].addons).toEqual([
+            {
+                addon_option_id: 11,
+                group_code: "detergen",
+                group_name: "Detergen",
+                option_name: "Premium",
+                price: 2000,
+                price_mode: "per_unit",
+                qty: 3,
+                subtotal: 6000,
+            },
+            {
+                addon_option_id: 21,
+                group_code: "pewangi",
+                group_name: "Pewangi",
+                option_name: "Premium",
+                price: 3000,
+                price_mode: "per_order",
+                qty: 1,
+                subtotal: 3000,
+            },
+        ]);
+        expect(created.totals.total_addon).toBe(9000);
+        expect(created.totals.total_laundry).toBe(24000);
+        expect(created.totals.total_amount).toBe(28000);
+    });
+
+    it("rejects addons that are not linked to the selected service", async () => {
+        const uc = new CreateOrderUseCase(
+            { countByDatePrefix: mock(() => 0), create: mock(), findByOrderId: mock() } as unknown as orderRepository,
+            { findById: mock(() => svcWithAddons), list: mock(), create: mock(), update: mock(), remove: mock() } as unknown as serviceRepository,
+            { findById: mock(() => prod), list: mock(), create: mock(), update: mock(), remove: mock(), updateImage: mock(), decrementStock: mock() } as unknown as productRepository,
+            { findById: mock(() => address) } as unknown as addressRepository,
+            { findById: mock(() => outlet) } as unknown as outletRepository,
+            { create: mock(), confirm: mock(), findActivePendingByUser: mock(() => null) } as unknown as paymentRepository,
+            { create: mock() } as unknown as cashflowRepository,
+        );
+
+        await expect(uc.execute("u-1", {
+            ...validInput(),
+            services: [{
+                laundry_service_id: svc.id,
+                qty: 3,
+                addons: [{ group_code: "parfum", option_id: 99 }],
+            }],
+        })).rejects.toMatchObject({ statusCode: 422 });
     });
 
     it("caps the member discount at 15% of subtotal", async () => {
@@ -534,8 +656,9 @@ describe("CancelOrderUseCase", () => {
             addTracking: mock(async () => {}),
         } as unknown as orderRepository;
         const cashflowRepo = { create: mock(async () => ({})) } as unknown as cashflowRepository;
+        const paymentRepo = { updateStatus: mock(async () => null) } as unknown as paymentRepository;
 
-        const uc = new CancelOrderUseCase(orderRepo, cashflowRepo);
+        const uc = new CancelOrderUseCase(orderRepo, cashflowRepo, paymentRepo);
         const result = await uc.execute("CLN-20260908-001", "u-1");
 
         expect(result.status).toBe("DIBATALKAN");
@@ -556,8 +679,9 @@ describe("CancelOrderUseCase", () => {
             addTracking: mock(async () => {}),
         } as unknown as orderRepository;
         const cashflowRepo = { create: mock(async () => ({})) } as unknown as cashflowRepository;
+        const paymentRepo = { updateStatus: mock(async () => null) } as unknown as paymentRepository;
 
-        await new CancelOrderUseCase(orderRepo, cashflowRepo).execute("CLN-20260908-001", "u-1");
+        await new CancelOrderUseCase(orderRepo, cashflowRepo, paymentRepo).execute("CLN-20260908-001", "u-1");
         expect(cashflowRepo.create).not.toHaveBeenCalled();
     });
 
@@ -569,7 +693,7 @@ describe("CancelOrderUseCase", () => {
             addTracking: mock(async () => {}),
         } as unknown as orderRepository;
 
-        await expect(new CancelOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository).execute("CLN-20260908-001", "u-1")).rejects.toMatchObject({ statusCode: 409 });
+        await expect(new CancelOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository, { updateStatus: mock(async () => null) } as unknown as paymentRepository).execute("CLN-20260908-001", "u-1")).rejects.toMatchObject({ statusCode: 409 });
         expect(orderRepo.updateStatus).not.toHaveBeenCalled();
     });
 
@@ -581,74 +705,21 @@ describe("CancelOrderUseCase", () => {
             addTracking: mock(async () => {}),
         } as unknown as orderRepository;
 
-        await expect(new CancelOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository).execute("CLN-20260908-001", "u-2")).rejects.toMatchObject({ statusCode: 403 });
+        await expect(new CancelOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository, { updateStatus: mock(async () => null) } as unknown as paymentRepository).execute("CLN-20260908-001", "u-2")).rejects.toMatchObject({ statusCode: 403 });
     });
 });
 
 describe("DeleteOrderUseCase", () => {
-    it("deletes a BARU order and creates a refund when paid", async () => {
-        const order = makeOrder({
-            status: "BARU" as orderStatus,
-            payment: { id: "p", transaction_id: "T", payment_type: "fadarosipay", gross_amount: 19000, status: "PAID", paid_at: null, created_at: new Date().toISOString() },
-        });
-        const orderRepo = {
-            findByOrderId: mock(() => order),
-            updateStatus: mock(async () => {}),
-            addTracking: mock(async () => {}),
-        } as unknown as orderRepository;
-        const cashflowRepo = { create: mock(async () => ({})) } as unknown as cashflowRepository;
-
-        await new DeleteOrderUseCase(orderRepo, cashflowRepo).execute("CLN-20260908-001", "a-1");
-        expect(orderRepo.updateStatus).toHaveBeenCalledWith("CLN-20260908-001", "DIBATALKAN");
-        expect(cashflowRepo.create).toHaveBeenCalledTimes(1);
-    });
-
-    it("rejects deletion of an in-progress order", async () => {
+    it("permanently deletes a completed order for its owner", async () => {
         const order = makeOrder({ status: "SELESAI" as orderStatus });
-        const orderRepo = { findByOrderId: mock(() => order), updateStatus: mock(async () => {}), addTracking: mock(async () => {}) } as unknown as orderRepository;
-
-        await expect(new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository).execute("CLN-20260908-001", "a-1")).rejects.toMatchObject({ statusCode: 409 });
-    });
-
-    it("permanently deletes a cancelled order for its owner", async () => {
-        const order = makeOrder({ status: "DIBATALKAN" as orderStatus });
         const orderRepo = {
             findByOrderId: mock(() => order),
             delete: mock(async () => {}),
         } as unknown as orderRepository;
 
-        await new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository)
-            .execute("CLN-20260908-001", "u-1", "user");
+        await new DeleteOrderUseCase(orderRepo).execute("CLN-20260908-001", "u-1", "user");
 
         expect(orderRepo.delete).toHaveBeenCalledWith("CLN-20260908-001");
-    });
-
-    it("forbids a user from deleting another customer's cancelled order", async () => {
-        const order = makeOrder({ status: "DIBATALKAN" as orderStatus });
-        const orderRepo = {
-            findByOrderId: mock(() => order),
-            delete: mock(async () => {}),
-        } as unknown as orderRepository;
-
-        await expect(
-            new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository)
-                .execute("CLN-20260908-001", "u-2", "user"),
-        ).rejects.toMatchObject({ statusCode: 403 });
-        expect(orderRepo.delete).not.toHaveBeenCalled();
-    });
-
-    it("forbids a user from deleting an active order", async () => {
-        const order = makeOrder({ status: "BARU" as orderStatus });
-        const orderRepo = {
-            findByOrderId: mock(() => order),
-            delete: mock(async () => {}),
-        } as unknown as orderRepository;
-
-        await expect(
-            new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository)
-                .execute("CLN-20260908-001", "u-1", "user"),
-        ).rejects.toMatchObject({ statusCode: 403 });
-        expect(orderRepo.delete).not.toHaveBeenCalled();
     });
 
     it("allows an admin to permanently delete a cancelled order", async () => {
@@ -658,9 +729,37 @@ describe("DeleteOrderUseCase", () => {
             delete: mock(async () => {}),
         } as unknown as orderRepository;
 
-        await new DeleteOrderUseCase(orderRepo, { create: mock(), summary: mock() } as unknown as cashflowRepository)
-            .execute("CLN-20260908-001", "a-1", "admin");
+        await new DeleteOrderUseCase(orderRepo).execute("CLN-20260908-001", "a-1", "admin");
 
         expect(orderRepo.delete).toHaveBeenCalledWith("CLN-20260908-001");
+    });
+
+    it.each(["BARU", "DITERIMA", "DIPROSES", "SIAP_ANTAR"] as orderStatus[])(
+        "rejects deletion of a %s order",
+        async (status) => {
+            const order = makeOrder({ status });
+            const orderRepo = {
+                findByOrderId: mock(() => order),
+                delete: mock(async () => {}),
+            } as unknown as orderRepository;
+
+            await expect(
+                new DeleteOrderUseCase(orderRepo).execute("CLN-20260908-001", "a-1", "admin"),
+            ).rejects.toMatchObject({ statusCode: 409 });
+            expect(orderRepo.delete).not.toHaveBeenCalled();
+        },
+    );
+
+    it("forbids a user from deleting another customer's completed order", async () => {
+        const order = makeOrder({ status: "SELESAI" as orderStatus });
+        const orderRepo = {
+            findByOrderId: mock(() => order),
+            delete: mock(async () => {}),
+        } as unknown as orderRepository;
+
+        await expect(
+            new DeleteOrderUseCase(orderRepo).execute("CLN-20260908-001", "u-2", "user"),
+        ).rejects.toMatchObject({ statusCode: 403 });
+        expect(orderRepo.delete).not.toHaveBeenCalled();
     });
 });

@@ -98,7 +98,6 @@ export const PRODUCT_CATEGORIES = [
     "Softener",
     "Pewangi",
     "Pemutih",
-    "Minyak Goreng",
     "Paket Hemat",
 ];
 

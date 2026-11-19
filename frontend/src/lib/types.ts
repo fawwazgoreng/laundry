@@ -49,6 +49,30 @@ export type AddressInput = {
     longitude: number
 }
 
+export type AddonSelectionType = "single" | "multiple"
+export type AddonPriceMode = "per_unit" | "per_order"
+
+export interface ServiceAddonOption {
+    id: number
+    name: string
+    price: number
+    price_mode: AddonPriceMode
+    is_default: boolean
+    is_active: boolean
+    sort_order: number
+}
+
+export interface ServiceAddonGroup {
+    id: number
+    code: string
+    name: string
+    selection_type: AddonSelectionType
+    is_required: boolean
+    is_active: boolean
+    sort_order: number
+    options: ServiceAddonOption[]
+}
+
 export interface Service {
     id: number
     name: string
@@ -57,6 +81,7 @@ export interface Service {
     description: string
     estimated_duration_hours: number
     is_active: boolean
+    addon_groups: ServiceAddonGroup[]
 }
 
 export type ServiceInput = {
@@ -77,6 +102,7 @@ export interface Product {
     stock: number
     is_active: boolean
     image: string
+    addon_groups: ServiceAddonGroup[]
 }
 
 export type ProductInput = {
@@ -127,11 +153,24 @@ export interface OrderItem {
     subtotal: number
 }
 
+export interface ServiceOrderAddon {
+    id: string
+    group_code: string
+    group_name: string
+    option_name: string
+    price: number
+    price_mode: AddonPriceMode
+    qty: number
+    subtotal: number
+}
+
 export interface ServiceOrderItem extends OrderItem {
     service_id: number
     service_name: string
     unit: string
     price_per_unit: number
+    addon_subtotal: number
+    addons: ServiceOrderAddon[]
     notes: string
 }
 
@@ -142,6 +181,8 @@ export interface ProductOrderItem extends OrderItem {
     size: string
     image: string
     price: number
+    addon_subtotal: number
+    addons: ServiceOrderAddon[]
 }
 
 export interface OrderTracking {
@@ -158,20 +199,36 @@ export interface Payment {
     order_id: string
     payment_type: PaymentMethod
     gross_amount: number
-    status: "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "REFUNDED" | "CANCELLED"
+    status: "PENDING" | "PAID" | "FAILED" | "EXPIRED" | "DIBATALKAN" | "REFUNDED" | "CANCELLED"
     paid_at: string | null
     raw_response: Record<string, unknown> | null
     created_at: string
     va_number?: string
 }
 
+export type OrderKind = "PRODUCT" | "SERVICE"
+export type RefundStatus = "REQUESTED" | "APPROVED" | "REJECTED" | "REFUNDED"
+
+export interface RefundSummary {
+    id: string
+    status: RefundStatus
+    amount: number
+    reason: string
+    gateway_ref: string | null
+    requested_at: string
+    processed_at: string | null
+}
+
 export interface OrderDetail {
     id: string
     order_id: string
     status: OrderStatus
+    order_type: OrderKind
+    refund_eligible: boolean
     payment_method: PaymentMethod
     total_laundry: number
     total_product: number
+    total_addon: number
     delivery_fee: number
     discount_member: number
     discount_voucher: number
@@ -188,6 +245,7 @@ export interface OrderDetail {
     services: ServiceOrderItem[]
     products: ProductOrderItem[]
     payment: Payment | null
+    refund: RefundSummary | null
     trackings: OrderTracking[]
 }
 
@@ -202,9 +260,14 @@ export interface OrderListItem {
     id: string
     order_id: string
     status: OrderStatus
+    order_type: OrderKind
+    refund_eligible: boolean
+    refund_status: RefundStatus | null
     total_amount: number
     payment_method: PaymentMethod
+    payment_status: Payment["status"] | null
     created_at: string
+    customer_id: string
     customer_name: string
     customer_phone: string
     items_summary: string
@@ -212,7 +275,12 @@ export interface OrderListItem {
 }
 
 export type OrderCreateInput = {
-    services: Array<{ laundry_service_id: number; qty: number; notes?: string }>
+    services: Array<{
+        laundry_service_id: number
+        qty: number
+        notes?: string
+        addons?: Array<{ group_code: string; option_id: number }>
+    }>
     products: Array<{ product_id: number; qty: number }>
     user_address_id: number
     outlet_id: number
@@ -245,6 +313,22 @@ export interface AdminStats {
     low_stock_products: Array<{ id: number; name: string; stock: number }>
 }
 
+export interface AddonGroupInput {
+    code: string
+    name: string
+    selection_type: AddonSelectionType
+    is_required: boolean
+    is_active: boolean
+}
+
+export interface AddonOptionInput {
+    name: string
+    price: number
+    price_mode: AddonPriceMode
+    is_default: boolean
+    is_active: boolean
+}
+
 export interface CashflowItem {
     id: number
     order_id: string | null
@@ -255,9 +339,24 @@ export interface CashflowItem {
     created_at: string
 }
 
+export interface CashflowCategoryTotal {
+    category: string
+    total: number
+    count: number
+}
+
+export interface CashflowSection {
+    total: number
+    categories: CashflowCategoryTotal[]
+    items: CashflowItem[]
+}
+
 export interface CashflowSummary {
     total_income: number
     total_expense: number
+    net_profit: number
     balance: number
+    income: CashflowSection
+    expense: CashflowSection
     items: CashflowItem[]
 }

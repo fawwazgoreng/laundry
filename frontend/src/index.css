@@ -83,4 +83,31 @@ input[type="number"]::-webkit-inner-spin-button {
   .print-hidden {
     display: none !important;
   }
+  /* Jaga baris dan ringkasan tidak terpotong; header tabel diulang antar halaman */
+  .report-net-summary,
+  .report-section tr {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .report-section thead {
+    display: table-header-group;
+  }
+  .report-income-header,
+  .report-expense-header {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+  /* Warna section wajib ikut tercetak agar Pendapatan dan Pengeluaran tidak tertukar */
+  .report-income-header {
+    background-color: #059669 !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .report-expense-header {
+    background-color: #b91c1c !important;
+    color: #ffffff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }

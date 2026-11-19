@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from "react"
 import { ChevronLeft, ChevronRight, CreditCard, Eye, MapPin, Receipt, Search, Trash2 } from "lucide-react"
-import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
+import { adminStatusLabel, adminStatusStyle, paymentStatusLabel, paymentStatusStyle } from "../../lib/orderStatus"
 import { formatIDR } from "../../lib/format"
-import type { OrderListItem, OrderStatus } from "../../lib/types"
+import type { OrderKind, OrderListItem, OrderStatus, Payment, RefundStatus } from "../../lib/types"
 import { orderApi } from "../../services/api"
 import { ApiError } from "../../services/apiClient"
 import { useToast } from "../../components/Toast"
@@ -19,22 +19,36 @@ const tabs = [
   { key: "dibatalkan", label: "Dibatalkan" },
 ]
 
+const refundTabs = [
+  { key: "semua", label: "Semua" },
+  { key: "request", label: "Request" },
+  { key: "approve", label: "Approve" },
+  { key: "reject", label: "Reject" },
+  { key: "refunded", label: "Refunded" },
+]
+
 const statusOrder: OrderStatus[] = ["BARU", "DITERIMA", "DIPROSES", "SIAP_ANTAR", "SELESAI"]
 
 interface AdminOrderRow {
   id: string
+  customerId: string
   customer: string
   phone: string
   content: string
   quantity: string
   status: OrderStatus
+  orderType: OrderKind
+  refundStatus: RefundStatus | null
+  paymentStatus: Payment["status"] | null
   total: number
 }
 
 export function AdminOrderManagementPage() {
   const { success: toastSuccess, error: toastError } = useToast()
   const [activeTab, setActiveTab] = useState("semua")
+  const [refundTab, setRefundTab] = useState("semua")
   const [search, setSearch] = useState("")
+  const [customerFilter, setCustomerFilter] = useState("")
   const [orders, setOrders] = useState<AdminOrderRow[]>([])
   const [statusTarget, setStatusTarget] = useState<{ order: AdminOrderRow; next: OrderStatus } | null>(null)
   const [updating, setUpdating] = useState(false)
@@ -50,11 +64,15 @@ export function AdminOrderManagementPage() {
         setOrders(
           page.data.map((o: OrderListItem) => ({
             id: o.order_id,
+            customerId: o.customer_id,
             customer: o.customer_name,
             phone: o.customer_phone,
             content: o.items_summary,
             quantity: o.items_unit,
             status: o.status,
+            orderType: o.order_type,
+            refundStatus: o.refund_status,
+            paymentStatus: o.payment_status,
             total: o.total_amount,
           })),
         )
@@ -82,6 +100,18 @@ export function AdminOrderManagementPage() {
     return c
   }, [orders])
 
+  const refundCounts = useMemo(() => {
+    const c: Record<string, number> = { semua: orders.length }
+    for (const tab of refundTabs.slice(1)) c[tab.key] = 0
+    for (const o of orders) {
+      if (o.refundStatus === "REQUESTED") c.request++
+      if (o.refundStatus === "APPROVED") c.approve++
+      if (o.refundStatus === "REJECTED") c.reject++
+      if (o.refundStatus === "REFUNDED") c.refunded++
+    }
+    return c
+  }, [orders])
+
   const filtered = useMemo(() => {
     let list = orders
     if (activeTab === "diterima") list = list.filter((o) => o.status === "DITERIMA")
@@ -89,14 +119,25 @@ export function AdminOrderManagementPage() {
     if (activeTab === "siap_antar") list = list.filter((o) => o.status === "SIAP_ANTAR")
     if (activeTab === "selesai") list = list.filter((o) => o.status === "SELESAI")
     if (activeTab === "dibatalkan") list = list.filter((o) => o.status === "DIBATALKAN")
+
+    if (refundTab === "request") list = list.filter((o) => o.refundStatus === "REQUESTED")
+    if (refundTab === "approve") list = list.filter((o) => o.refundStatus === "APPROVED")
+    if (refundTab === "reject") list = list.filter((o) => o.refundStatus === "REJECTED")
+    if (refundTab === "refunded") list = list.filter((o) => o.refundStatus === "REFUNDED")
+
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       list = list.filter((o) => o.id.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q))
     }
+    if (customerFilter.trim()) {
+      const q = customerFilter.trim().toLowerCase()
+      list = list.filter(
+        (o) => o.customer.toLowerCase().includes(q) || o.customerId.toLowerCase().includes(q),
+      )
+    }
     return list
-  }, [orders, activeTab, search])
+  }, [orders, activeTab, refundTab, search, customerFilter])
 
-  // Buka pop-up konfirmasi sebelum status pesanan diubah ke tahap berikutnya
   function handleAdvance(order: AdminOrderRow) {
     const current = statusOrder.indexOf(order.status)
     const next = statusOrder[current + 1]
@@ -104,7 +145,6 @@ export function AdminOrderManagementPage() {
     setStatusTarget({ order, next })
   }
 
-  // Jalankan perubahan status pesanan setelah dikonfirmasi admin
   async function confirmStatusChange() {
     if (!statusTarget) return
     setUpdating(true)
@@ -144,30 +184,67 @@ export function AdminOrderManagementPage() {
         <p className="text-sm text-gray-500">Kelola antrean laundry, update status proses pencucian, dan kasir manual.</p>
       </div>
 
-      <div className="flex flex-wrap gap-2">
-        {tabs.map((tab) => {
-          const isActive = activeTab === tab.key
-          return (
-            <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${isActive
-                ? "border-primary bg-primary text-white"
-                : "border-gray-200 bg-white text-ink hover:bg-gray-50"
+      {/* Section Header: Status Pesanan Utama */}
+      <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Status Alur Pesanan</h2>
+        <div className="flex flex-wrap gap-2">
+          {tabs.map((tab) => {
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                  isActive
+                    ? "border-primary bg-primary text-white"
+                    : "border-gray-200 bg-gray-50 text-ink hover:bg-gray-100"
                 }`}
-            >
-              {tab.label}
-              <span
-                className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${isActive ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"
-                  }`}
               >
-                {counts[tab.key] ?? 0}
-              </span>
-            </button>
-          )
-        })}
+                {tab.label}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
+                    isActive ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {counts[tab.key] ?? 0}
+                </span>
+              </button>
+            )
+          })}
+        </div>
       </div>
 
+      {/* Section Header: Filter Status Refund */}
+      <div className="space-y-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Filter Status Refund</h2>
+        <div className="flex flex-wrap gap-2">
+          {refundTabs.map((tab) => {
+            const isActive = refundTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setRefundTab(tab.key)}
+                className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition-colors ${
+                  isActive
+                    ? "border-amber-600 bg-amber-600 text-white"
+                    : "border-gray-200 bg-gray-50 text-ink hover:bg-gray-100"
+                }`}
+              >
+                {tab.label}
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-xs font-bold ${
+                    isActive ? "bg-white/20 text-white" : "bg-gray-200 text-gray-600"
+                  }`}
+                >
+                  {refundCounts[tab.key] ?? 0}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Search and Filters Input */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 sm:max-w-sm">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -178,115 +255,143 @@ export function AdminOrderManagementPage() {
             className="w-full rounded-xl bg-white border border-gray-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-primary"
           />
         </div>
+        <div className="relative flex-1 sm:max-w-sm">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            value={customerFilter}
+            onChange={(e) => setCustomerFilter(e.target.value)}
+            placeholder="Filter pelanggan: username / ID..."
+            className="w-full rounded-xl bg-white border border-gray-200 py-2.5 pl-9 pr-4 text-sm outline-none focus:border-primary"
+          />
+        </div>
       </div>
 
+      {/* Tabel Data Pesanan */}
       <div className="rounded-2xl border border-gray-200 bg-white p-2">
         {loading ? (
           <LoadingState message="Memuat daftar pesanan..." />
         ) : loadError ? (
           <ErrorState message={loadError} onRetry={() => { setLoading(true); load() }} />
         ) : (
-        <>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-100 text-xs text-gray-400">
-                <th className="px-2 py-3 font-medium">No. Order</th>
-                <th className="px-2 py-3 font-medium">Pelanggan</th>
-                <th className="px-2 py-3 font-medium">No HP</th>
-                <th className="px-2 py-3 font-medium">Isi Pesanan</th>
-                <th className="px-2 py-3 font-medium">Satuan</th>
-                <th className="px-2 py-3 font-medium">Status</th>
-                <th className="px-2 py-3 text-right font-medium">Total Harga</th>
-                <th className="px-2 py-3 text-right font-medium">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((order) => (
-                <tr key={order.id} className="border-b border-gray-50 last:border-0">
-                  <td className="px-2 py-4 font-semibold text-ink-strong">{order.id}</td>
-                  <td className="px-2 py-4 text-gray-600">{order.customer}</td>
-                  <td className="px-2 py-4 text-gray-600">{order.phone}</td>
-                  <td className="px-2 py-4 text-gray-600">{order.content}</td>
-                  <td className="px-2 py-4 text-gray-600">{order.quantity}</td>
-                  <td className="px-2 py-4">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${adminStatusStyle[order.status]}`}
-                    >
-                      {adminStatusLabel[order.status]}
-                    </span>
-                  </td>
-                  <td className="px-2 py-4 text-right font-semibold text-ink-strong">
-                    {formatIDR(order.total)}
-                  </td>
-                  <td className="px-2 py-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <Link to={"/admin/riwayat/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
-                        <Eye size={14} />
-                      </Link>
-                      <Link to={"/admin/tracking/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
-                        <MapPin size={14} />
-                      </Link>
-                      <Link to={"/payment/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
-                        <CreditCard size={14} />
-                      </Link>
-                      <Link to={"/nota/" + order.id} target="blank" className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
-                        <Receipt size={14} />
-                      </Link>
-                      {order.status === "DIBATALKAN" ? (
-                        <button
-                          onClick={() => setDeleteTarget(order)}
-                          aria-label={`Hapus pesanan ${order.id}`}
-                          className="flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
-                        >
-                          <Trash2 size={13} /> Hapus
-                        </button>
-                      ) : statusOrder.indexOf(order.status) < statusOrder.length - 1 ? (
-                        <button
-                          onClick={() => handleAdvance(order)}
-                          className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-ink hover:bg-gray-50"
-                        >
-                          Ubah Status
-                        </button>
-                      ) : (
-                        <span className="rounded-lg bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-400">
-                          Selesai
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[860px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100 text-xs text-gray-400">
+                    <th className="px-2 py-3 font-medium">No. Order</th>
+                    <th className="px-2 py-3 font-medium">Pelanggan</th>
+                    <th className="px-2 py-3 font-medium">No HP</th>
+                    <th className="px-2 py-3 font-medium">Isi Pesanan</th>
+                    <th className="px-2 py-3 font-medium">Satuan</th>
+                    <th className="px-2 py-3 font-medium">Status</th>
+                    <th className="px-2 py-3 text-right font-medium">Total Harga</th>
+                    <th className="px-2 py-3 text-right font-medium">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((order) => (
+                    <tr key={order.id} className="border-b border-gray-50 last:border-0">
+                      <td className="px-2 py-4 font-semibold text-ink-strong">{order.id}</td>
+                      <td className="px-2 py-4 text-gray-600">{order.customer}</td>
+                      <td className="px-2 py-4 text-gray-600">{order.phone}</td>
+                      <td className="px-2 py-4 text-gray-600">{order.content}</td>
+                      <td className="px-2 py-4 text-gray-600">{order.quantity}</td>
+                      <td className="px-2 py-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${adminStatusStyle[order.status]}`}
+                          >
+                            {adminStatusLabel[order.status]}
+                          </span>
+                          <span
+                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                              order.orderType === "PRODUCT" ? "bg-emerald-100 text-emerald-700" : "bg-gray-100 text-gray-600"
+                            }`}
+                          >
+                            {order.orderType === "PRODUCT" ? "Product" : "Service"}
+                          </span>
+                          {order.refundStatus && (
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${order.refundStatus === "REQUESTED" ? "bg-amber-100 text-amber-700" : order.refundStatus === "REJECTED" ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                              Refund: {order.refundStatus}
+                            </span>
+                          )}
+                          {order.paymentStatus && (
+                            <span
+                              className={`rounded-full px-2.5 py-1 text-xs font-medium ${paymentStatusStyle[order.paymentStatus]}`}
+                            >
+                              {paymentStatusLabel[order.paymentStatus]}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-2 py-4 text-right font-semibold text-ink-strong">
+                        {formatIDR(order.total)}
+                      </td>
+                      <td className="px-2 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <Link to={"/admin/riwayat/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
+                            <Eye size={14} />
+                          </Link>
+                          <Link to={"/admin/tracking/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
+                            <MapPin size={14} />
+                          </Link>
+                          <Link to={"/payment/" + order.id} className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
+                            <CreditCard size={14} />
+                          </Link>
+                          <Link to={"/nota/" + order.id} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:text-primary">
+                            <Receipt size={14} />
+                          </Link>
+                          {order.status === "DIBATALKAN" || order.status === "SELESAI" ? (
+                            <button
+                              onClick={() => setDeleteTarget(order)}
+                              aria-label={`Hapus pesanan ${order.id}`}
+                              className="flex items-center gap-1 rounded-lg border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 size={13} /> Hapus
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleAdvance(order)}
+                              className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-ink hover:bg-gray-50"
+                            >
+                              Ubah Status
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
 
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="py-10 text-center text-sm text-gray-400">
-                    Tidak ada pesanan pada kategori ini.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                  {filtered.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="py-10 text-center text-sm text-gray-400">
+                        {customerFilter.trim()
+                          ? `Tidak ada pelanggan dengan username / ID "${customerFilter.trim()}".`
+                          : "Tidak ada pesanan pada kategori ini."}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-3 mt-2 border-t-2 border-gray-200">
-          <p className="text-sm text-gray-400">Menampilkan {filtered.length} dari {orders.length} pesanan</p>
-          <div className="flex items-center gap-2">
-            <button className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:bg-gray-50">
-              <ChevronLeft size={16} />
-            </button>
-            <button className="h-8 w-8 rounded-lg bg-primary text-sm font-semibold text-white">1</button>
-            <button className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:bg-gray-50">
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        </div>
-        </>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-3 mt-2 border-t-2 border-gray-200">
+              <p className="text-sm text-gray-400">Menampilkan {filtered.length} dari {orders.length} pesanan</p>
+              <div className="flex items-center gap-2">
+                <button className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:bg-gray-50">
+                  <ChevronLeft size={16} />
+                </button>
+                <button className="h-8 w-8 rounded-lg bg-primary text-sm font-semibold text-white">1</button>
+                <button className="rounded-lg border border-gray-200 p-2 text-gray-400 hover:bg-gray-50">
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
-
-      {/* Konfirmasi khusus sebelum status pesanan diubah */}
+      {/* Dialog Konfirmasi Ubah Status */}
       <ConfirmDialog
         open={statusTarget !== null}
         title="Konfirmasi Ubah Status"
@@ -302,7 +407,7 @@ export function AdminOrderManagementPage() {
         onCancel={() => setStatusTarget(null)}
       />
 
-      {/* Konfirmasi sebelum pesanan yang sudah dibatalkan dihapus permanen */}
+      {/* Dialog Konfirmasi Hapus */}
       <ConfirmDialog
         open={deleteTarget !== null}
         title="Hapus Pesanan?"

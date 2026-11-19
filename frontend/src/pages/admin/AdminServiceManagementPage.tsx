@@ -15,6 +15,7 @@ interface ServiceRow {
   description: string
   etaHours: number
   is_active: boolean
+  addonGroups: Service["addon_groups"]
 }
 
 export function AdminServiceManagementPage() {
@@ -49,6 +50,7 @@ export function AdminServiceManagementPage() {
             description: s.description,
             etaHours: s.estimated_duration_hours,
             is_active: s.is_active,
+            addonGroups: s.addon_groups,
           })),
         )
         setListError(null)
@@ -171,6 +173,11 @@ export function AdminServiceManagementPage() {
                   {service.pricePerUnit.toLocaleString("id-ID")} per 1 unit ( {service.unit} )
                 </p>
                 <p className="text-sm text-gray-500">estimasi selesai {service.etaHours} jam</p>
+                {service.addonGroups.length > 0 && (
+                  <p className="mt-1 text-xs text-gray-400">
+                    Add-on: {service.addonGroups.map((group) => `${group.name} (${group.options.length})`).join(", ")}
+                  </p>
+                )}
               </div>
             ))
           )}

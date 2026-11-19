@@ -15,7 +15,10 @@ import type {
     orderStatus,
     paymentGate,
     paymentMethod,
+    serviceAddonRecord,
+    serviceAddonInput,
 } from "../../domain/types/orderType";
+import type { serviceAddonGroupType } from "../../domain/types/serviceType";
 import type { meta } from "../../domain/types/globalType";
 import { AppError } from "../../helper/errorHandling/appError";
 import { logger } from "../../helper/logging/logger";
@@ -99,18 +102,42 @@ export class CreateOrderUseCase {
         if (!outlet) throw AppError.notFound("Outlet tidak ditemukan");
 
         let laundrySubtotal = 0;
-        const services: Array<{ laundry_service_id: number; qty: number; notes: string; subtotal: number }> = [];
+        let addonSubtotal = 0;
+        const services: Array<{
+            laundry_service_id: number
+            qty: number
+            notes: string
+            price_per_unit: number
+            addon_subtotal: number
+            addons: serviceAddonRecord[]
+            subtotal: number
+        }> = [];
         for (const item of dto.services) {
             const svc = await this.serviceRepository.findById(item.laundry_service_id);
             if (!svc) throw AppError.notFound(`Layanan id ${item.laundry_service_id} tidak ditemukan`);
             if (!svc.is_active) throw AppError.conflict("Layanan tidak tersedia");
-            const subtotal = svc.price_per_unit * item.qty;
+            const addons = this.resolveAddons(svc.addon_groups, item.addons ?? [], item.qty);
+            const itemAddonSubtotal = addons.reduce((sum, addon) => sum + addon.subtotal, 0);
+            const subtotal = svc.price_per_unit * item.qty + itemAddonSubtotal;
             laundrySubtotal += subtotal;
-            services.push({ ...item, notes: item.notes ?? "", subtotal });
+            addonSubtotal += itemAddonSubtotal;
+            services.push({
+                laundry_service_id: item.laundry_service_id,
+                qty: item.qty,
+                notes: item.notes ?? "",
+                price_per_unit: svc.price_per_unit,
+                addon_subtotal: itemAddonSubtotal,
+                addons,
+                subtotal,
+            });
         }
 
         let productSubtotal = 0;
-        const products: Array<{ product_id: number; qty: number; subtotal: number }> = [];
+        const products: Array<{
+            product_id: number
+            qty: number
+            subtotal: number
+        }> = [];
         for (const item of dto.products) {
             const prod = await this.productRepository.findById(item.product_id);
             if (!prod) throw AppError.notFound(`Produk id ${item.product_id} tidak ditemukan`);
@@ -118,13 +145,18 @@ export class CreateOrderUseCase {
             if (prod.stock < item.qty) throw AppError.conflict(`Stok ${prod.name} tidak mencukupi`);
             const subtotal = Number(prod.price) * item.qty;
             productSubtotal += subtotal;
-            products.push({ ...item, subtotal });
+            products.push({
+                product_id: item.product_id,
+                qty: item.qty,
+                subtotal,
+            });
         }
 
         const deliveryFee = orderEntity.computeDeliveryFee(dto.distance_km);
         const totals = orderEntity.computeTotals({
             laundrySubtotal,
             productSubtotal,
+            addonSubtotal,
             itemCount: services.length + products.length,
             deliveryFee,
         });
@@ -205,12 +237,76 @@ export class CreateOrderUseCase {
         }
     }
 
+    private resolveAddons(
+        groups: serviceAddonGroupType[],
+        selections: serviceAddonInput[],
+        serviceQty: number,
+    ): serviceAddonRecord[] {
+        const activeGroups = groups.filter((group) => group.is_active);
+        const groupsByCode = new Map(activeGroups.map((group) => [group.code, group]));
+        const selectionsByGroup = new Map<string, serviceAddonInput[]>();
+
+        for (const selection of selections) {
+            const group = groupsByCode.get(selection.group_code);
+            if (!group) {
+                throw AppError.validation({
+                    addons: `Add-on ${selection.group_code} tidak tersedia untuk item ini`,
+                });
+            }
+            const option = group.options.find(
+                (candidate) => candidate.id === selection.option_id && candidate.is_active,
+            );
+            if (!option) {
+                throw AppError.validation({
+                    addons: `Pilihan ${group.name} tidak valid`,
+                });
+            }
+            const picked = selectionsByGroup.get(group.code) ?? [];
+            if (picked.some((item) => item.option_id === selection.option_id)) {
+                throw AppError.validation({ addons: `Pilihan ${group.name} duplikat` });
+            }
+            if (group.selection_type === "single" && picked.length > 0) {
+                throw AppError.validation({
+                    addons: `${group.name} hanya dapat dipilih satu`,
+                });
+            }
+            picked.push(selection);
+            selectionsByGroup.set(group.code, picked);
+        }
+
+        for (const group of activeGroups) {
+            if (group.is_required && !selectionsByGroup.has(group.code)) {
+                throw AppError.validation({ addons: `${group.name} wajib dipilih` });
+            }
+        }
+
+        const records: serviceAddonRecord[] = [];
+        for (const [groupCode, picked] of selectionsByGroup) {
+            const group = groupsByCode.get(groupCode)!;
+            for (const selection of picked) {
+                const option = group.options.find((candidate) => candidate.id === selection.option_id)!;
+                const qty = option.price_mode === "per_unit" ? serviceQty : 1;
+                records.push({
+                    addon_option_id: option.id,
+                    group_code: group.code,
+                    group_name: group.name,
+                    option_name: option.name,
+                    price: option.price,
+                    price_mode: option.price_mode,
+                    qty,
+                    subtotal: option.price * qty,
+                });
+            }
+        }
+        return records.sort((a, b) => a.group_code.localeCompare(b.group_code) || a.option_name.localeCompare(b.option_name));
+    }
+
     private buildInitialPayment(method: paymentMethod, amount: number): orderNewPaymentType {
         if (method === "fadarosipay" || method === "cod") {
             return {
                 payment_type: method,
                 gross_amount: amount,
-                status: "PAID",
+                status: "PENDING",
                 paid_at: new Date().toISOString(),
                 raw_response: { gateway: "fadarosipay", method: "wallet" },
             };
@@ -445,10 +541,7 @@ export class CancelOrderUseCase {
 }
 
 export class DeleteOrderUseCase {
-    constructor(
-        private readonly orderRepository: orderRepository,
-        private readonly cashflowRepository: cashflowRepository,
-    ) { }
+    constructor(private readonly orderRepository: orderRepository) { }
 
     async execute(
         orderId: string,
@@ -460,35 +553,15 @@ export class DeleteOrderUseCase {
 
         const isAdmin = actorRole === "admin";
         const isOwner = order.customer.id === actorUserId;
-
-        if (order.status === "DIBATALKAN") {
-            if (!isAdmin && !isOwner) {
-                throw AppError.forbidden("Anda tidak memiliki akses ke pesanan ini");
-            }
-            await this.orderRepository.delete(orderId);
-            logger.warn("cancelled order deleted", { orderId, actorUserId, actorRole });
-            return order;
+        if (!isAdmin && !isOwner) {
+            throw AppError.forbidden("Anda tidak memiliki akses ke pesanan ini");
+        }
+        if (order.status !== "SELESAI" && order.status !== "DIBATALKAN") {
+            throw AppError.conflict("Hanya pesanan berstatus SELESAI/DIBATALKAN yang dapat dihapus");
         }
 
-        if (!isAdmin) {
-            throw AppError.forbidden("Hanya admin yang dapat menghapus pesanan aktif");
-        }
-        if (order.status !== "BARU" && order.status !== "DITERIMA") {
-            throw AppError.conflict("Hanya pesanan berstatus BARU/DITERIMA yang dapat dihapus");
-        }
-        await this.orderRepository.updateStatus(orderId, "DIBATALKAN");
-        await this.orderRepository.addTracking(orderId, "DIBATALKAN", `Pesanan dihapus oleh admin (${actorUserId}).`);
-        if (order.payment && order.payment.status === "PAID") {
-            await this.cashflowRepository.create({
-                order_id: order.order_id,
-                type: "expense",
-                category: "refund",
-                amount: order.total_amount,
-                description: `Refund penghapusan order ${order.order_id} (${order.payment_method})`,
-            });
-        }
-        logger.warn("order deleted by admin", { orderId, actorUserId });
-        const fresh = await this.orderRepository.findByOrderId(orderId);
-        return fresh ?? order;
+        await this.orderRepository.delete(orderId);
+        logger.warn("order deleted", { orderId, actorUserId, actorRole, status: order.status });
+        return order;
     }
 }

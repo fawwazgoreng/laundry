@@ -7,6 +7,7 @@ import {
     formatShortDate,
     isWithinRange,
     resolveReportRange,
+    splitCashflow,
     summarizeCashflow,
     toDateInputValue,
 } from "../../src/lib/report";
@@ -98,6 +99,37 @@ describe("summarizeCashflow", () => {
 
     it("mengembalikan nol untuk periode tanpa transaksi", () => {
         expect(summarizeCashflow([])).toEqual({ income: 0, expense: 0, balance: 0 });
+    });
+});
+
+describe("splitCashflow", () => {
+    it("memisahkan pendapatan dan pengeluaran beserta subtotal dan net profit", () => {
+        const items = [
+            cashflowItem({ id: 1, created_at: "2024-03-01T00:00:00.000Z", type: "income", amount: 50_000 }),
+            cashflowItem({ id: 2, created_at: "2024-03-02T00:00:00.000Z", type: "expense", amount: 20_000 }),
+            cashflowItem({ id: 3, created_at: "2024-03-03T00:00:00.000Z", type: "income", amount: 10_000 }),
+        ];
+
+        const sections = splitCashflow(items);
+
+        expect(sections.income.total).toBe(60_000);
+        expect(sections.expense.total).toBe(20_000);
+        expect(sections.net_profit).toBe(40_000);
+        expect(sections.income.items.map((item) => item.id)).toEqual([3, 1]);
+        expect(sections.expense.items.map((item) => item.id)).toEqual([2]);
+    });
+
+    it("menghitung subtotal per kategori di section masing-masing", () => {
+        const items = [
+            cashflowItem({ id: 1, created_at: "2024-03-01T00:00:00.000Z", type: "income", category: "sales", amount: 40_000 }),
+            cashflowItem({ id: 2, created_at: "2024-03-02T00:00:00.000Z", type: "income", category: "sales", amount: 10_000 }),
+            cashflowItem({ id: 3, created_at: "2024-03-03T00:00:00.000Z", type: "expense", category: "operational", amount: 15_000 }),
+        ];
+
+        const sections = splitCashflow(items);
+
+        expect(sections.income.categories).toEqual([{ category: "sales", total: 50_000, count: 2 }]);
+        expect(sections.expense.categories).toEqual([{ category: "operational", total: 15_000, count: 1 }]);
     });
 });
 

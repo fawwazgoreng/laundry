@@ -1,6 +1,7 @@
 import { prisma } from "../prisma/prisma";
 import { fromInstant, instant, numeric, varchar } from "../prisma/scalars";
 import { AppError } from "../../helper/errorHandling/appError";
+import { orderEntity } from "../../domain/entities/orderEntity";
 import type { orderRepository } from "../../domain/repositories/orderRepository";
 import type {
     orderDetailType,
@@ -9,15 +10,31 @@ import type {
     orderNewRecordType,
     orderStatus,
     serviceOrderItemType,
+    serviceOrderAddonType,
     productOrderItemType,
     paymentSummaryType,
     orderTrackingType,
 } from "../../domain/types/orderType";
+import type { refundSummaryType, refundStatus } from "../../domain/types/refundType";
+import type { addonPriceMode } from "../../domain/types/serviceType";
+
+type ServiceAddonRow = {
+    id: string
+    group_code: string
+    group_name: string
+    option_name: string
+    price: unknown
+    price_mode: string
+    qty: unknown
+    subtotal: unknown
+};
 
 type ServiceItemRow = {
     id: string
     laundry_service_id: number
     qty: unknown
+    price_per_unit: unknown
+    addon_subtotal: unknown
     subtotal: unknown
     notes: string
     service: {
@@ -25,6 +42,7 @@ type ServiceItemRow = {
         unit: string
         price_per_unit: unknown
     } | null
+    addons: ServiceAddonRow[]
 };
 
 type ProductItemRow = {
@@ -39,6 +57,16 @@ type ProductItemRow = {
         image: string
         price: unknown
     } | null
+};
+
+type RefundRow = {
+    id: string
+    status: string
+    amount: unknown
+    reason: string
+    gateway_ref: string | null
+    requested_at: Temporal.Instant
+    processed_at: Temporal.Instant | null
 };
 
 type PaymentRow = {
@@ -68,6 +96,7 @@ type OrderDetailRow = {
     payment_method: string
     total_laundry: unknown
     total_product: unknown
+    total_addon: unknown
     delivery_fee: unknown
     total_amount: number
     distance_km: unknown
@@ -94,6 +123,7 @@ type OrderDetailRow = {
     serviceOrderItems: ServiceItemRow[]
     productOrderItems: ProductItemRow[]
     payments: PaymentRow[]
+    refundRequests: RefundRow[]
     orderTrackings: TrackingRow[]
 };
 
@@ -105,9 +135,16 @@ type OrderListRow = {
     payment_method: string
     created_at: Temporal.Instant
     user: {
+        id: string
         username: string
         phone: string
     } | null
+    payments: {
+        status: string
+    }[]
+    refundRequests: {
+        status: string
+    }[]
     serviceOrderItems: {
         qty: unknown
         service: {
@@ -124,6 +161,19 @@ type OrderListRow = {
     }[]
 };
 
+function toServiceAddon(row: ServiceAddonRow): serviceOrderAddonType {
+    return {
+        id: row.id,
+        group_code: row.group_code,
+        group_name: row.group_name,
+        option_name: row.option_name,
+        price: Number(row.price),
+        price_mode: row.price_mode as addonPriceMode,
+        qty: Number(row.qty),
+        subtotal: Number(row.subtotal),
+    };
+}
+
 function toServiceItem(row: ServiceItemRow): serviceOrderItemType {
     const service = row.service;
     if (!service) throw new Error("service order item missing service");
@@ -133,7 +183,9 @@ function toServiceItem(row: ServiceItemRow): serviceOrderItemType {
         service_name: service.name,
         unit: service.unit,
         qty: Number(row.qty),
-        price_per_unit: Number(service.price_per_unit),
+        price_per_unit: Number(row.price_per_unit) || Number(service.price_per_unit),
+        addon_subtotal: Number(row.addon_subtotal),
+        addons: row.addons.map(toServiceAddon),
         subtotal: Number(row.subtotal),
         notes: row.notes,
     };
@@ -180,17 +232,34 @@ function toTracking(row: TrackingRow): orderTrackingType {
     };
 }
 
+function toRefundSummary(row: RefundRow | undefined): refundSummaryType | null {
+    if (!row) return null;
+    return {
+        id: row.id,
+        status: row.status as refundStatus,
+        amount: Number(row.amount),
+        reason: row.reason,
+        gateway_ref: row.gateway_ref,
+        requested_at: fromInstant(row.requested_at).toISOString(),
+        processed_at: row.processed_at ? fromInstant(row.processed_at).toISOString() : null,
+    };
+}
+
 function toOrderDetail(row: OrderDetailRow): orderDetailType {
     const payment = toPayment(row.payments[0]);
     const user = row.user;
     if (!user) throw new Error("order missing customer");
+    const kind = orderEntity.deriveKind(row.serviceOrderItems.length, row.productOrderItems.length);
     return {
         id: row.id,
         order_id: row.order_id,
         status: row.status as orderStatus,
+        order_type: kind,
+        refund_eligible: orderEntity.isRefundEligible(kind, row.payment_method, payment?.status ?? null),
         payment_method: row.payment_method as orderDetailType["payment_method"],
         total_laundry: Number(row.total_laundry),
         total_product: Number(row.total_product),
+        total_addon: Number(row.total_addon),
         delivery_fee: Number(row.delivery_fee),
         total_amount: row.total_amount,
         distance_km: Number(row.distance_km),
@@ -212,6 +281,7 @@ function toOrderDetail(row: OrderDetailRow): orderDetailType {
         services: row.serviceOrderItems.map(toServiceItem),
         products: row.productOrderItems.map(toProductItem),
         payment,
+        refund: toRefundSummary(row.refundRequests[0]),
         trackings: row.orderTrackings
             .slice()
             .sort((a, b) => a.created_at.epochMilliseconds - b.created_at.epochMilliseconds)
@@ -225,15 +295,18 @@ const orderDetailQuery = () =>
         .include("address", (a) => a.select("id", "label", "address_text"))
         .include("outlet", (o) => o.select("id", "name", "latitude", "longitude"))
         .include("payments", (p) => p.orderBy((r) => r.created_at.desc()).limit(1))
-        .include("serviceOrderItems", (s) => s.include("service"))
+        .include("serviceOrderItems", (s) => s.include("service").include("addons"))
         .include("productOrderItems", (p) => p.include("product"))
+        .include("refundRequests", (r) => r.orderBy((refund) => refund.requested_at.desc()).limit(1))
         .include("orderTrackings");
 
 const orderListQuery = () =>
     prisma.orm.public.Orders
         .include("user", (u) => u.select("id", "username", "phone"))
+        .include("payments", (p) => p.select("status").orderBy((r) => r.created_at.desc()).limit(1))
         .include("serviceOrderItems", (s) => s.include("service"))
-        .include("productOrderItems", (p) => p.include("product"));
+        .include("productOrderItems", (p) => p.include("product"))
+        .include("refundRequests", (r) => r.select("status").orderBy((refund) => refund.requested_at.desc()).limit(1));
 
 export class pgOrderRepository implements orderRepository {
     async create(input: orderNewRecordType): Promise<orderDetailType> {
@@ -247,32 +320,54 @@ export class pgOrderRepository implements orderRepository {
                 delivery_fee: numeric<10, 2>(input.delivery_fee),
                 total_laundry: numeric<12, 2>(input.totals.total_laundry),
                 total_product: numeric<12, 2>(input.totals.total_product),
+                total_addon: numeric<12, 2>(input.totals.total_addon),
                 total_amount: input.totals.total_amount,
                 status: varchar<20>(input.status),
                 payment_method: varchar<20>(input.payment_method),
                 notes: input.notes ?? null,
-                serviceOrderItems: (items) => items.create(input.services.map((s) => ({
-                    laundry_service_id: s.laundry_service_id,
-                    qty: numeric<6, 2>(s.qty),
-                    subtotal: numeric<12, 2>(s.subtotal),
-                    notes: s.notes ?? "",
-                }))),
-                productOrderItems: (items) => items.create(input.products.map((p) => ({
-                    product_id: p.product_id,
-                    qty: p.qty,
-                    subtotal: p.subtotal,
-                }))),
                 orderTrackings: (trackings) => trackings.create({
                     status: varchar<20>(input.tracking.status),
                     notes: input.tracking.notes,
                 }),
             });
+
+            for (const s of input.services) {
+                const item = await tx.orm.public.Service_order_item.create({
+                    order_id: input.order_id,
+                    laundry_service_id: s.laundry_service_id,
+                    qty: numeric<6, 2>(s.qty),
+                    price_per_unit: numeric<12, 2>(s.price_per_unit),
+                    addon_subtotal: numeric<12, 2>(s.addon_subtotal),
+                    subtotal: numeric<12, 2>(s.subtotal),
+                    notes: s.notes ?? "",
+                });
+                for (const addon of s.addons) {
+                    await tx.orm.public.Service_order_item_addons.create({
+                        service_order_item_id: item.id,
+                        addon_option_id: addon.addon_option_id,
+                        group_code: varchar<30>(addon.group_code),
+                        group_name: varchar<50>(addon.group_name),
+                        option_name: varchar<50>(addon.option_name),
+                        price: numeric<12, 2>(addon.price),
+                        price_mode: varchar<20>(addon.price_mode),
+                        qty: numeric<6, 2>(addon.qty),
+                        subtotal: numeric<12, 2>(addon.subtotal),
+                    });
+                }
+            }
+
             for (const p of input.products) {
                 const product = await tx.orm.public.Products.where({ id: p.product_id }).forUpdate().first();
                 if (!product) throw AppError.conflict(`Produk id ${p.product_id} tidak ditemukan`);
                 if (product.stock < p.qty) throw AppError.conflict(`Stok ${product.name} tidak mencukupi`);
                 await tx.orm.public.Products.where({ id: p.product_id }).update({
                     stock: product.stock - p.qty,
+                });
+                await tx.orm.public.Product_order_item.create({
+                    order_id: input.order_id,
+                    product_id: p.product_id,
+                    qty: p.qty,
+                    subtotal: p.subtotal,
                 });
             }
 
@@ -318,6 +413,8 @@ export class pgOrderRepository implements orderRepository {
             if (!user) throw new Error("order missing customer");
             const svc = row.serviceOrderItems[0];
             const prod = row.productOrderItems[0];
+            const kind = orderEntity.deriveKind(row.serviceOrderItems.length, row.productOrderItems.length);
+            const paymentStatus = row.payments[0]?.status ?? null;
             let summary = "Layanan laundry";
             let unit = "-";
             if (svc && svc.service) {
@@ -332,9 +429,14 @@ export class pgOrderRepository implements orderRepository {
                 id: row.id,
                 order_id: row.order_id,
                 status: row.status as orderStatus,
+                order_type: kind,
+                refund_eligible: orderEntity.isRefundEligible(kind, row.payment_method, paymentStatus),
+                refund_status: (row.refundRequests[0]?.status as refundStatus | undefined) ?? null,
                 total_amount: row.total_amount,
                 payment_method: row.payment_method as orderListItemType["payment_method"],
+                payment_status: paymentStatus,
                 created_at: fromInstant(row.created_at).toISOString(),
+                customer_id: user.id,
                 customer_name: user.username,
                 customer_phone: user.phone,
                 items_summary: summary,
@@ -367,6 +469,14 @@ export class pgOrderRepository implements orderRepository {
             const conditions = [];
             if (filters.status && filters.status !== "all") {
                 conditions.push(o.status.eq(varchar<20>(filters.status)));
+            }
+            if (filters.customer) {
+                const term = filters.customer;
+                const byUsername = o.user.some((u) => u.username.ilike(`%${term}%`));
+                const looksLikeId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(term);
+                conditions.push(
+                    looksLikeId ? fns.or(byUsername, o.user.some((u) => u.id.eq(term))) : byUsername,
+                );
             }
             if (filters.search) {
                 const term = filters.search;
@@ -422,9 +532,14 @@ export class pgOrderRepository implements orderRepository {
         await prisma.transaction(async (tx) => {
             // Riwayat kas tetap disimpan, hanya tautan ke order yang dilepas.
             await tx.orm.public.Cash_flow.where({ order_id: orderId }).updateAll({ order_id: null });
+            await tx.orm.public.Refund_requests.where({ order_id: orderId }).deleteAll();
             await tx.orm.public.Order_trackings.where({ order_id: orderId }).deleteAll();
             await tx.orm.public.Payments.where({ order_id: orderId }).deleteAll();
             await tx.orm.public.Product_order_item.where({ order_id: orderId }).deleteAll();
+            const serviceItems = await tx.orm.public.Service_order_item.where({ order_id: orderId }).all();
+            for (const item of serviceItems) {
+                await tx.orm.public.Service_order_item_addons.where({ service_order_item_id: item.id }).deleteAll();
+            }
             await tx.orm.public.Service_order_item.where({ order_id: orderId }).deleteAll();
             await tx.orm.public.Orders.where({ order_id: orderId }).deleteAll();
         });

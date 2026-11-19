@@ -10,6 +10,99 @@ function daysAgo(days: number, hour = 14): Date {
     return d;
 }
 
+async function seedServiceAddons(): Promise<void> {
+    const groups = [
+        {
+            code: "detergen",
+            name: "Detergen",
+            selection_type: "single",
+            is_required: false,
+            sort_order: 1,
+            options: [
+                { name: "Standard", price: 1000, price_mode: "per_unit", sort_order: 1 },
+                { name: "Premium", price: 2000, price_mode: "per_unit", sort_order: 2 },
+                { name: "Hypoallergenic", price: 3500, price_mode: "per_unit", sort_order: 3 },
+            ],
+        },
+        {
+            code: "pewangi",
+            name: "Pewangi",
+            selection_type: "single",
+            is_required: false,
+            sort_order: 2,
+            options: [
+                { name: "Standard", price: 1000, price_mode: "per_unit", sort_order: 1 },
+                { name: "Premium", price: 2500, price_mode: "per_unit", sort_order: 2 },
+                { name: "Hypoallergenic", price: 4000, price_mode: "per_unit", sort_order: 3 },
+            ],
+        },
+    ];
+
+    for (const seed of groups) {
+        let group = await prisma.orm.public.Service_addon_groups
+            .where({ code: varchar<30>(seed.code) })
+            .first();
+        if (!group) {
+            group = await prisma.orm.public.Service_addon_groups.create({
+                code: varchar<30>(seed.code),
+                name: varchar<50>(seed.name),
+                selection_type: varchar<20>(seed.selection_type),
+                is_required: seed.is_required,
+                is_active: true,
+            });
+        } else {
+            group = await prisma.orm.public.Service_addon_groups.where({ id: group.id }).update({
+                name: varchar<50>(seed.name),
+                selection_type: varchar<20>(seed.selection_type),
+                is_required: seed.is_required,
+                is_active: true,
+            });
+        }
+        if (!group) throw new Error(`Gagal menyiapkan add-on ${seed.code}`);
+
+        for (const option of seed.options) {
+            const existing = await prisma.orm.public.Service_addon_options
+                .where({ group_id: group.id, name: varchar<50>(option.name) })
+                .first();
+            if (!existing) {
+                await prisma.orm.public.Service_addon_options.create({
+                    group_id: group.id,
+                    name: varchar<50>(option.name),
+                    price: numeric<12, 2>(option.price),
+                    price_mode: varchar<20>(option.price_mode),
+                    is_default: false,
+                    is_active: true,
+                });
+            } else {
+                await prisma.orm.public.Service_addon_options.where({ id: existing.id }).update({
+                    price: numeric<12, 2>(option.price),
+                    price_mode: varchar<20>(option.price_mode),
+                    is_active: true,
+                });
+            }
+        }
+    }
+
+    const [services, addonGroups] = await Promise.all([
+        prisma.orm.public.Laundry_services.all(),
+        prisma.orm.public.Service_addon_groups.all(),
+    ]);
+    for (const service of services) {
+        for (const group of addonGroups) {
+            const existing = await prisma.orm.public.Laundry_service_addon_groups
+                .where({ service_id: service.id, group_id: group.id })
+                .first();
+            if (!existing) {
+                await prisma.orm.public.Laundry_service_addon_groups.create({
+                    service_id: service.id,
+                    group_id: group.id,
+                });
+            }
+        }
+    }
+    logger.info("service addons ensured", { groups: addonGroups.length, services: services.length });
+}
+
 async function createDemoOrders(): Promise<void> {
     const { count } = await prisma.orm.public.Orders.aggregate((agg) => ({ count: agg.count() }));
     if (count > 0) return;
@@ -175,6 +268,8 @@ async function createDemoOrders(): Promise<void> {
                     d.services.map((s) => ({
                         laundry_service_id: s.id,
                         qty: numeric<6, 2>(s.qty),
+                        price_per_unit: numeric<12, 2>(servicePrice(s.id)),
+                        addon_subtotal: numeric<12, 2>(0),
                         subtotal: numeric<12, 2>(servicePrice(s.id) * s.qty),
                         notes: "",
                     })),
@@ -278,6 +373,8 @@ async function main() {
         }
     }
     logger.info("services ensured", { count: services.length });
+
+    await seedServiceAddons();
 
     const { count: productCount } = await prisma.orm.public.Products.aggregate((agg) => ({ count: agg.count() }));
     if (productCount === 0) {

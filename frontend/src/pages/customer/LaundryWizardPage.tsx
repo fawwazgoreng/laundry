@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Check, Scissors, Shirt, Wind, Zap } from "lucide-react"
+import { Check, Droplets, Scissors, Shirt, Sparkles, Wind, Zap } from "lucide-react"
 import { formatIDR } from "../../lib/format"
-import type { Service } from "../../lib/types"
+import type { Service, ServiceAddonGroup } from "../../lib/types"
+import { formatAddonPrice, selectedAddonsSubtotal } from "../../lib/serviceAddons"
 import { serviceApi } from "../../services/api"
-import { useOrderDraft } from "../../context/OrderDraftContext"
+import { useOrderDraft, type DraftServiceAddon } from "../../context/OrderDraftContext"
 import { ErrorState, LoadingState } from "../../components/ui"
 
 const wizardSteps = ["Jenis Cucian", "Detail & Berat", "Alamat & Jadwal", "Konfirmasi"]
@@ -28,35 +29,39 @@ function slugifyName(name: string): string {
   return map[name] ?? name.toLowerCase().replace(/[^a-z0-9]+/g, "-")
 }
 
-interface ServiceCard {
-  id: number
-  name: string
-  description: string
-  slug: string
-  pricePerKg: number
+function defaultAddonSelections(service?: Service): Record<string, number[]> {
+  const result: Record<string, number[]> = {}
+  for (const group of service?.addon_groups ?? []) {
+    const preferred =
+      group.options.find((option) => option.is_default) ??
+      (group.is_required ? group.options[0] : undefined)
+    result[group.code] = preferred ? [preferred.id] : []
+  }
+  return result
+}
+
+function groupIcon(group: ServiceAddonGroup) {
+  return group.code === "detergen" ? Droplets : Sparkles
 }
 
 export function LaundryWizardPage() {
   const navigate = useNavigate()
   const { addService } = useOrderDraft()
-  const [services, setServices] = useState<ServiceCard[]>([])
+  const [services, setServices] = useState<Service[]>([])
   const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null)
+  const [selectedAddons, setSelectedAddons] = useState<Record<string, number[]>>({})
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [addOnsError, setAddOnsError] = useState<string | null>(null)
 
   useEffect(() => {
     serviceApi
       .list()
       .then((list: Service[]) => {
-        const cards: ServiceCard[] = list.map((s) => ({
-          id: s.id,
-          name: s.name,
-          description: s.description,
-          slug: slugifyName(s.name),
-          pricePerKg: s.price_per_unit,
-        }))
-        setServices(cards)
-        setSelectedServiceId((current) => current ?? cards[0]?.id ?? null)
+        setServices(list)
+        const first = list[0]
+        setSelectedServiceId(first?.id ?? null)
+        setSelectedAddons(defaultAddonSelections(first))
         setLoadError(null)
       })
       .catch((err) => {
@@ -66,22 +71,46 @@ export function LaundryWizardPage() {
   }, [])
 
   const selectedService = services.find((s) => s.id === selectedServiceId) ?? services[0]
-  const estimatedTotal = (selectedService?.pricePerKg ?? 0) * estimatedWeightKg
+  const selectedAddonList: DraftServiceAddon[] = (selectedService?.addon_groups ?? []).flatMap((group) => {
+    const optionIds = selectedAddons[group.code] ?? []
+    return group.options
+      .filter((option) => optionIds.includes(option.id))
+      .map((option) => ({ group, option }))
+  })
+  const laundryBase = (selectedService?.price_per_unit ?? 0) * estimatedWeightKg
+  const addonTotal = selectedAddonsSubtotal(selectedAddonList, estimatedWeightKg)
+  const estimatedTotal = laundryBase + addonTotal
+
+  function handleSelectService(service: Service) {
+    setSelectedServiceId(service.id)
+    setSelectedAddons(defaultAddonSelections(service))
+  }
+
+  function toggleAddon(group: ServiceAddonGroup, optionId: number) {
+    setSelectedAddons((prev) => {
+      const current = prev[group.code] ?? []
+      let next: number[]
+      if (current.includes(optionId)) {
+        if (group.is_required) return prev
+        next = group.selection_type === "single" ? [] : current.filter((id) => id !== optionId)
+      } else {
+        next = group.selection_type === "single" ? [optionId] : [...current, optionId]
+      }
+      return { ...prev, [group.code]: next }
+    })
+  }
 
   function handleContinue() {
     if (!selectedService) return
-    addService(
-      {
-        id: selectedService.id,
-        name: selectedService.name,
-        unit: "kg",
-        price_per_unit: selectedService.pricePerKg,
-        description: selectedService.description,
-        estimated_duration_hours: 24,
-        is_active: true,
-      },
-      estimatedWeightKg,
-    )
+    if (selectedAddonList.length < 1) {
+      setAddOnsError("Silahkan memilih detergen dan pewangi")
+      window.scrollBy({
+        top: 800,
+        behavior: "smooth"
+      })
+      return
+    }
+    addService(selectedService, estimatedWeightKg, selectedAddonList)
     navigate("/checkout")
   }
 
@@ -95,9 +124,8 @@ export function LaundryWizardPage() {
               {wizardSteps.map((step, idx) => (
                 <div key={step} className="flex items-center gap-2">
                   <span
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${
-                      idx === 0 ? "bg-primary text-white" : "bg-gray-100 text-gray-400"
-                    }`}
+                    className={`flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold ${idx === 0 ? "bg-primary text-white" : "bg-gray-100 text-gray-400"
+                      }`}
                   >
                     {idx + 1}
                   </span>
@@ -129,15 +157,14 @@ export function LaundryWizardPage() {
                 </div>
               ) : (
                 services.map((service) => {
-                  const Icon = serviceIcons[service.slug] ?? Shirt
+                  const Icon = serviceIcons[slugifyName(service.name)] ?? Shirt
                   const isSelected = service.id === selectedServiceId
                   return (
                     <button
                       key={service.id}
-                      onClick={() => setSelectedServiceId(service.id)}
-                      className={`relative flex flex-col gap-3 rounded-2xl border-2 bg-white p-5 text-left transition-colors ${
-                        isSelected ? "border-primary" : "border-gray-200"
-                      }`}
+                      onClick={() => handleSelectService(service)}
+                      className={`relative flex flex-col gap-3 rounded-2xl border-2 bg-white p-5 text-left transition-colors ${isSelected ? "border-primary" : "border-gray-200"
+                        }`}
                     >
                       {isSelected && (
                         <span className="absolute right-4 top-4 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white">
@@ -145,15 +172,17 @@ export function LaundryWizardPage() {
                         </span>
                       )}
                       <span
-                        className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                          isSelected ? "bg-primary-light text-primary" : "bg-gray-100 text-gray-500"
-                        }`}
+                        className={`flex h-10 w-10 items-center justify-center rounded-lg ${isSelected ? "bg-primary-light text-primary" : "bg-gray-100 text-gray-500"
+                          }`}
                       >
                         <Icon size={18} />
                       </span>
                       <div>
                         <p className="text-sm font-semibold text-ink-strong">{service.name}</p>
                         <p className="mt-1 text-xs text-gray-400">{service.description}</p>
+                        <p className="mt-2 text-xs font-semibold text-primary">
+                          {formatIDR(service.price_per_unit)} / {service.unit}
+                        </p>
                       </div>
                     </button>
                   )
@@ -161,6 +190,73 @@ export function LaundryWizardPage() {
               )}
             </div>
           </div>
+
+          {selectedService && selectedService.addon_groups.length > 0 && (
+            <div className="rounded-2xl border border-gray-200 bg-white p-6">
+              <div className="mb-1 flex items-center gap-2">
+                <Sparkles size={16} className="text-primary" />
+                <h2 className="text-sm font-semibold text-ink-strong">Opsi Tambahan Layanan</h2>
+              </div>
+              <p className="mb-5 text-xs text-gray-500">
+                Add-on hanya berlaku untuk layanan ini dan tidak mengurangi stok produk toko.
+              </p>
+
+              <div className="space-y-4">
+                {selectedService.addon_groups.map((group) => {
+                  const Icon = groupIcon(group)
+                  const selected = selectedAddons[group.code] ?? []
+                  return (
+                    <fieldset key={group.id} className="rounded-xl border border-gray-200 p-4">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <legend className="flex items-center gap-2 text-sm font-semibold text-ink-strong">
+                          <Icon size={15} className="text-primary" />
+                          {group.name}
+                          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-medium text-gray-500">
+                            {group.is_required ? "Wajib" : "Opsional"}
+                          </span>
+                        </legend>
+                        {!group.is_required && (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedAddons((prev) => ({ ...prev, [group.code]: [] }))}
+                            className={`rounded-full px-3 py-1 text-[11px] font-semibold ${selected.length === 0
+                              ? "bg-primary-light text-primary"
+                              : "bg-gray-100 text-gray-500"
+                              }`}
+                          >
+                            Tanpa {group.name}
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                        {group.options.map((option) => {
+                          const isSelected = selected.includes(option.id)
+                          return (
+                            <button
+                              key={option.id}
+                              type="button"
+                              onClick={() => toggleAddon(group, option.id)}
+                              className={`rounded-lg border px-3 py-2 text-left transition-colors ${isSelected
+                                ? "border-primary bg-primary-light"
+                                : "border-gray-200 bg-white hover:border-gray-300"
+                                }`}
+                            >
+                              <span className="block text-xs font-semibold text-ink-strong">
+                                {option.name}
+                              </span>
+                              <span className={`mt-0.5 block text-[11px] ${isSelected ? "text-primary" : "text-gray-500"}`}>
+                                {formatAddonPrice(option, selectedService.unit)}
+                              </span>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </fieldset>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <aside className="h-fit rounded-2xl border border-gray-200 bg-white p-6">
@@ -175,16 +271,29 @@ export function LaundryWizardPage() {
               <span className="font-medium text-ink-strong">{estimatedWeightKg.toFixed(1)} Kg</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-500">Biaya per Kg</span>
+              <span className="text-gray-500">
+                Biaya per {selectedService?.unit ?? "unit"}
+              </span>
               <span className="font-medium text-ink-strong">
-                {selectedService ? formatIDR(selectedService.pricePerKg) : "-"}
+                {selectedService ? formatIDR(selectedService.price_per_unit) : "-"}
               </span>
             </div>
+            {selectedAddonList.length > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-500">Tambahan Add-on</span>
+                <span className="font-medium text-ink-strong">{formatIDR(addonTotal)}</span>
+              </div>
+            )}
           </div>
           <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
             <span className="text-sm font-semibold text-ink-strong">Estimasi Total</span>
             <span className="text-lg font-bold text-primary">{formatIDR(estimatedTotal)}</span>
           </div>
+          {(addOnsError && addOnsError.length > 3) && (
+            <div className="m-4">
+              <p className="text-sm text-red-600">{addOnsError}</p>
+            </div>
+          )}
           <button
             onClick={handleContinue}
             disabled={!selectedService}

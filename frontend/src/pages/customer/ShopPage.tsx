@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
-import { Search } from "lucide-react"
+import { Search, X } from "lucide-react"
 import { formatIDR } from "../../lib/format"
-import type { Product } from "../../lib/types"
+import type { Product, ServiceAddonGroup, ServiceAddonOption } from "../../lib/types"
 import { productApi } from "../../services/api"
 import { useOrderDraft } from "../../context/OrderDraftContext"
 import { PRODUCT_CATEGORIES } from "../../lib/utils"
@@ -13,8 +13,10 @@ interface CardProduct {
   name: string
   category: string
   price: number
+  size: string
   imageUrl: string
   stock: number
+  addonGroups: ServiceAddonGroup[]
 }
 
 export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) => void }) {
@@ -26,6 +28,8 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
   const [sort, setSort] = useState<"terbaru" | "termurah" | "termahal">("terbaru")
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [addonProduct, setAddonProduct] = useState<Product | null>(null)
+  const [selections, setSelections] = useState<Record<string, number[]>>({})
 
   useEffect(() => {
     productApi
@@ -37,8 +41,10 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
             name: p.name,
             category: p.category,
             price: p.price,
+            size: p.size,
             imageUrl: p.image,
-            stock: p.stock
+            stock: p.stock,
+            addonGroups: p.addon_groups ?? [],
           })),
         )
         setLoadError(null)
@@ -70,13 +76,57 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
       name: product.name,
       category: product.category,
       price: product.price,
-      size: "",
-      stock: 0,
+      size: product.size,
+      stock: product.stock,
       is_active: true,
       image: product.imageUrl,
+      addon_groups: product.addonGroups,
     }
-    addProduct(record)
-    onAddToOrder?.(product.id)
+    if (product.addonGroups.length === 0) {
+      addProduct(record)
+      onAddToOrder?.(product.id)
+      navigate("/checkout")
+      return
+    }
+    const defaults: Record<string, number[]> = {}
+    for (const group of product.addonGroups) {
+      defaults[group.code] = group.options.filter((option) => option.is_default).map((option) => option.id)
+    }
+    setSelections(defaults)
+    setAddonProduct(record)
+  }
+
+  function toggleAddon(group: ServiceAddonGroup, option: ServiceAddonOption) {
+    if (!option.is_active) return
+    setSelections((prev) => {
+      const picked = prev[group.code] ?? []
+      if (group.selection_type === "single") {
+        return { ...prev, [group.code]: picked[0] === option.id ? [] : [option.id] }
+      }
+      return {
+        ...prev,
+        [group.code]: picked.includes(option.id)
+          ? picked.filter((id) => id !== option.id)
+          : [...picked, option.id],
+      }
+    })
+  }
+
+  function confirmAddWithAddons() {
+    if (!addonProduct) return
+    const requiredMissing = addonProduct.addon_groups.some(
+      (group) => group.is_required && (selections[group.code]?.length ?? 0) === 0,
+    )
+    if (requiredMissing) return
+    const addons = addonProduct.addon_groups.flatMap((group) =>
+      (selections[group.code] ?? []).flatMap((optionId) => {
+        const option = group.options.find((candidate) => candidate.id === optionId)
+        return option ? [{ group, option }] : []
+      }),
+    )
+    addProduct(addonProduct, 1, addons)
+    onAddToOrder?.(addonProduct.id)
+    setAddonProduct(null)
     navigate("/checkout")
   }
 
@@ -177,6 +227,78 @@ export function ShopPage({ onAddToOrder }: { onAddToOrder?: (productId: number) 
           )}
         </div>
       </div>
+      {addonProduct && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setAddonProduct(null)}
+        >
+          <div
+            className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="mb-4 flex items-start justify-between">
+              <div>
+                <h3 className="text-base font-bold text-ink-strong">Pilih Add-on {addonProduct.name}</h3>
+                <p className="text-xs text-gray-500">Add-on mengikuti item produk ini dan dihitung otomatis.</p>
+              </div>
+              <button onClick={() => setAddonProduct(null)} className="text-gray-400 hover:text-ink-strong">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="space-y-4">
+              {addonProduct.addon_groups.filter((group) => group.is_active).map((group) => (
+                <div key={group.id} className="rounded-xl border border-gray-200 p-4">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-ink-strong">{group.name}</p>
+                    {group.is_required && (
+                      <span className="rounded-full bg-primary-light px-2 py-0.5 text-[10px] font-semibold text-primary">
+                        Wajib
+                      </span>
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    {group.options.filter((option) => option.is_active).map((option) => {
+                      const checked = (selections[group.code] ?? []).includes(option.id)
+                      return (
+                        <button
+                          key={option.id}
+                          type="button"
+                          onClick={() => toggleAddon(group, option)}
+                          className={`flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm ${
+                            checked ? "border-primary bg-primary-light/40" : "border-gray-200"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            <span className={`h-4 w-4 rounded-full border-2 ${checked ? "border-primary bg-primary" : "border-gray-300"}`} />
+                            {option.name}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            +{formatIDR(option.price)}{option.price_mode === "per_unit" ? "/unit" : "/order"}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => setAddonProduct(null)}
+                className="w-full rounded-lg border border-gray-200 py-2.5 text-sm font-semibold text-ink-strong"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmAddWithAddons}
+                className="w-full rounded-lg bg-primary py-2.5 text-sm font-semibold text-white hover:bg-primary-dark"
+              >
+                Tambah ke Order
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

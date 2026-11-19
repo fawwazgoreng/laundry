@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
-import { Check, Minus, Plus, Trash2, Wallet, Landmark, WashingMachine, X } from "lucide-react"
+import { Check, Info, Minus, Plus, Trash2, Wallet, Landmark, WashingMachine, X } from "lucide-react"
 import { formatIDR } from "../../lib/format"
 import type { Address, Outlet, User, PaymentGate } from "../../lib/types"
 import { addressApi, authApi, orderApi, outletApi } from "../../services/api"
-import { useOrderDraft } from "../../context/OrderDraftContext"
+import { useOrderDraft, type DraftServiceAddon } from "../../context/OrderDraftContext"
+import { addonSubtotal } from "../../lib/serviceAddons"
 import { ErrorState, LoadingState } from "../../components/ui"
 import { ApiError } from "../../services/apiClient"
 
@@ -20,6 +21,8 @@ const banks: { code: BankCode; name: string; desc: string }[] = [
 ]
 
 interface CartLine {
+  key: string
+  kind: "service" | "product"
   id: number
   tag: string
   name: string
@@ -28,6 +31,17 @@ interface CartLine {
   unit: string
   pricePerUnit: number
   image?: string
+  notes: string
+  addons: DraftServiceAddon[]
+}
+
+function isWeightUnit(unit: string): boolean {
+  return unit.toLowerCase() === "kg"
+}
+
+function cartLineTotal(line: CartLine): number {
+  const addonTotal = line.addons.reduce((sum, addon) => sum + addonSubtotal(addon.option, line.qty), 0)
+  return line.qty * line.pricePerUnit + addonTotal
 }
 
 interface DeliverAddress {
@@ -45,6 +59,8 @@ export function CheckoutPage() {
 
   const [cart, setCart] = useState<CartLine[]>(() => [
     ...services.map((s) => ({
+      key: `service-${s.service.id}`,
+      kind: "service" as const,
       id: s.service.id,
       tag: "Layanan Laundry",
       name: s.service.name,
@@ -52,8 +68,12 @@ export function CheckoutPage() {
       qty: s.qty,
       unit: s.service.unit,
       pricePerUnit: s.service.price_per_unit,
+      notes: s.notes,
+      addons: s.addons,
     })),
     ...products.map((p) => ({
+      key: `product-${p.product.id}`,
+      kind: "product" as const,
       id: p.product.id,
       tag: "Toko Detergen",
       name: p.product.name,
@@ -62,6 +82,8 @@ export function CheckoutPage() {
       unit: "Pcs",
       pricePerUnit: p.product.price,
       image: p.product.image,
+      notes: "",
+      addons: p.addons,
     })),
   ])
   const [addresses, setAddresses] = useState<DeliverAddress[]>([])
@@ -107,21 +129,23 @@ export function CheckoutPage() {
 
   const primaryAddress = addresses.find((a) => a.isPrimary) ?? addresses[0]
 
-  function updateQty(id: number, delta: number) {
+  function updateQty(key: string, delta: number) {
     setCart((prev) =>
       prev.map((line) =>
-        line.id === id ? { ...line, qty: Math.max(line.unit === "Kg" ? 0.1 : 1, line.qty + delta) } : line,
+        line.key === key
+          ? { ...line, qty: Math.max(isWeightUnit(line.unit) ? 0.1 : 1, line.qty + delta) }
+          : line,
       ),
     )
   }
 
-  function removeLine(id: number) {
-    setCart((prev) => prev.filter((line) => line.id !== id))
-    removeProduct(id)
-    removeService(id)
+  function removeLine(line: CartLine) {
+    setCart((prev) => prev.filter((item) => item.key !== line.key))
+    if (line.kind === "service") removeService(line.id)
+    else removeProduct(line.id)
   }
 
-  const itemsTotal = cart.reduce((sum, l) => sum + l.qty * l.pricePerUnit, 0)
+  const itemsTotal = cart.reduce((sum, line) => sum + cartLineTotal(line), 0)
   const deliveryFee = useMemo(() => {
     if (!primaryAddress) return 10000
     const distanceKm = 2.5
@@ -156,12 +180,27 @@ export function CheckoutPage() {
       const distance_km = 2.5
       const paidDelivery = orderApi
       const order: PaymentGate = await paidDelivery.create({
-        services: services.map((s) => ({
-          laundry_service_id: s.service.id,
-          qty: s.qty,
-          notes: s.notes || undefined,
-        })),
-        products: products.map((p) => ({ product_id: p.product.id, qty: p.qty })),
+        services: cart
+          .filter((line) => line.kind === "service")
+          .map((line) => ({
+            laundry_service_id: line.id,
+            qty: line.qty,
+            notes: line.notes || undefined,
+            addons: line.addons.map((addon) => ({
+              group_code: addon.group.code,
+              option_id: addon.option.id,
+            })),
+          })),
+        products: cart
+          .filter((line) => line.kind === "product")
+          .map((line) => ({
+            product_id: line.id,
+            qty: line.qty,
+            addons: line.addons.map((addon) => ({
+              group_code: addon.group.code,
+              option_id: addon.option.id,
+            })),
+          })),
         user_address_id: choiceAddress,
         outlet_id: outlet.id,
         distance_km,
@@ -212,6 +251,15 @@ export function CheckoutPage() {
         </p>
       </div>
 
+      <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+        <Info size={18} className="mt-0.5 shrink-0" />
+        <p>
+          <span className="font-semibold">Kebijakan refund:</span> Refund hanya dapat dilakukan untuk order bertipe{" "}
+          <span className="font-semibold">Product</span> dan pembayaran melalui bank. Order layanan laundry atau campuran layanan + produk otomatis
+          tidak memenuhi syarat refund.
+        </p>
+      </div>
+
       {/* Progres pemesanan */}
       <div className="rounded-2xl border border-gray-200 bg-white p-6">
         <h2 className="mb-5 text-sm font-semibold text-ink-strong">Progres Pemesanan</h2>
@@ -243,10 +291,10 @@ export function CheckoutPage() {
             </div>
             <div className="divide-y divide-gray-100">
               {cart.map((line) => (
-                <div key={line.id} className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div key={line.key} className="flex flex-col gap-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     <span className="bg-primary-light w-16 h-16 shrink-0 overflow-hidden flex items-center justify-center text-4xl rounded-xl">
-                      {line.tag === "Layanan Laundry" ? (
+                      {line.kind === "service" ? (
                         <WashingMachine className="w-8 h-8 text-primary" />
                       ) : (
                         <img src={line.image} className="w-full h-full block object-cover" alt="" />
@@ -259,19 +307,31 @@ export function CheckoutPage() {
                       </span>
                       <p className="mt-1 text-sm font-semibold text-ink-strong truncate">{line.name}</p>
                       <p className="text-xs text-gray-400 truncate">{line.desc}</p>
+                      {line.addons.length > 0 && (
+                        <ul className="mt-1.5 space-y-0.5">
+                          {line.addons.map((addon) => (
+                            <li key={`${addon.group.code}-${addon.option.id}`} className="text-[11px] text-primary">
+                              {addon.group.name}: {addon.option.name}{" "}
+                              {addon.option.price_mode === "per_unit"
+                                ? `(+${formatIDR(addon.option.price)}/${line.unit})`
+                                : `(+${formatIDR(addon.option.price)}/order)`}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                   </div>
 
                   <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0">
                     {/* Tombol Qty */}
                     <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-2 py-1.5 bg-white">
-                      <button onClick={() => updateQty(line.id, line.unit === "Kg" ? -0.1 : -1)} className="cursor-pointer">
+                      <button onClick={() => updateQty(line.key, isWeightUnit(line.unit) ? -0.1 : -1)} className="cursor-pointer">
                         <Minus size={14} className="text-gray-400 hover:text-ink-strong" />
                       </button>
                       <span className="w-14 text-center text-sm font-medium select-none">
-                        {line.qty.toFixed(line.unit === "Kg" ? 1 : 0)} {line.unit}
+                        {line.qty.toFixed(isWeightUnit(line.unit) ? 1 : 0)} {line.unit}
                       </span>
-                      <button onClick={() => updateQty(line.id, line.unit === "Kg" ? 0.1 : 1)} className="cursor-pointer">
+                      <button onClick={() => updateQty(line.key, isWeightUnit(line.unit) ? 0.1 : 1)} className="cursor-pointer">
                         <Plus size={14} className="text-gray-400 hover:text-ink-strong" />
                       </button>
                     </div>
@@ -279,15 +339,15 @@ export function CheckoutPage() {
                     {/* Harga */}
                     <div className="text-right min-w-20">
                       <p className="text-xs text-gray-400">
-                        {formatIDR(line.pricePerUnit)} / {line.unit === "Kg" ? "Kg" : "unit"}
+                        {formatIDR(line.pricePerUnit)} / {isWeightUnit(line.unit) ? "Kg" : "unit"}
                       </p>
                       <p className="text-sm font-bold text-ink-strong">
-                        {formatIDR(line.qty * line.pricePerUnit)}
+                        {formatIDR(cartLineTotal(line))}
                       </p>
                     </div>
 
                     <button
-                      onClick={() => removeLine(line.id)}
+                      onClick={() => removeLine(line)}
                       className="text-gray-300 hover:text-primary cursor-pointer transition-colors"
                     >
                       <Trash2 size={16} />

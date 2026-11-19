@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { AppError } from "../../helper/errorHandling/appError";
-import { ORDER_STATUSES, type orderCreateType, type orderStatus, type orderTotalsType, PAYMENT_METHODS } from "../types/orderType";
+import { ORDER_STATUSES, type orderCreateType, type orderKind, type orderStatus, type orderTotalsType, PAYMENT_METHODS } from "../types/orderType";
+import type { paymentStatus } from "../types/paymentType";
 
 const ORDER_FLOW = ["BARU", "DITERIMA", "DIPROSES", "SIAP_ANTAR", "SELESAI"] as const;
 
@@ -11,12 +12,18 @@ export class orderEntity {
                 laundry_service_id: z.coerce.number().int().positive(),
                 qty: z.coerce.number().positive("Berat harus lebih dari 0"),
                 notes: z.string().optional().default(""),
+                addons: z.array(
+                    z.object({
+                        group_code: z.string().trim().min(1, "Grup add-on wajib dipilih"),
+                        option_id: z.coerce.number().int().positive(),
+                    }),
+                ).optional().default([]),
             }),
         ).optional().default([]),
         products: z.array(
             z.object({
                 product_id: z.coerce.number().int().positive(),
-                qty: z.coerce.number().int().positive(),
+                qty: z.coerce.number().int().positive()
             }),
         ).optional().default([]),
         user_address_id: z.coerce.number().int().positive(),
@@ -24,7 +31,7 @@ export class orderEntity {
         distance_km: z.coerce.number().nonnegative().default(0),
         delivery_fee: z.coerce.number().nonnegative().optional(),
         payment_method: z.enum(PAYMENT_METHODS, { message: "Invalid payment method" }),
-        bank: z.enum(["bca", "bni", "bri", "permata"]).optional(),
+        bank: z.enum(["bca", "bni", "bri", "permata", "mandiri"]).optional(),
         notes: z.string().optional(),
     }).refine((data) => data.services.length > 0 || data.products.length > 0, {
         message: "Minimal harus memilih satu layanan / satu produck"
@@ -76,6 +83,14 @@ export class orderEntity {
         return current === "BARU" || current === "DITERIMA";
     }
 
+    static deriveKind(serviceCount: number, productCount: number): orderKind {
+        return productCount > 0 && serviceCount === 0 ? "PRODUCT" : "SERVICE";
+    }
+
+    static isRefundEligible(kind: orderKind, method: string, status: string | paymentStatus | null): boolean {
+        return kind === "PRODUCT" && method !== "cod" && status === "PAID";
+    }
+
     static generateOrderId(seq: number, date: Date = new Date()): string {
         const y = date.getFullYear();
         const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -95,6 +110,7 @@ export class orderEntity {
         productSubtotal: number
         itemCount: number
         deliveryFee: number
+        addonSubtotal?: number
     }): orderTotalsType {
         const total = Math.max(
             0,
@@ -103,6 +119,7 @@ export class orderEntity {
         return {
             total_laundry: Math.round(input.laundrySubtotal),
             total_product: Math.round(input.productSubtotal),
+            total_addon: Math.round(input.addonSubtotal ?? 0),
             delivery_fee: Math.round(input.deliveryFee),
             total_amount: total,
             item_count: input.itemCount,

@@ -3,7 +3,15 @@ import { Link, useNavigate } from "react-router-dom"
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { PackageOpen, Printer, ShoppingBag, TrendingDown, TrendingUp, Wallet } from "lucide-react"
 import { adminStatusLabel, adminStatusStyle } from "../../lib/orderStatus"
-import { buildMonthlySeries, filterByRange, formatShortDate, resolveReportRange, summarizeCashflow, toDateInputValue } from "../../lib/report"
+import {
+  buildMonthlySeries,
+  cashflowCategoryLabel,
+  filterByRange,
+  formatShortDate,
+  resolveReportRange,
+  splitCashflow,
+  toDateInputValue,
+} from "../../lib/report"
 import type { LowStockItem, MonthlyPoint, ReportRangeMode } from "../../lib/report"
 import { formatIDR } from "../../lib/format"
 import type { CashflowItem, OrderListItem, OrderStatus } from "../../lib/types"
@@ -24,13 +32,136 @@ interface StatCardData {
   colorClass: string
 }
 
-interface CashflowRow {
-  id: number
-  date: string
-  category: string
-  description: string
-  type: "income" | "expense"
-  amount: number
+interface CashflowTableProps {
+  title: string
+  subtitle: string
+  tone: "income" | "expense"
+  items: CashflowItem[]
+  total: number
+  limit?: number
+}
+
+const CASHFLOW_TONE = {
+  income: {
+    header: "bg-emerald-600",
+    border: "border-emerald-600",
+    soft: "bg-emerald-50",
+    text: "text-emerald-700",
+    badge: "bg-emerald-100 text-emerald-700",
+    sign: "+",
+    empty: "Belum ada pendapatan pada periode ini.",
+  },
+  expense: {
+    header: "bg-red-700",
+    border: "border-red-700",
+    soft: "bg-red-50",
+    text: "text-red-700",
+    badge: "bg-red-100 text-red-700",
+    sign: "-",
+    empty: "Belum ada pengeluaran pada periode ini.",
+  },
+} as const
+
+function CashflowTable({ title, subtitle, tone, items, total, limit = 8 }: CashflowTableProps) {
+  const style = CASHFLOW_TONE[tone]
+  const visibleItems = items.slice(0, limit)
+  const hiddenCount = Math.max(0, items.length - visibleItems.length)
+
+  return (
+    <section className={`report-section overflow-hidden rounded-2xl border-2 bg-white ${style.border}`}>
+      <div className={`flex flex-col gap-2 px-6 py-4 text-white sm:flex-row sm:items-center sm:justify-between ${style.header}`}>
+        <div>
+          <h2 className="text-base font-bold">{title}</h2>
+          <p className="text-xs text-white/80">{subtitle}</p>
+        </div>
+        <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+          {items.length} Transaksi
+        </span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[560px] text-left text-sm">
+          <thead className={style.soft}>
+            <tr className="text-xs uppercase tracking-wide text-gray-500">
+              <th className="px-4 py-2.5 font-semibold">Tanggal</th>
+              <th className="px-4 py-2.5 font-semibold">Kategori</th>
+              <th className="px-4 py-2.5 font-semibold">Keterangan</th>
+              <th className="px-4 py-2.5 text-right font-semibold">Nominal</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visibleItems.map((item) => (
+              <tr key={item.id} className="border-b border-gray-100 last:border-0">
+                <td className="px-4 py-3 text-gray-600">{formatShortDate(item.created_at)}</td>
+                <td className="px-4 py-3">
+                  <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${style.badge}`}>
+                    {cashflowCategoryLabel(item.category)}
+                  </span>
+                </td>
+                <td className="px-4 py-3 text-gray-600">{item.description || "-"}</td>
+                <td className={`px-4 py-3 text-right font-semibold ${style.text}`}>
+                  {style.sign} {formatIDR(item.amount)}
+                </td>
+              </tr>
+            ))}
+            {visibleItems.length === 0 && (
+              <tr>
+                <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-400">
+                  {style.empty}
+                </td>
+              </tr>
+            )}
+          </tbody>
+          <tfoot>
+            <tr className={`border-t-2 ${style.border} ${style.soft}`}>
+              <td colSpan={3} className="px-4 py-3 text-right text-sm font-bold text-ink-strong">
+                Subtotal {title}
+              </td>
+              <td className={`px-4 py-3 text-right text-base font-black ${style.text}`}>
+                {style.sign} {formatIDR(total)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      {hiddenCount > 0 && (
+        <p className="px-4 py-3 text-xs text-gray-400">
+          Menampilkan {visibleItems.length} dari {items.length} transaksi. Cetak laporan untuk daftar lengkap.
+        </p>
+      )}
+    </section>
+  )
+}
+
+function NetProfitSummary({ income, expense, netProfit }: { income: number; expense: number; netProfit: number }) {
+  const positive = netProfit >= 0
+
+  return (
+    <section className="report-net-summary rounded-2xl border-4 border-ink-strong bg-white p-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-base font-bold text-ink-strong">Ringkasan Laba / Rugi</h2>
+          <p className="mt-1 text-xs text-gray-500">Net Profit = Total Pendapatan - Total Pengeluaran</p>
+        </div>
+        <div className={`rounded-xl px-5 py-3 ${positive ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-700"}`}>
+          <p className="text-xs font-semibold uppercase tracking-wide">Net Profit</p>
+          <p className="text-2xl font-black">
+            {positive ? "+ " : ""}
+            {formatIDR(netProfit)}
+          </p>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Total Pendapatan</p>
+          <p className="mt-1 text-lg font-black text-emerald-700">+ {formatIDR(income)}</p>
+        </div>
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-red-700">Total Pengeluaran</p>
+          <p className="mt-1 text-lg font-black text-red-700">- {formatIDR(expense)}</p>
+        </div>
+      </div>
+    </section>
+  )
 }
 
 export function AdminReportPage() {
@@ -71,10 +202,10 @@ export function AdminReportPage() {
   )
 
   const periodCashflow = useMemo(() => filterByRange(cashflowItems, windowRange), [cashflowItems, windowRange])
-  const { income: totalIncome, expense: totalExpense, balance: netBalance } = useMemo(
-    () => summarizeCashflow(periodCashflow),
-    [periodCashflow],
-  )
+  const sections = useMemo(() => splitCashflow(periodCashflow), [periodCashflow])
+  const totalIncome = sections.income.total
+  const totalExpense = sections.expense.total
+  const netBalance = sections.net_profit
   const periodOrders = useMemo(() => filterByRange(orders, windowRange), [orders, windowRange])
   const monthlyData: MonthlyPoint[] = useMemo(
     () => buildMonthlySeries(periodCashflow, windowRange),
@@ -82,25 +213,16 @@ export function AdminReportPage() {
   )
 
   const statCards: StatCardData[] = [
-    { label: "Pendapatan", value: `+ ${formatIDR(totalIncome)}`, icon: TrendingUp, colorClass: "bg-red-100 text-red-600" },
-    { label: "Pengeluaran", value: `- ${formatIDR(totalExpense)}`, icon: TrendingDown, colorClass: "bg-emerald-100 text-emerald-600" },
-    { label: "Saldo Bersih", value: formatIDR(netBalance), icon: Wallet, colorClass: "bg-blue-100 text-blue-600" },
+    { label: "Pendapatan", value: `+ ${formatIDR(totalIncome)}`, icon: TrendingUp, colorClass: "bg-emerald-100 text-emerald-700" },
+    { label: "Pengeluaran", value: `- ${formatIDR(totalExpense)}`, icon: TrendingDown, colorClass: "bg-red-100 text-red-700" },
+    {
+      label: "Laba/Rugi Bersih",
+      value: `${netBalance >= 0 ? "+ " : ""}${formatIDR(netBalance)}`,
+      icon: Wallet,
+      colorClass: netBalance >= 0 ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700",
+    },
     { label: "Jumlah Pesanan", value: `${periodOrders.length} Pesanan`, icon: ShoppingBag, colorClass: "bg-gray-100 text-gray-600" },
   ]
-
-  // Rincian arus kas periode (urutan terbaru ke terlama, maks. 12 baris)
-  const cashflowRows: CashflowRow[] = periodCashflow
-    .slice()
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-    .slice(0, 12)
-    .map((it) => ({
-      id: it.id,
-      date: formatShortDate(it.created_at),
-      category: it.category,
-      description: it.description,
-      type: it.type,
-      amount: it.amount,
-    }))
 
   // Cetak diarahkan ke halaman Nota Laporan (/laporan/nota) yang membawa data hasil filter ini,
   // supaya yang tercetak adalah dokumen lengkap, bukan sekadar potongan tabel di layar.
@@ -231,8 +353,8 @@ export function AdminReportPage() {
                 <YAxis tick={{ fontSize: 11, fill: "#9ca3af" }} axisLine={false} tickLine={false} width={80} />
                 <Tooltip formatter={(value) => formatIDR(Number(value))} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Bar dataKey="income" name="Pendapatan" fill="#dc2626" radius={[4, 4, 0, 0]} barSize={18} />
-                <Bar dataKey="expense" name="Pengeluaran" fill="#9ca3af" radius={[4, 4, 0, 0]} barSize={18} />
+                <Bar dataKey="income" name="Pendapatan" fill="#059669" radius={[4, 4, 0, 0]} barSize={18} />
+                <Bar dataKey="expense" name="Pengeluaran" fill="#dc2626" radius={[4, 4, 0, 0]} barSize={18} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -265,102 +387,66 @@ export function AdminReportPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Tabel rincian arus kas periode */}
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-ink-strong">Rincian Arus Kas</h2>
-            <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold text-gray-500">
-              {periodCashflow.length} Transaksi
-            </span>
-          </div>
-          <div className="overflow-x-auto print:overflow-visible">
-            <table className="w-full min-w-[480px] text-left text-sm print:min-w-0">
-              <thead>
-                {/* Baris header kolom tabel arus kas */}
-                <tr className="border-b border-gray-100 text-xs text-gray-400">
-                  <th className="pb-2 font-medium">Tanggal</th>
-                  <th className="pb-2 font-medium">Kategori</th>
-                  <th className="pb-2 font-medium">Keterangan</th>
-                  <th className="pb-2 font-medium">Tipe</th>
-                  <th className="pb-2 text-right font-medium">Nominal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {/* Render setiap transaksi arus kas pada periode */}
-                {cashflowRows.map((row) => (
-                  <tr key={row.id} className="border-b border-gray-50 last:border-0">
-                    <td className="py-3 text-gray-600">{row.date}</td>
-                    <td className="py-3 font-medium text-ink-strong">{row.category}</td>
-                    <td className="py-3 text-gray-600">{row.description}</td>
-                    <td className="py-3">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${row.type === "income" ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-600"
-                          }`}
-                      >
-                        {row.type === "income" ? "Masuk" : "Keluar"}
-                      </span>
-                    </td>
-                    <td className={`py-3 text-right font-semibold ${row.type === "income" ? "text-emerald-600" : "text-red-600"}`}>
-                      {row.type === "income" ? "+" : "-"} {formatIDR(row.amount)}
-                    </td>
-                  </tr>
-                ))}
-                {cashflowRows.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="py-8 text-center text-sm text-gray-400">
-                      Tidak ada transaksi pada periode ini.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+      <div className="space-y-6">
+        <CashflowTable
+          title="Pendapatan"
+          subtitle="Semua arus kas masuk pada periode terpilih"
+          tone="income"
+          items={sections.income.items}
+          total={totalIncome}
+        />
+        <CashflowTable
+          title="Pengeluaran"
+          subtitle="Semua arus kas keluar pada periode terpilih"
+          tone="expense"
+          items={sections.expense.items}
+          total={totalExpense}
+        />
+        <NetProfitSummary income={totalIncome} expense={totalExpense} netProfit={netBalance} />
+      </div>
 
-        <div className="rounded-2xl border border-gray-200 bg-white p-6">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-ink-strong">Pesanan dalam Periode</h2>
-            <Link to="/admin/pesanan" className="cursor-pointer text-xs font-semibold text-primary hover:underline print:hidden">
-              Kelola Semua
-            </Link>
-          </div>
-          <div className="overflow-x-auto print:overflow-visible">
-            <table className="w-full min-w-[480px] text-left text-sm print:min-w-0">
-              <thead>
-                {/* Baris header kolom tabel pesanan */}
-                <tr className="border-b border-gray-100 text-xs text-gray-400">
-                  <th className="pb-2 font-medium">No. Order</th>
-                  <th className="pb-2 font-medium">Pelanggan</th>
-                  <th className="pb-2 font-medium">Status</th>
-                  <th className="pb-2 text-right font-medium">Total</th>
+      <div className="rounded-2xl border border-gray-200 bg-white p-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-ink-strong">Pesanan dalam Periode</h2>
+          <Link to="/admin/pesanan" className="cursor-pointer text-xs font-semibold text-primary hover:underline print:hidden">
+            Kelola Semua
+          </Link>
+        </div>
+        <div className="overflow-x-auto print:overflow-visible">
+          <table className="w-full min-w-[480px] text-left text-sm print:min-w-0">
+            <thead>
+              {/* Baris header kolom tabel pesanan */}
+              <tr className="border-b border-gray-100 text-xs text-gray-400">
+                <th className="pb-2 font-medium">No. Order</th>
+                <th className="pb-2 font-medium">Pelanggan</th>
+                <th className="pb-2 font-medium">Status</th>
+                <th className="pb-2 text-right font-medium">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {periodOrders.slice(0, 8).map((order) => (
+                <tr key={order.id} className="border-b border-gray-50 last:border-0">
+                  <td className="py-3 font-medium text-ink-strong">{order.order_id}</td>
+                  <td className="py-3 text-gray-600">{order.customer_name}</td>
+                  <td className="py-3">
+                    <span
+                      className={`rounded-full px-2.5 py-1 text-xs font-medium ${adminStatusStyle[order.status as OrderStatus]}`}
+                    >
+                      {adminStatusLabel[order.status as OrderStatus]}
+                    </span>
+                  </td>
+                  <td className="py-3 text-right font-semibold text-ink-strong">{formatIDR(order.total_amount)}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {periodOrders.slice(0, 8).map((order) => (
-                  <tr key={order.id} className="border-b border-gray-50 last:border-0">
-                    <td className="py-3 font-medium text-ink-strong">{order.order_id}</td>
-                    <td className="py-3 text-gray-600">{order.customer_name}</td>
-                    <td className="py-3">
-                      <span
-                        className={`rounded-full px-2.5 py-1 text-xs font-medium ${adminStatusStyle[order.status as OrderStatus]}`}
-                      >
-                        {adminStatusLabel[order.status as OrderStatus]}
-                      </span>
-                    </td>
-                    <td className="py-3 text-right font-semibold text-ink-strong">{formatIDR(order.total_amount)}</td>
-                  </tr>
-                ))}
-                {periodOrders.length === 0 && (
-                  <tr>
-                    <td colSpan={4} className="py-8 text-center text-sm text-gray-400">
-                      Tidak ada pesanan pada periode ini.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              ))}
+              {periodOrders.length === 0 && (
+                <tr>
+                  <td colSpan={4} className="py-8 text-center text-sm text-gray-400">
+                    Tidak ada pesanan pada periode ini.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

@@ -72,6 +72,7 @@ export function ReceiptPage() {
       qty: `${s.qty} Pcs`,
       weight: `${Number((s.qty || 0).toFixed(1))} Kg`,
       price: formatIDR(s.price_per_unit),
+      addons: s.addons,
       subtotal: s.subtotal,
     })),
     ...(order?.products ?? []).map((p) => ({
@@ -81,6 +82,7 @@ export function ReceiptPage() {
       qty: `${p.qty} Pcs`,
       weight: "-",
       price: formatIDR(p.price),
+      addons: [],
       subtotal: p.subtotal,
     })),
   ]
@@ -239,6 +241,15 @@ export function ReceiptPage() {
                     <td className="py-4">
                       <p className="font-semibold text-ink-strong">{item.name}</p>
                       <p className="text-xs text-gray-400">{item.detail}</p>
+                      {item.addons.length > 0 && (
+                        <ul className="mt-1 space-y-0.5">
+                          {item.addons.map((addon) => (
+                            <li key={addon.id} className="text-[11px] text-primary">
+                              {addon.group_name}: {addon.option_name} ({formatIDR(addon.subtotal)})
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </td>
                     <td className="py-4 text-right text-ink">{item.qty}</td>
                     <td className="py-4 text-right text-ink">{item.weight}</td>
@@ -256,6 +267,12 @@ export function ReceiptPage() {
                 <span className="text-gray-500">Subtotal Laundry ({totalWeightKg} Kg)</span>
                 <span className="font-medium text-ink-strong">{formatIDR(order.total_laundry)}</span>
               </div>
+              {order.total_addon > 0 && (
+                <div className="flex justify-between pl-3">
+                  <span className="text-xs text-gray-400">Termasuk Add-on Layanan</span>
+                  <span className="text-xs font-medium text-gray-500">{formatIDR(order.total_addon)}</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span className="text-gray-500">Subtotal Produk</span>
                 <span className="font-medium text-ink-strong">{formatIDR(order.total_product)}</span>
