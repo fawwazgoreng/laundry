@@ -106,22 +106,24 @@ const SERVICE_ADDON_GROUPS: readonly AddonGroupSeed[] = [
         code: "detergen",
         name: "Detergen",
         selection_type: "single",
-        is_required: false,
+        is_required: true,
         options: [
-            { name: "Standard", price: 1000, price_mode: "per_unit" },
-            { name: "Premium", price: 2000, price_mode: "per_unit" },
-            { name: "Hypoallergenic", price: 3500, price_mode: "per_unit" },
+            { name: "Standard", price: 0, price_mode: "per_unit" },
+            { name: "Premium", price: 1000, price_mode: "per_unit" },
+            { name: "Hypoallergenic", price: 1500, price_mode: "per_unit" },
         ],
     },
     {
         code: "pewangi",
         name: "Pewangi",
         selection_type: "single",
-        is_required: false,
+        is_required: true,
         options: [
-            { name: "Standard", price: 1000, price_mode: "per_unit" },
-            { name: "Premium", price: 2500, price_mode: "per_unit" },
-            { name: "Hypoallergenic", price: 4000, price_mode: "per_unit" },
+            { name: "Standard", price: 0, price_mode: "per_unit" },
+            { name: "Sakura", price: 1000, price_mode: "per_unit" },
+            { name: "Lavender", price: 1000, price_mode: "per_unit" },
+            { name: "Peach", price: 1000, price_mode: "per_unit" },
+            { name: "Plum", price: 1000, price_mode: "per_unit" },
         ],
     },
 ];
@@ -133,9 +135,9 @@ const PRODUCT_ADDON_GROUPS: readonly AddonGroupSeed[] = [
         selection_type: "single",
         is_required: false,
         options: [
-            { name: "Bubble Wrap", price: 3000, price_mode: "per_unit" },
-            { name: "Kardus Tambahan", price: 5000, price_mode: "per_unit" },
-            { name: "Gift Wrap", price: 7500, price_mode: "per_unit" },
+            { name: "Bubble Wrap", price: 2000, price_mode: "per_order" },
+            { name: "Kardus Tambahan", price: 3000, price_mode: "per_order" },
+            { name: "Gift Wrap", price: 5000, price_mode: "per_order" },
         ],
     },
     {
@@ -448,7 +450,7 @@ const DEMO_ORDERS: readonly DemoOrder[] = [
                 qty: 5,
                 addons: [
                     { group: "detergen", option: "Premium" },
-                    { group: "pewangi", option: "Premium" },
+                    { group: "pewangi", option: "Sakura" },
                 ],
             },
         ],
@@ -485,7 +487,7 @@ const DEMO_ORDERS: readonly DemoOrder[] = [
                 qty: 2,
                 addons: [
                     { group: "detergen", option: "Hypoallergenic" },
-                    { group: "pewangi", option: "Hypoallergenic" },
+                    { group: "pewangi", option: "Lavender" },
                 ],
             },
         ],

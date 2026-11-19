@@ -26,7 +26,7 @@ const banks: { code: BankCode; name: string; desc: string }[] = [
 ]
 
 /** Tarif ongkir per km. Harus sama dengan perhitungan backend (orderEntity.computeDeliveryFee). */
-const FEE_PER_KM = 2000
+const FEE_PER_KM = 1000
 /** Masa tenggang refund (hari). Idealnya diambil dari satu config bersama dengan backend. */
 const REFUND_WINDOW_DAYS = 7
 

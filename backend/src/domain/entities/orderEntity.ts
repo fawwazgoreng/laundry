@@ -140,6 +140,6 @@ export class orderEntity {
 
     static computeDeliveryFee(distanceKm: number): Money {
         if (distanceKm <= 0) return money(0);
-        return roundMoney(multiplyMoney(distanceKm, 2000));
+        return roundMoney(multiplyMoney(distanceKm, 1000));
     }
 }

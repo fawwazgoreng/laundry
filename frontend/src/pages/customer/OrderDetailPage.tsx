@@ -236,9 +236,11 @@ export function OrderDetailPage() {
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-ink hover:bg-gray-50">
+          {!isAdmin && (
+            <button className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-ink hover:bg-gray-50">
             <MessageCircle size={15} /> Hubungi CS
           </button>
+          )}
           {(order.status === "BARU" || order.status === "DITERIMA") && (
             <button
               onClick={handleCancel}

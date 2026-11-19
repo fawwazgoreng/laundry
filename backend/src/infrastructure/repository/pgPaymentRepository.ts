@@ -91,6 +91,7 @@ export class pgPaymentRepository implements paymentRepository {
         const rows = await prisma.orm.public.Payments
             .where({ status: varchar<30>("PENDING") })
             .where((p) => p.order.some((o) => o.user_id.eq(userId)))
+            .where({ payment_type: varchar<20>("transfer_bank")})
             .orderBy((p) => p.created_at.desc())
             .limit(10)
             .all();

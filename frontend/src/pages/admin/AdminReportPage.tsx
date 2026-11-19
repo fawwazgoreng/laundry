@@ -254,14 +254,14 @@ export function AdminReportPage() {
         </div>
       )}
 
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between print:hidden">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-baseline lg:justify-between print:hidden">
         <div>
           <h1 className="text-2xl font-bold text-ink-strong">Laporan Fadarosi</h1>
           <p className="mt-1 text-sm text-gray-500">
             Ringkasan pendapatan, pengeluaran, dan transaksi pada rentang waktu terpilih.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap  gap-2 self-end">
           {RANGE_PRESETS.map((preset) => (
             <button
               key={preset.months}
