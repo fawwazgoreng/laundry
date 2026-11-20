@@ -97,8 +97,8 @@ beforeAll(async () => {
     );
     customerAddressId = addr.data.id;
 
-    serviceIds = (await prisma.orm.public.Laundry_services.orderBy((s) => s.id.asc()).all()).map((s) => s.id);
-    productIds = (await prisma.orm.public.Products.orderBy((p) => p.id.asc()).all()).map((p) => p.id);
+    serviceIds = (await prisma.orm.Laundry_services.orderBy((s) => s.id.asc()).all()).map((s) => s.id);
+    productIds = (await prisma.orm.Products.orderBy((p) => p.id.asc()).all()).map((p) => p.id);
 });
 
 afterAll(async () => {
@@ -230,7 +230,7 @@ describe("orders", () => {
         const detail = await json(await api("GET", `/api/orders/${body.data.order_id}`, { token: customerToken }));
         expect(detail.data.payment.status).toBe("PAID");
 
-        const cf = await prisma.orm.public.Cash_flow.where({ order_id: detail.data.order_id }).first();
+        const cf = await prisma.orm.Cash_flow.where({ order_id: detail.data.order_id }).first();
         expect(cf?.type).toBe(varchar<20>("income"));
         expect(Number(cf?.amount)).toBe(detail.data.total_amount);
     });
@@ -271,7 +271,7 @@ describe("orders", () => {
         expect(detail.data.status).toBe("SELESAI");
         expect(detail.data.payment.status).toBe("PAID");
 
-        const cf = await prisma.orm.public.Cash_flow.where({ order_id: orderId, type: varchar<20>("income") }).first();
+        const cf = await prisma.orm.Cash_flow.where({ order_id: orderId, type: varchar<20>("income") }).first();
         expect(Number(cf?.amount)).toBe(detail.data.total_amount);
 
         const tracking = await json(await api("GET", `/api/orders/${orderId}/tracking`, { token: customerToken }));
@@ -378,7 +378,7 @@ describe("payments", () => {
         );
         expect(confirmed.data.status).toBe("PAID");
 
-        const cf = await prisma.orm.public.Cash_flow.where({ order_id: confirmed.data.order_id, type: varchar<20>("income") }).first();
+        const cf = await prisma.orm.Cash_flow.where({ order_id: confirmed.data.order_id, type: varchar<20>("income") }).first();
         expect(cf?.category).toBe(varchar<40>("sales"));
 
         const again = await api("POST", "/api/payments/confirm", {

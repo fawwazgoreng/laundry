@@ -1,87 +1,87 @@
 // use prisma-8
 model User {
-  id              Uuid              @id @default(uuid())
-  role            VarChar(10)
-  username        VarChar(150)
+  id              sql.UuidString    @id @onCreate(uuid(7))
+  role            sql.String(10)
+  username        sql.String(150)
   email           String            @unique
   password        String
-  phone           VarChar(20)
-  is_verified     Boolean           @default(true)
+  phone           sql.String(20)
+  is_verified     Int               @default(1)
   verified_at     DateTime          @default(now())
   created_at      DateTime          @default(now())
   user_address    User_address[]
   refreshToken    Refresh_token?    @relation(fields: [refresh_tokenId], references: [id])
-  refresh_tokenId Uuid?
+  refresh_tokenId sql.Char(36)?
   accessToken     Access_token?     @relation(fields: [access_tokenId], references: [id])
-  access_tokenId  Uuid?
+  access_tokenId  sql.Char(36)?
   orders          Orders[]
   refundRequests  Refund_requests[]
 }
 
 model Refresh_token {
-  id         Uuid     @id @default(uuid())
-  user_id    Uuid
-  token      String
+  id         sql.UuidString   @id @onCreate(uuid(7))
+  user_id    sql.Char(36)
+  token      sql.String(2048)
   expired_at DateTime
-  created_at DateTime @default(now())
+  created_at DateTime         @default(now())
   user       User[]
 }
 
 model Access_token {
-  id         Uuid     @id @default(uuid())
-  user_id    Uuid
-  token      String
+  id         sql.UuidString   @id @onCreate(uuid(7))
+  user_id    sql.Char(36)
+  token      sql.String(2048)
   expired_at DateTime
-  created_at DateTime @default(now())
+  created_at DateTime         @default(now())
   user       User[]
 }
 
 model User_address {
-  id           Int            @id @default(autoincrement())
-  label        VarChar(30)
-  address_text String
-  latitude     Numeric(10, 8)
-  longitude    Numeric(11, 8)
-  is_primary   Boolean        @default(false)
-  user_id      Uuid
-  user         User           @relation(fields: [user_id], references: [id])
+  id           Int              @id @default(autoincrement())
+  label        sql.String(30)
+  address_text sql.String(1000)
+  latitude     sql.String(30)
+  longitude    sql.String(30)
+  is_primary   Int              @default(0)
+  user_id      sql.Char(36)
+  user         User             @relation(fields: [user_id], references: [id])
   orders       Orders[]
 }
 
 model Outlets {
-  id               Int            @id @default(autoincrement())
+  id               Int               @id @default(autoincrement())
   name             String
-  phone            VarChar(20)?
-  address_text     String?
-  latitude         Numeric(10, 8)
-  longitude        Numeric(11, 8)
-  max_coverage_km  Numeric(5, 2)
-  min_order_amount Numeric(12, 2)
-  open_hours       String?
-  slot_date        String?
-  weekly_hours     String?
+  phone            sql.String(20)?
+  address_text     sql.String(1000)?
+  latitude         sql.String(30)
+  longitude        sql.String(30)
+  max_coverage_km  sql.String(20)
+  min_order_amount sql.String(20)
+  open_hours       sql.String(255)?
+  slot_date        sql.String(255)?
+  weekly_hours     sql.String(2000)?
   orders           Orders[]
 }
 
 model Laundry_services {
   id                       Int                            @id @default(autoincrement())
-  name                     VarChar(30)
-  unit                     VarChar(10)
-  price_per_unit           Numeric(12, 2)
-  description              String
+  name                     sql.String(30)
+  unit                     sql.String(10)
+  price_per_unit           sql.String(20)
+  description              sql.String(1000)
   estimated_duration_hours Int
-  is_active                Boolean
+  is_active                Int
   serviceOrderItems        Service_order_item[]
   addonGroups              Laundry_service_addon_groups[]
 }
 
 model Service_addon_groups {
   id             Int                            @id @default(autoincrement())
-  code           VarChar(30)                    @unique
-  name           VarChar(50)
-  selection_type VarChar(20)                    @default("single")
-  is_required    Boolean                        @default(false)
-  is_active      Boolean                        @default(true)
+  code           sql.String(30)                 @unique
+  name           sql.String(50)
+  selection_type sql.String(20)                 @default("single")
+  is_required    Int                            @default(0)
+  is_active      Int                            @default(1)
   options        Service_addon_options[]
   services       Laundry_service_addon_groups[]
   productAddons  Product_addon_groups[]
@@ -90,11 +90,11 @@ model Service_addon_groups {
 model Service_addon_options {
   id                Int                         @id @default(autoincrement())
   group_id          Int
-  name              VarChar(50)
-  price             Numeric(12, 2)              @default(0)
-  price_mode        VarChar(20)                 @default("per_unit")
-  is_default        Boolean                     @default(false)
-  is_active         Boolean                     @default(true)
+  name              sql.String(50)
+  price             sql.String(20)              @default("0")
+  price_mode        sql.String(20)              @default("per_unit")
+  is_default        Int                         @default(0)
+  is_active         Int                         @default(1)
   group             Service_addon_groups        @relation(fields: [group_id], references: [id])
   orderItemAddons   Service_order_item_addons[]
   productItemAddons Product_order_item_addons[]
@@ -113,13 +113,13 @@ model Laundry_service_addon_groups {
 
 model Products {
   id                Int                    @id @default(autoincrement())
-  name              VarChar(30)
-  category          VarChar(30)
-  price             Numeric(12, 2)
-  size              VarChar(10)
+  name              sql.String(30)
+  category          sql.String(30)
+  price             sql.String(20)
+  size              sql.String(10)
   stock             Int
-  is_active         Boolean
-  image             String
+  is_active         Int
+  image             sql.String(500)
   productOrderItems Product_order_item[]
   addonGroups       Product_addon_groups[]
 }
@@ -134,24 +134,24 @@ model Product_addon_groups {
 }
 
 model Orders {
-  id                Uuid                 @id @default(uuid())
+  id                sql.Char(36)         @id @onCreate(uuid(7))
   order_id          String               @unique
-  user_id           Uuid
+  user_id           sql.Char(36)
   outlet_id         Int
   user_address_id   Int
-  distance_km       Numeric(6, 2)
-  delivery_fee      Numeric(10, 2)
-  total_laundry     Numeric(12, 2)
-  total_product     Numeric(12, 2)
-  total_addon       Numeric(12, 2)       @default(0)
-  total_amount      Numeric(12, 2)
-  status            VarChar(20)
-  payment_method    VarChar(20)
-  notes             String?
+  distance_km       sql.String(20)
+  delivery_fee      sql.String(20)
+  total_laundry     sql.String(20)
+  total_product     sql.String(20)
+  total_addon       sql.String(20)       @default("0")
+  total_amount      sql.String(20)
+  status            sql.String(20)
+  payment_method    sql.String(20)
+  notes             sql.String(1000)?
   created_at        DateTime             @default(now())
-  updated_at        temporal.updatedAt() // Menggunakan standar pelacakan waktu mutakhir aplikasi Prisma 8
-  longitude         Numeric(11, 8)?
-  latitude          Numeric(10, 8)?
+  updated_at        temporal.UpdatedAt
+  longitude         sql.String(30)?
+  latitude          sql.String(30)?
   user              User                 @relation(fields: [user_id], references: [id])
   outlet            Outlets              @relation(fields: [outlet_id], references: [id])
   address           User_address         @relation(fields: [user_address_id], references: [id])
@@ -164,114 +164,114 @@ model Orders {
 }
 
 model Service_order_item {
-  id                 Uuid                        @id @default(uuid())
+  id                 sql.Char(36)                @id @onCreate(uuid(7))
   order_id           String
   laundry_service_id Int
-  qty                Numeric(6, 2) // Kiloan laundry menggunakan pecahan desimal biner
-  price_per_unit     Numeric(12, 2)              @default(0)
-  addon_subtotal     Numeric(12, 2)              @default(0)
-  subtotal           Numeric(12, 2)
-  notes              String
+  qty                sql.String(20)
+  price_per_unit     sql.String(20)              @default("0")
+  addon_subtotal     sql.String(20)              @default("0")
+  subtotal           sql.String(20)
+  notes              sql.String(1000)
   service            Laundry_services            @relation(fields: [laundry_service_id], references: [id])
   order              Orders                      @relation(fields: [order_id], references: [order_id])
   addons             Service_order_item_addons[]
 }
 
 model Service_order_item_addons {
-  id                    Uuid                   @id @default(uuid())
-  service_order_item_id Uuid
+  id                    sql.Char(36)           @id @onCreate(uuid(7))
+  service_order_item_id sql.Char(36)
   addon_option_id       Int?
-  group_code            VarChar(30)
-  group_name            VarChar(50)
-  option_name           VarChar(50)
-  price                 Numeric(12, 2)         @default(0)
-  price_mode            VarChar(20)            @default("per_unit")
-  qty                   Numeric(6, 2)          @default(0)
-  subtotal              Numeric(12, 2)         @default(0)
+  group_code            sql.String(30)
+  group_name            sql.String(50)
+  option_name           sql.String(50)
+  price                 sql.String(20)         @default("0")
+  price_mode            sql.String(20)         @default("per_unit")
+  qty                   sql.String(20)         @default("0")
+  subtotal              sql.String(20)         @default("0")
   serviceOrderItem      Service_order_item     @relation(fields: [service_order_item_id], references: [id], onDelete: Cascade)
   addonOption           Service_addon_options? @relation(fields: [addon_option_id], references: [id])
 }
 
 model Product_order_item {
-  id         Uuid                        @id @default(uuid())
+  id         sql.Char(36)                @id @onCreate(uuid(7))
   order_id   String
   product_id Int
   qty        Int
-  subtotal   Numeric(12, 2)
+  subtotal   sql.String(20)
   product    Products                    @relation(fields: [product_id], references: [id])
   order      Orders                      @relation(fields: [order_id], references: [order_id])
   addons     Product_order_item_addons[]
 }
 
 model Product_order_item_addons {
-  id                    Uuid                   @id @default(uuid())
-  product_order_item_id Uuid
+  id                    sql.Char(36)           @id @onCreate(uuid(7))
+  product_order_item_id sql.Char(36)
   addon_option_id       Int?
-  group_code            VarChar(30)
-  group_name            VarChar(50)
-  option_name           VarChar(50)
-  price                 Numeric(12, 2)         @default(0)
-  price_mode            VarChar(20)            @default("per_unit")
-  qty                   Numeric(6, 2)          @default(0)
-  subtotal              Numeric(12, 2)         @default(0)
+  group_code            sql.String(30)
+  group_name            sql.String(50)
+  option_name           sql.String(50)
+  price                 sql.String(20)         @default("0")
+  price_mode            sql.String(20)         @default("per_unit")
+  qty                   sql.String(20)         @default("0")
+  subtotal              sql.String(20)         @default("0")
   productOrderItem      Product_order_item     @relation(fields: [product_order_item_id], references: [id], onDelete: Cascade)
   addonOption           Service_addon_options? @relation(fields: [addon_option_id], references: [id])
 }
 
 model Payments {
-  id             Uuid              @id @default(uuid())
+  id             sql.Char(36)      @id @onCreate(uuid(7))
   order_id       String
   transaction_id String
-  payment_type   VarChar(20)
-  gross_amount   Numeric(12, 2)
-  status         VarChar(30)
+  payment_type   sql.String(20)
+  gross_amount   sql.String(20)
+  status         sql.String(30)
   va_number      String?
   paid_at        DateTime?
-  raw_response   Json?
+  raw_response   sql.String(8000)?
   created_at     DateTime          @default(now())
   order          Orders            @relation(fields: [order_id], references: [order_id])
   refundRequests Refund_requests[]
 }
 
 model Refund_requests {
-  id               Uuid           @id @default(uuid())
+  id               sql.Char(36)      @id @onCreate(uuid(7))
   order_id         String
-  user_id          Uuid
-  payment_id       Uuid?
-  amount           Numeric(12, 2)
-  reason           String
-  status           VarChar(20)    @default("REQUESTED")
+  user_id          sql.Char(36)
+  payment_id       sql.Char(36)?
+  amount           sql.String(20)
+  reason           sql.String(1000)
+  status           sql.String(20)    @default("REQUESTED")
   gateway_ref      String?
-  gateway_response Json?
-  requested_at     DateTime       @default(now())
+  gateway_response sql.String(8000)?
+  requested_at     DateTime          @default(now())
   processed_at     DateTime?
-  processed_by     Uuid?
-  order            Orders         @relation(fields: [order_id], references: [order_id])
-  user             User           @relation(fields: [user_id], references: [id])
-  payment          Payments?      @relation(fields: [payment_id], references: [id])
+  processed_by     sql.Char(36)?
+  order            Orders            @relation(fields: [order_id], references: [order_id])
+  user             User              @relation(fields: [user_id], references: [id])
+  payment          Payments?         @relation(fields: [payment_id], references: [id])
 
   @@index([order_id, status])
 }
 
 model Order_trackings {
-  id                        Uuid        @id @default(uuid())
+  id                        sql.UuidString   @id @onCreate(uuid(7))
   order_id                  String
-  status                    VarChar(20)
-  estimated_completion_time DateTime    @default(now())
-  notes                     String
-  created_at                DateTime    @default(now())
-  order                     Orders      @relation(fields: [order_id], references: [order_id])
+  status                    sql.String(20)
+  estimated_completion_time DateTime         @default(now())
+  notes                     sql.String(1000)
+  created_at                DateTime         @default(now())
+  order                     Orders           @relation(fields: [order_id], references: [order_id])
 }
 
 model Cash_flow {
-  id          Int            @id @default(autoincrement())
+  id          Int              @id @default(autoincrement())
   order_id    String?
-  type        VarChar(20)
-  category    VarChar(40)
-  amount      Numeric(12, 2)
-  description String
-  created_at  DateTime       @default(now())
-  order       Orders?        @relation(fields: [order_id], references: [order_id])
+  type        sql.String(20)
+  category    sql.String(40)
+  amount      sql.String(20)
+  description sql.String(1000)
+  created_at  DateTime         @default(now())
+  order       Orders?          @relation(fields: [order_id], references: [order_id])
 
   @@unique([order_id, type])
 }

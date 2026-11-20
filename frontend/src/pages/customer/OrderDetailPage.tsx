@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { useNavigate, useParams } from "react-router-dom"
+import { Link, useNavigate, useParams } from "react-router-dom"
 import { Check, CreditCard, Info, MessageCircle, RotateCcw, Trash2 } from "lucide-react"
 import { formatIDR } from "../../lib/format"
 import { paymentStatusLabel, paymentStatusStyle } from "../../lib/orderStatus"
@@ -237,9 +237,9 @@ export function OrderDetailPage() {
         </div>
         <div className="flex gap-3">
           {!isAdmin && (
-            <button className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-ink hover:bg-gray-50">
+            <Link to={"https://wa.me/6289636546423"} className="flex items-center gap-1.5 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-ink hover:bg-gray-50">
             <MessageCircle size={15} /> Hubungi CS
-          </button>
+          </Link>
           )}
           {(order.status === "BARU" || order.status === "DITERIMA") && (
             <button

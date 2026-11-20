@@ -30,7 +30,7 @@ function toCashflowType(row: {
     category: string
     amount: string
     description: string
-    created_at: Temporal.Instant
+    created_at: Date
 }): cashflowType {
     return {
         id: row.id,
@@ -39,13 +39,13 @@ function toCashflowType(row: {
         category: row.category,
         amount: money(row.amount),
         description: row.description,
-        created_at: new Date(row.created_at.epochMilliseconds).toISOString(),
+        created_at: row.created_at.toISOString(),
     };
 }
 
 export class pgCashflowRepository implements cashflowRepository {
     async create(input: cashflowInput): Promise<cashflowType> {
-        const row = await prisma.orm.public.Cash_flow.create({
+        const row = await prisma.orm.Cash_flow.create({
             order_id: input.order_id ?? null,
             type: varchar(input.type),
             category: varchar(input.category),
@@ -57,11 +57,11 @@ export class pgCashflowRepository implements cashflowRepository {
 
     async summary(): Promise<cashflowSummaryType> {
         const [incomeRows, expenseRows] = await Promise.all([
-            prisma.orm.public.Cash_flow
+            prisma.orm.Cash_flow
                 .where({ type: varchar<20>("income") })
                 .orderBy((r) => r.created_at.desc())
                 .all(),
-            prisma.orm.public.Cash_flow
+            prisma.orm.Cash_flow
                 .where({ type: varchar<20>("expense") })
                 .orderBy((r) => r.created_at.desc())
                 .all(),

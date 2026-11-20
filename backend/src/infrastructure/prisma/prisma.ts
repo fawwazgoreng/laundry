@@ -1,6 +1,9 @@
 // src/lib/prisma.ts
-import postgres from "@prisma/orm-postgres/runtime";
-import type { SqlMiddleware } from "@prisma/orm-postgres/family-runtime";
+import mysql from "@prisma/orm-mysql/runtime";
+import { contractFromJson } from "@prisma/orm-mysql/static";
+import type { SqlMiddleware } from "@prisma/orm-mysql/family-runtime";
+import type { SqlRuntimeExtensionDescriptor } from "@prisma/orm-family-sql/runtime";
+import { generateId } from "@prisma/orm-framework/ids/runtime";
 import { env } from "../../config/env";
 
 import type { Contract } from "../database/generated/contract";
@@ -24,8 +27,31 @@ function queryLogger(): SqlMiddleware {
   };
 }
 
-export const prisma = postgres<Contract>({
-  contractJson,
+const idGeneratorIds = ["uuidv7"] as const;
+
+const idGeneratorDefaults = idGeneratorIds.map((id) => ({
+  id,
+  generate: (params: Record<string, unknown> | undefined) =>
+    params === undefined ? generateId({ id }) : generateId({ id, params }),
+  stability: "field" as const,
+}));
+
+const idGeneratorsExtension: SqlRuntimeExtensionDescriptor<"mysql"> = {
+  kind: "extension",
+  id: "builtin-id-generators",
+  version: "1.0.0",
+  familyId: "sql",
+  targetId: "mysql",
+  codecs: () => [],
+  mutationDefaultGenerators: () => idGeneratorDefaults,
+  create: () => ({ familyId: "sql", targetId: "mysql" }),
+};
+
+export const contract = contractFromJson<Contract>(contractJson);
+
+export const prisma = mysql({
+  contract,
+  extensions: [idGeneratorsExtension],
   url: env.DATABASE_URL,
   poolOptions: {
     connectionTimeoutMillis: 10_000,

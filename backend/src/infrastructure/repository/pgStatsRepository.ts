@@ -1,7 +1,8 @@
 import type { statsRepository } from "../../domain/repositories/statsRepository";
 import type { adminStatsType } from "../../domain/types/adminType";
+import { param } from "@prisma/orm-mysql/relational-core/expression";
 import { prisma } from "../prisma/prisma";
-import { fromInstant, instant, varchar } from "../prisma/scalars";
+import { varchar } from "../prisma/scalars";
 import Decimal from "decimal.js";
 import { money } from "../../lib/money";
 
@@ -21,33 +22,50 @@ function dayStart(offsetDays: number): Date {
 export class pgStatsRepository implements statsRepository {
     async getStats(): Promise<adminStatsType> {
         const today = startOfToday();
+        const todayParam = param(today, { codecId: "mysql/datetime@1" });
 
-        const [ordersToday, revenueTodayAgg, inProgressAgg, productsSoldAgg, recentOrders, services, weeklyPayments, lowStock] =
+        const [ordersToday, revenueToday, inProgress, productsSold, recentOrders, services, weeklyPayments, lowStock] =
             await Promise.all([
-                prisma.orm.public.Orders.where((c) => c.created_at.gte(instant(today))).aggregate((agg) => ({ count: agg.count() })).then(r => r.count),
-                prisma.orm.public.Payments
-                    .where((p, { fns }) => fns.and(p.status.eq(varchar<30>("PAID")), p.paid_at.gte(instant(today))))
-                    .aggregate((agg) => ({ sum: agg.sum("gross_amount") })),
-                prisma.orm.public.Orders.where((o) => o.status.in([varchar<20>("DITERIMA"), varchar<20>("DIPROSES")])).aggregate((agg) => ({ count: agg.count() })).then(r => r.count),
-                prisma.orm.public.Product_order_item
-                    .where((poi) => poi.order.some((o) => o.created_at.gte(instant(today))))
-                    .aggregate((agg) => ({ sum: agg.sum("qty") })),
-                prisma.orm.public.Orders
+                prisma.query(
+                    prisma.raw.sql`SELECT COUNT(*) AS n FROM \`Orders\` WHERE \`created_at\` >= ${todayParam}`
+                        .returnsRow({ n: "mysql/bigint@1" })
+                        .build(),
+                ).then((rows) => Number(rows[0]?.n ?? 0n)),
+                prisma.query(
+                    prisma.raw.sql`SELECT COALESCE(SUM(CAST(\`gross_amount\` AS DECIMAL(20, 2))), 0) AS total
+                        FROM \`Payments\` WHERE \`status\` = 'PAID' AND \`paid_at\` >= ${todayParam}`
+                        .returnsRow({ total: "mysql/text@1" })
+                        .build(),
+                ).then((rows) => rows[0]?.total ?? "0"),
+                prisma.query(
+                    prisma.raw.sql`SELECT COUNT(*) AS n FROM \`Orders\` WHERE \`status\` IN ('DITERIMA', 'DIPROSES')`
+                        .returnsRow({ n: "mysql/bigint@1" })
+                        .build(),
+                ).then((rows) => Number(rows[0]?.n ?? 0n)),
+                prisma.query(
+                    prisma.raw.sql`SELECT COALESCE(SUM(poi.\`qty\`), 0) AS n
+                        FROM \`Product_order_item\` poi
+                        JOIN \`Orders\` o ON poi.\`order_id\` = o.\`order_id\`
+                        WHERE o.\`created_at\` >= ${todayParam}`
+                        .returnsRow({ n: "mysql/bigint@1" })
+                        .build(),
+                ).then((rows) => Number(rows[0]?.n ?? 0n)),
+                prisma.orm.Orders
                     .orderBy((o) => o.created_at.desc())
                     .limit(5)
                     .include("user", (u) => u.select("username", "phone"))
                     .include("serviceOrderItems", (si) => si.include("service", (s) => s.select("name", "unit")))
                     .include("productOrderItems", (pi) => pi.include("product", (p) => p.select("name", "size")))
                     .all(),
-                prisma.orm.public.Laundry_services
+                prisma.orm.Laundry_services
                     .select("id", "name")
                     .all(),
-                prisma.orm.public.Payments
-                    .where((p, { fns }) => fns.and(p.status.eq(varchar<30>("PAID")), p.paid_at.gte(instant(dayStart(6)))))
+                prisma.orm.Payments
+                    .where((p, { fns }) => fns.and(p.status.eq(varchar<30>("PAID")), p.paid_at.gte(dayStart(6))))
                     .select("gross_amount", "paid_at")
                     .all(),
-                prisma.orm.public.Products
-                    .where((p, { fns }) => fns.and(p.is_active.eq(true), p.stock.lte(5)))
+                prisma.orm.Products
+                    .where((p, { fns }) => fns.and(p.is_active.eq(1), p.stock.lte(5)))
                     .orderBy((p) => p.stock.asc())
                     .select("id", "name", "stock")
                     .all(),
@@ -56,10 +74,14 @@ export class pgStatsRepository implements statsRepository {
         const serviceRevenue = (
             await Promise.all(
                 services.map(async (service) => {
-                    const agg = await prisma.orm.public.Service_order_item
-                        .where({ laundry_service_id: service.id })
-                        .aggregate((a) => ({ total: a.sum("subtotal"), count: a.count() }));
-                    return { service_name: service.name, total: money(agg.total ?? 0), count: agg.count };
+                    const [row] = await prisma.query(
+                        prisma.raw.sql`SELECT COALESCE(SUM(CAST(\`subtotal\` AS DECIMAL(20, 2))), 0) AS total, COUNT(*) AS n
+                            FROM \`Service_order_item\` WHERE \`laundry_service_id\` = ${service.id}`
+                            .returnsRow({ total: "mysql/text@1", n: "mysql/bigint@1" })
+                            .build(),
+                    );
+                    const count = Number(row?.n ?? 0n);
+                    return { service_name: service.name, total: money(row?.total ?? "0"), count };
                 }),
             )
         )
@@ -74,15 +96,15 @@ export class pgStatsRepository implements statsRepository {
         }
         for (const p of weeklyPayments) {
             if (!p.paid_at) continue;
-            const key = fromInstant(p.paid_at).toISOString().slice(0, 10);
+            const key = p.paid_at.toISOString().slice(0, 10);
             if (weekly.has(key)) weekly.set(key, (weekly.get(key) ?? new Decimal(0)).plus(p.gross_amount));
         }
 
         return {
             orders_today: ordersToday,
-            revenue_today: money(revenueTodayAgg.sum ?? 0),
-            laundry_in_progress: inProgressAgg,
-            products_sold: Number(productsSoldAgg.sum ?? 0),
+            revenue_today: money(revenueToday),
+            laundry_in_progress: inProgress,
+            products_sold: productsSold,
             recent_orders: recentOrders.map((o) => {
                 const svc = o.serviceOrderItems[0];
                 const prod = o.productOrderItems[0];
@@ -100,7 +122,7 @@ export class pgStatsRepository implements statsRepository {
                     status: o.status,
                     total_amount: money(o.total_amount),
                     items_summary: summary,
-                    created_at: new Date(o.created_at.epochMilliseconds).toISOString(),
+                    created_at: o.created_at.toISOString(),
                 };
             }),
             service_revenue: serviceRevenue,

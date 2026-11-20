@@ -1,21 +1,22 @@
 services:
   db:
-    image: docker.io/library/postgres
+    image: docker.io/library/mysql:8.4
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
     networks:
-      - back-tier 
+      - back-tier
     ports:
-      - 5432:5432
+      - "3306:3306"
     volumes:
-      - postgres_data:/var/lib/postgresql
+      - mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD-SHELL" , "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$$MYSQL_USER -p$$MYSQL_PASSWORD --silent"]
       interval: 5s
       timeout: 5s
-      retries: 3
+      retries: 10
 
   backend:
     build:
@@ -23,7 +24,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/laundry
+      - DATABASE_URL=mysql://${MYSQL_USER}:${MYSQL_PASSWORD}@db:3306/${MYSQL_DATABASE}
       - CORS_ORIGIN=http://localhost:5173
     depends_on:
       db:
@@ -31,10 +32,10 @@ services:
     volumes:
       - uploads_data:/app/public/uploads
     networks:
-      - back-tier  
+      - back-tier
 
   frontend:
-    build: 
+    build:
       context: ./frontend
     ports:
       - "5173:80"
@@ -62,7 +63,7 @@ services:
       - back-tier
 
 volumes:
-  postgres_data:
+  mysql_data:
   uploads_data:
 
 secrets:

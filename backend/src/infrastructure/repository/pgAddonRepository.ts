@@ -8,11 +8,11 @@ import type {
 } from "../../domain/types/addonType";
 import type { serviceAddonGroupType } from "../../domain/types/serviceType";
 import { prisma } from "../prisma/prisma";
-import { numeric, varchar } from "../prisma/scalars";
+import { flag, numeric, varchar } from "../prisma/scalars";
 import { toAddonGroup } from "./addonRowMapper";
 
 const groupQuery = () =>
-    prisma.orm.public.Service_addon_groups.include("options");
+    prisma.orm.Service_addon_groups.include("options");
 
 export class pgAddonRepository implements addonRepository {
     async listGroups(includeInactive: boolean): Promise<serviceAddonGroupType[]> {
@@ -28,12 +28,12 @@ export class pgAddonRepository implements addonRepository {
     }
 
     async createGroup(data: addonGroupCreateType): Promise<serviceAddonGroupType> {
-        const row = await prisma.orm.public.Service_addon_groups.create({
+        const row = await prisma.orm.Service_addon_groups.create({
             code: varchar<30>(data.code),
             name: varchar<50>(data.name),
             selection_type: varchar<20>(data.selection_type),
-            is_required: data.is_required,
-            is_active: data.is_active,
+            is_required: flag(data.is_required),
+            is_active: flag(data.is_active),
         });
         return {
             ...toAddonGroup({ ...row, options: [] }, false)!,
@@ -41,67 +41,67 @@ export class pgAddonRepository implements addonRepository {
     }
 
     async updateGroup(id: number, data: addonGroupUpdateType): Promise<serviceAddonGroupType | null> {
-        const existing = await prisma.orm.public.Service_addon_groups.where({ id }).first();
+        const existing = await prisma.orm.Service_addon_groups.where({ id }).first();
         if (!existing) return null;
-        await prisma.orm.public.Service_addon_groups.where({ id }).update({
+        await prisma.orm.Service_addon_groups.where({ id }).update({
             ...(data.code !== undefined ? { code: varchar<30>(data.code) } : {}),
             ...(data.name !== undefined ? { name: varchar<50>(data.name) } : {}),
             ...(data.selection_type !== undefined ? { selection_type: varchar<20>(data.selection_type) } : {}),
-            ...(data.is_required !== undefined ? { is_required: data.is_required } : {}),
-            ...(data.is_active !== undefined ? { is_active: data.is_active } : {}),
+            ...(data.is_required !== undefined ? { is_required: flag(data.is_required) } : {}),
+            ...(data.is_active !== undefined ? { is_active: flag(data.is_active) } : {}),
         });
         return this.findGroupById(id);
     }
 
     async removeGroup(id: number): Promise<boolean> {
-        const existing = await prisma.orm.public.Service_addon_groups.where({ id }).first();
+        const existing = await prisma.orm.Service_addon_groups.where({ id }).first();
         if (!existing) return false;
-        await prisma.orm.public.Service_addon_groups.where({id}).delete();
+        await prisma.orm.Service_addon_groups.where({id}).delete();
         return true;
     }
 
     async createOption(data: addonOptionCreateType): Promise<serviceAddonGroupType | null> {
-        const group = await prisma.orm.public.Service_addon_groups.where({ id: data.group_id }).first();
+        const group = await prisma.orm.Service_addon_groups.where({ id: data.group_id }).first();
         if (!group) return null;
-        await prisma.orm.public.Service_addon_options.create({
+        await prisma.orm.Service_addon_options.create({
             group_id: data.group_id,
             name: varchar<50>(data.name),
             price: numeric<12, 2>(data.price),
             price_mode: varchar<20>(data.price_mode),
-            is_default: data.is_default,
-            is_active: data.is_active,
+            is_default: flag(data.is_default),
+            is_active: flag(data.is_active),
         });
         return this.findGroupById(data.group_id);
     }
 
     async updateOption(id: number, data: addonOptionUpdateType): Promise<serviceAddonGroupType | null> {
-        const existing = await prisma.orm.public.Service_addon_options.where({ id }).first();
+        const existing = await prisma.orm.Service_addon_options.where({ id }).first();
         if (!existing) return null;
-        await prisma.orm.public.Service_addon_options.where({ id }).update({
+        await prisma.orm.Service_addon_options.where({ id }).update({
             ...(data.name !== undefined ? { name: varchar<50>(data.name) } : {}),
             ...(data.price !== undefined ? { price: numeric<12, 2>(data.price) } : {}),
             ...(data.price_mode !== undefined ? { price_mode: varchar<20>(data.price_mode) } : {}),
-            ...(data.is_default !== undefined ? { is_default: data.is_default } : {}),
-            ...(data.is_active !== undefined ? { is_active: data.is_active } : {}),
+            ...(data.is_default !== undefined ? { is_default: flag(data.is_default) } : {}),
+            ...(data.is_active !== undefined ? { is_active: flag(data.is_active) } : {}),
         });
         return this.findGroupById(existing.group_id);
     }
 
     async removeOption(id: number): Promise<boolean> {
-        const existing = await prisma.orm.public.Service_addon_options.where({ id }).first();
+        const existing = await prisma.orm.Service_addon_options.where({ id }).first();
         if (!existing) return false;
-        await prisma.orm.public.Service_addon_options.where({ id }).delete();
+        await prisma.orm.Service_addon_options.where({ id }).delete();
         return true;
     }
 
     async listTargetGroupIds(targetType: addonTargetType, targetId: number): Promise<number[]> {
         if (targetType === "service") {
-            const rows = await prisma.orm.public.Laundry_service_addon_groups
+            const rows = await prisma.orm.Laundry_service_addon_groups
                 .where({ service_id: targetId })
                 .all();
             return rows.map((row) => row.group_id).sort((a, b) => a - b);
         }
-        const rows = await prisma.orm.public.Product_addon_groups
+        const rows = await prisma.orm.Product_addon_groups
             .where({ product_id: targetId })
             .all();
         return rows.map((row) => row.group_id).sort((a, b) => a - b);
@@ -110,22 +110,22 @@ export class pgAddonRepository implements addonRepository {
     async setTargetGroups(targetType: addonTargetType, targetId: number, groupIds: number[]): Promise<void> {
         await prisma.transaction(async (tx) => {
             if (targetType === "service") {
-                await tx.orm.public.Laundry_service_addon_groups
+                await tx.orm.Laundry_service_addon_groups
                     .where({ service_id: targetId })
                     .deleteAll();
                 for (const groupId of groupIds) {
-                    await tx.orm.public.Laundry_service_addon_groups.create({
+                    await tx.orm.Laundry_service_addon_groups.create({
                         service_id: targetId,
                         group_id: groupId,
                     });
                 }
                 return;
             }
-            await tx.orm.public.Product_addon_groups
+            await tx.orm.Product_addon_groups
                 .where({ product_id: targetId })
                 .deleteAll();
             for (const groupId of groupIds) {
-                await tx.orm.public.Product_addon_groups.create({
+                await tx.orm.Product_addon_groups.create({
                     product_id: targetId,
                     group_id: groupId,
                 });

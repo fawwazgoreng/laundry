@@ -62,22 +62,14 @@ const withTimeout = async <T>(work: Promise<T>, ms: number): Promise<T> => {
     }
 };
 
-const healthPlan = prisma.raw.sql`SELECT 1 AS result`
-    .returnsRow({ result: "pg/int4@1" })
-    .build();
-
-const runHealthQuery = async () => await prisma.runtime().query(healthPlan);
+const runHealthQuery = async () => {
+    await prisma.query(prisma.raw.sql`SELECT 1 AS ok`.returnsRow({ ok: "mysql/int@1" }).build());
+};
 
 app.get("/health", async (c) => {
     try {
-        const [row] = await withTimeout(runHealthQuery(), HEALTH_TIMEOUT_MS);
-
-        if (row?.result === 1) {
-            return c.json({ success: true, status: "ok", database: "up" });
-        }
-
-        logger.error("health check failed", { message: "Database response invalid", row });
-        return c.json({ success: false, status: "degraded", database: "down" }, 503);
+        await withTimeout(runHealthQuery(), HEALTH_TIMEOUT_MS);
+        return c.json({ success: true, status: "ok", database: "up" });
     } catch (error) {
         logger.error("health check failed", describeError(error));
         return c.json({ success: false, status: "degraded", database: "down" }, 503);

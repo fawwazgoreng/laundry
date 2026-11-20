@@ -6,18 +6,12 @@ import type {
     serviceUpdateType,
 } from "../../domain/types/serviceType";
 import { prisma } from "../prisma/prisma";
-import { numeric, varchar } from "../prisma/scalars";
+import { flag, isFlag, numeric, varchar } from "../prisma/scalars";
+import type { Models } from "../database/generated/contract";
 import { toAddonGroup, type AddonGroupRow } from "./addonRowMapper";
 import { money } from "../../lib/money";
 
-type ServiceRow = {
-    id: number
-    name: string
-    unit: string
-    price_per_unit: string
-    description: string
-    estimated_duration_hours: number
-    is_active: boolean
+type ServiceRow = Pick<Models.Laundry_services, "id" | "name" | "unit" | "price_per_unit" | "description" | "estimated_duration_hours" | "is_active"> & {
     addonGroups: Array<{ group: AddonGroupRow | null }>;
 };
 
@@ -29,7 +23,7 @@ function toServiceType(row: ServiceRow, activeOnly = false): serviceType {
         price_per_unit: money(row.price_per_unit),
         description: row.description,
         estimated_duration_hours: row.estimated_duration_hours,
-        is_active: row.is_active,
+        is_active: isFlag(row.is_active),
         addon_groups: row.addonGroups
             .map((link) => (link.group ? toAddonGroup(link.group, activeOnly) : null))
             .filter((group): group is serviceAddonGroupType => group !== null)
@@ -37,7 +31,7 @@ function toServiceType(row: ServiceRow, activeOnly = false): serviceType {
 }
 
 const serviceQuery = () =>
-    prisma.orm.public.Laundry_services
+    prisma.orm.Laundry_services
         .include("addonGroups", (link) =>
             link.include("group", (group) => group.include("options")),
         );
@@ -45,7 +39,7 @@ const serviceQuery = () =>
 export class pgServiceRepository implements serviceRepository {
     async list(activeOnly = true): Promise<serviceType[]> {
         const rows = await serviceQuery()
-            .where(activeOnly ? { is_active: true } : {})
+            .where(activeOnly ? { is_active: 1 } : {})
             .orderBy((s) => s.id.asc())
             .all();
         return rows.map((row) => toServiceType(row, activeOnly));
@@ -57,13 +51,13 @@ export class pgServiceRepository implements serviceRepository {
     }
 
     async create(data: serviceCreateType): Promise<serviceType> {
-        const row = await prisma.orm.public.Laundry_services.create({
+        const row = await prisma.orm.Laundry_services.create({
             name: varchar(data.name),
             unit: varchar(data.unit),
             price_per_unit: numeric(data.price_per_unit),
             description: data.description,
             estimated_duration_hours: data.estimated_duration_hours,
-            is_active: data.is_active,
+            is_active: flag(data.is_active),
         });
         return {
             ...toServiceType({ ...row, addonGroups: [] }),
@@ -72,24 +66,24 @@ export class pgServiceRepository implements serviceRepository {
     }
 
     async update(id: number, data: serviceUpdateType): Promise<serviceType | null> {
-        const existing = await prisma.orm.public.Laundry_services.where({ id }).first();
+        const existing = await prisma.orm.Laundry_services.where({ id }).first();
         if (!existing) return null;
-        await prisma.orm.public.Laundry_services.where({ id }).update({
+        await prisma.orm.Laundry_services.where({ id }).update({
             ...(data.name !== undefined ? { name: varchar(data.name) } : {}),
             ...(data.unit !== undefined ? { unit: varchar(data.unit) } : {}),
             ...(data.price_per_unit !== undefined ? { price_per_unit: numeric(data.price_per_unit) } : {}),
             ...(data.description !== undefined ? { description: data.description } : {}),
             ...(data.estimated_duration_hours !== undefined ? { estimated_duration_hours: data.estimated_duration_hours } : {}),
-            ...(data.is_active !== undefined ? { is_active: data.is_active } : {}),
+            ...(data.is_active !== undefined ? { is_active: flag(data.is_active) } : {}),
         });
         const row = await serviceQuery().where({ id }).first();
         return row ? toServiceType(row, false) : null;
     }
 
     async remove(id: number): Promise<boolean> {
-        const existing = await prisma.orm.public.Laundry_services.where({ id }).first();
+        const existing = await prisma.orm.Laundry_services.where({ id }).first();
         if (!existing) return false;
-        await prisma.orm.public.Laundry_services.where({ id }).update({ is_active: false });
+        await prisma.orm.Laundry_services.where({ id }).update({ is_active: 0 });
         return true;
     }
 }

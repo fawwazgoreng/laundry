@@ -1,5 +1,6 @@
 import { prisma } from "../prisma/prisma";
-import { fromInstant, instant, numeric, varchar } from "../prisma/scalars";
+import { fromJsonText, jsonText, numeric, varchar } from "../prisma/scalars";
+import type { Models } from "../database/generated/contract";
 import Decimal from "decimal.js";
 import { money } from "../../lib/money";
 import { AppError } from "../../helper/errorHandling/appError";
@@ -20,16 +21,10 @@ import type {
 import type { refundSummaryType, refundStatus } from "../../domain/types/refundType";
 import type { addonPriceMode } from "../../domain/types/serviceType";
 
-type ServiceAddonRow = {
-    id: string
-    group_code: string
-    group_name: string
-    option_name: string
-    price: string
-    price_mode: string
-    qty: string
-    subtotal: string
-};
+type ServiceAddonRow = Pick<
+    Models.Service_order_item_addons,
+    "id" | "group_code" | "group_name" | "option_name" | "price" | "price_mode" | "qty" | "subtotal"
+>;
 
 type ServiceItemRow = {
     id: string
@@ -48,16 +43,10 @@ type ServiceItemRow = {
     addons: ServiceAddonRow[]
 };
 
-type ProductAddonRow = {
-    id: string
-    group_code: string
-    group_name: string
-    option_name: string
-    price: string
-    price_mode: string
-    qty: string
-    subtotal: string
-};
+type ProductAddonRow = Pick<
+    Models.Product_order_item_addons,
+    "id" | "group_code" | "group_name" | "option_name" | "price" | "price_mode" | "qty" | "subtotal"
+>;
 
 type ProductItemRow = {
     id: string
@@ -74,35 +63,14 @@ type ProductItemRow = {
     addons: ProductAddonRow[]
 };
 
-type RefundRow = {
-    id: string
-    status: string
-    amount: string
-    reason: string
-    gateway_ref: string | null
-    requested_at: Temporal.Instant
-    processed_at: Temporal.Instant | null
-};
+type RefundRow = Pick<Models.Refund_requests, "id" | "status" | "amount" | "reason" | "gateway_ref" | "requested_at" | "processed_at">;
 
-type PaymentRow = {
-    id: string
-    transaction_id: string
-    payment_type: string
-    gross_amount: string
-    status: string
-    va_number: string | null
-    paid_at: Temporal.Instant | null
-    created_at: Temporal.Instant
-    raw_response: unknown
-};
+type PaymentRow = Pick<
+    Models.Payments,
+    "id" | "transaction_id" | "payment_type" | "gross_amount" | "status" | "va_number" | "paid_at" | "created_at" | "raw_response"
+>;
 
-type TrackingRow = {
-    id: string
-    status: string
-    notes: string
-    estimated_completion_time: Temporal.Instant
-    created_at: Temporal.Instant
-};
+type TrackingRow = Pick<Models.Order_trackings, "id" | "status" | "notes" | "estimated_completion_time" | "created_at">;
 
 type OrderDetailRow = {
     id: string
@@ -118,8 +86,8 @@ type OrderDetailRow = {
     latitude: string | null
     longitude: string | null
     notes: string | null
-    created_at: Temporal.Instant
-    updated_at: Temporal.Instant
+    created_at: Date
+    updated_at: Date
     user: {
         id: string
         username: string
@@ -152,7 +120,7 @@ type OrderListRow = {
     status: string
     total_amount: string
     payment_method: string
-    created_at: Temporal.Instant
+    created_at: Date
     user: {
         id: string
         username: string
@@ -237,9 +205,9 @@ function toPayment(row: PaymentRow | undefined): paymentSummaryType | null {
         gross_amount: money(row.gross_amount),
         status: row.status,
         va_number: row.va_number,
-        paid_at: row.paid_at ? fromInstant(row.paid_at).toISOString() : null,
-        created_at: fromInstant(row.created_at).toISOString(),
-        raw_response: row.raw_response as Record<string, unknown> | null,
+        paid_at: row.paid_at ? row.paid_at.toISOString() : null,
+        created_at: row.created_at.toISOString(),
+        raw_response: fromJsonText(row.raw_response),
     };
 }
 
@@ -248,8 +216,8 @@ function toTracking(row: TrackingRow): orderTrackingType {
         id: row.id,
         status: row.status as orderStatus,
         notes: row.notes,
-        estimated_completion_time: fromInstant(row.estimated_completion_time).toISOString(),
-        created_at: fromInstant(row.created_at).toISOString(),
+        estimated_completion_time: row.estimated_completion_time.toISOString(),
+        created_at: row.created_at.toISOString(),
     };
 }
 
@@ -261,8 +229,8 @@ function toRefundSummary(row: RefundRow | undefined): refundSummaryType | null {
         amount: money(row.amount),
         reason: row.reason,
         gateway_ref: row.gateway_ref,
-        requested_at: fromInstant(row.requested_at).toISOString(),
-        processed_at: row.processed_at ? fromInstant(row.processed_at).toISOString() : null,
+        requested_at: row.requested_at.toISOString(),
+        processed_at: row.processed_at ? row.processed_at.toISOString() : null,
     };
 }
 
@@ -287,8 +255,8 @@ function toOrderDetail(row: OrderDetailRow): orderDetailType {
         latitude: row.latitude === null ? null : Number(row.latitude),
         longitude: row.longitude === null ? null : Number(row.longitude),
         notes: row.notes,
-        created_at: fromInstant(row.created_at).toISOString(),
-        updated_at: fromInstant(row.updated_at).toISOString(),
+        created_at: row.created_at.toISOString(),
+        updated_at: row.updated_at.toISOString(),
         customer: {
             id: user.id,
             username: user.username,
@@ -313,13 +281,13 @@ function toOrderDetail(row: OrderDetailRow): orderDetailType {
         refund: toRefundSummary(row.refundRequests[0]),
         trackings: row.orderTrackings
             .slice()
-            .sort((a, b) => a.created_at.epochMilliseconds - b.created_at.epochMilliseconds)
+            .sort((a, b) => a.created_at.getTime() - b.created_at.getTime())
             .map(toTracking),
     };
 }
 
 const orderDetailQuery = () =>
-    prisma.orm.public.Orders
+    prisma.orm.Orders
         .include("user", (u) => u.select("id", "username", "phone", "email"))
         .include("address", (a) => a.select("id", "label", "address_text", "latitude", "longitude"))
         .include("outlet", (o) => o.select("id", "name", "latitude", "longitude"))
@@ -330,7 +298,7 @@ const orderDetailQuery = () =>
         .include("orderTrackings");
 
 const orderListQuery = () =>
-    prisma.orm.public.Orders
+    prisma.orm.Orders
         .include("user", (u) => u.select("id", "username", "phone"))
         .include("payments", (p) => p.select("status").orderBy((r) => r.created_at.desc()).limit(1))
         .include("serviceOrderItems", (s) => s.include("service"))
@@ -340,7 +308,7 @@ const orderListQuery = () =>
 export class pgOrderRepository implements orderRepository {
     async create(input: orderNewRecordType): Promise<orderDetailType> {
         await prisma.transaction(async (tx) => {
-            await tx.orm.public.Orders.create({
+            await tx.orm.Orders.create({
                 order_id: input.order_id,
                 user_id: input.user_id,
                 outlet_id: input.outlet_id,
@@ -363,7 +331,7 @@ export class pgOrderRepository implements orderRepository {
             });
 
             for (const s of input.services) {
-                const item = await tx.orm.public.Service_order_item.create({
+                const item = await tx.orm.Service_order_item.create({
                     order_id: input.order_id,
                     laundry_service_id: s.laundry_service_id,
                     qty: numeric<6, 2>(s.qty),
@@ -373,7 +341,7 @@ export class pgOrderRepository implements orderRepository {
                     notes: s.notes ?? "",
                 });
                 for (const addon of s.addons) {
-                    await tx.orm.public.Service_order_item_addons.create({
+                    await tx.orm.Service_order_item_addons.create({
                         service_order_item_id: item.id,
                         addon_option_id: addon.addon_option_id,
                         group_code: varchar<30>(addon.group_code),
@@ -388,20 +356,20 @@ export class pgOrderRepository implements orderRepository {
             }
 
             for (const p of input.products) {
-                const product = await tx.orm.public.Products.where({ id: p.product_id }).forUpdate().first();
+                const product = await tx.orm.Products.where({ id: p.product_id }).first();
                 if (!product) throw AppError.conflict(`Produk id ${p.product_id} tidak ditemukan`);
                 if (product.stock < p.qty) throw AppError.conflict(`Stok ${product.name} tidak mencukupi`);
-                await tx.orm.public.Products.where({ id: p.product_id }).update({
+                await tx.orm.Products.where({ id: p.product_id }).update({
                     stock: product.stock - p.qty,
                 });
-                const productItem = await tx.orm.public.Product_order_item.create({
+                const productItem = await tx.orm.Product_order_item.create({
                     order_id: input.order_id,
                     product_id: p.product_id,
                     qty: p.qty,
                     subtotal: numeric<12, 2>(p.subtotal),
                 });
                 for (const addon of p.addons) {
-                    await tx.orm.public.Product_order_item_addons.create({
+                    await tx.orm.Product_order_item_addons.create({
                         product_order_item_id: productItem.id,
                         addon_option_id: addon.addon_option_id,
                         group_code: varchar<30>(addon.group_code),
@@ -415,19 +383,19 @@ export class pgOrderRepository implements orderRepository {
                 }
             }
 
-            await tx.orm.public.Payments.create({
+            await tx.orm.Payments.create({
                 order_id: input.order_id,
                 transaction_id: input.payment.transaction_id ?? `TRX-PAY-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
                 payment_type: varchar<20>(input.payment.payment_type),
                 gross_amount: numeric<12, 2>(input.payment.gross_amount),
                 status: varchar<30>(input.payment.status),
                 va_number: input.payment.va_number ?? null,
-                paid_at: input.payment.paid_at ? instant(new Date(input.payment.paid_at)) : null,
-                raw_response: (input.payment.raw_response ?? null) as any,
+                paid_at: input.payment.paid_at ? new Date(input.payment.paid_at) : null,
+                raw_response: jsonText(input.payment.raw_response ?? null),
             });
 
             if (input.cashflow) {
-                await tx.orm.public.Cash_flow.create({
+                await tx.orm.Cash_flow.create({
                     order_id: input.order_id,
                     type: varchar<20>(input.cashflow.type),
                     category: varchar<40>(input.cashflow.category),
@@ -479,7 +447,7 @@ export class pgOrderRepository implements orderRepository {
                 total_amount: money(row.total_amount),
                 payment_method: row.payment_method as orderListItemType["payment_method"],
                 payment_status: paymentStatus,
-                created_at: fromInstant(row.created_at).toISOString(),
+                created_at: row.created_at.toISOString(),
                 customer_id: user.id,
                 customer_name: user.username,
                 customer_phone: user.phone,
@@ -499,11 +467,17 @@ export class pgOrderRepository implements orderRepository {
             }
             return fns.and(...conditions);
         });
-        const [rows, countAgg] = await Promise.all([
+        const [rows, countRows] = await Promise.all([
             base.orderBy((o) => o.created_at.desc()).offset((page - 1) * perPage).limit(perPage).all(),
-            base.aggregate((agg) => ({ count: agg.count() })),
+            prisma.query(
+                prisma.raw.sql`SELECT COUNT(*) AS n FROM \`Orders\`
+                    WHERE \`user_id\` = ${userId}
+                      AND (${filters.status && filters.status !== "all" ? 0 : 1} = 1 OR \`status\` = ${filters.status ?? ""})`
+                    .returnsRow({ n: "mysql/bigint@1" })
+                    .build(),
+            ),
         ]);
-        return { data: await this.toListItems(rows), count: countAgg.count };
+        return { data: await this.toListItems(rows), count: Number(countRows[0]?.n ?? 0n) };
     }
 
     async listAll(filters: orderListFilters = {}): Promise<{ data: orderListItemType[]; count: number }> {
@@ -516,7 +490,7 @@ export class pgOrderRepository implements orderRepository {
             }
             if (filters.customer) {
                 const term = filters.customer;
-                const byUsername = o.user.some((u) => u.username.ilike(`%${term}%`));
+                const byUsername = o.user.some((u) => u.username.like(`%${term}%`));
                 const looksLikeId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(term);
                 conditions.push(
                     looksLikeId ? fns.or(byUsername, o.user.some((u) => u.id.eq(term))) : byUsername,
@@ -525,37 +499,63 @@ export class pgOrderRepository implements orderRepository {
             if (filters.search) {
                 const term = filters.search;
                 conditions.push(fns.or(
-                    o.order_id.ilike(`%${term}%`),
-                    o.user.some((u) => u.username.ilike(`%${term}%`)),
+                    o.order_id.like(`%${term}%`),
+                    o.user.some((u) => u.username.like(`%${term}%`)),
                     o.user.some((u) => u.phone.like(`%${term}%`)),
                 ));
             }
             if (filters.service) {
                 const term = filters.service;
                 conditions.push(
-                    o.serviceOrderItems.some((s) => s.service.some((svc) => svc.name.ilike(`%${term}%`))),
+                    o.serviceOrderItems.some((s) => s.service.some((svc) => svc.name.like(`%${term}%`))),
                 );
             }
             return fns.and(...(conditions.length > 0 ? conditions : [o.id.isNotNull()]));
         });
-        const [rows, countAgg] = await Promise.all([
+        const statusFilter = filters.status && filters.status !== "all" ? filters.status : null;
+        const customerTerm = filters.customer ?? null;
+        const searchTerm = filters.search ?? null;
+        const serviceTerm = filters.service ?? null;
+        const customerIsId = customerTerm !== null
+            && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(customerTerm);
+
+        const [rows, countRows] = await Promise.all([
             base.orderBy((o) => o.created_at.desc()).offset((page - 1) * perPage).limit(perPage).all(),
-            base.aggregate((agg) => ({ count: agg.count() })),
+            prisma.query(
+                prisma.raw.sql`SELECT COUNT(*) AS n FROM \`Orders\` o
+                    WHERE (${statusFilter === null ? 1 : 0} = 1 OR o.\`status\` = ${statusFilter ?? ""})
+                      AND (${customerTerm === null ? 1 : 0} = 1 OR EXISTS (
+                          SELECT 1 FROM \`User\` u
+                          WHERE u.\`id\` = o.\`user_id\`
+                            AND (u.\`username\` LIKE ${`%${customerTerm ?? ""}%`}
+                              OR (${customerIsId ? 1 : 0} = 1 AND u.\`id\` = ${customerTerm ?? ""}))))
+                      AND (${searchTerm === null ? 1 : 0} = 1 OR o.\`order_id\` LIKE ${`%${searchTerm ?? ""}%`}
+                          OR EXISTS (
+                              SELECT 1 FROM \`User\` u
+                              WHERE u.\`id\` = o.\`user_id\`
+                                AND (u.\`username\` LIKE ${`%${searchTerm ?? ""}%`} OR u.\`phone\` LIKE ${`%${searchTerm ?? ""}%`})))
+                      AND (${serviceTerm === null ? 1 : 0} = 1 OR EXISTS (
+                          SELECT 1 FROM \`Service_order_item\` si
+                          JOIN \`Laundry_services\` ls ON ls.\`id\` = si.\`laundry_service_id\`
+                          WHERE si.\`order_id\` = o.\`order_id\` AND ls.\`name\` LIKE ${`%${serviceTerm ?? ""}%`}))`
+                    .returnsRow({ n: "mysql/bigint@1" })
+                    .build(),
+            ),
         ]);
-        return { data: await this.toListItems(rows), count: countAgg.count };
+        return { data: await this.toListItems(rows), count: Number(countRows[0]?.n ?? 0n) };
     }
 
     async updateStatus(orderId: string, status: orderStatus): Promise<void> {
         await prisma.transaction(async (tx) => {
-            await tx.orm.public.Orders.where({ order_id: orderId }).update({
+            await tx.orm.Orders.where({ order_id: orderId }).update({
                 status: varchar<20>(status),
             });
             if (status === "DIBATALKAN") {
-                const items = await tx.orm.public.Product_order_item.where({ order_id: orderId }).all();
+                const items = await tx.orm.Product_order_item.where({ order_id: orderId }).all();
                 for (const item of items) {
-                    const product = await tx.orm.public.Products.where({ id: item.product_id }).forUpdate().first();
+                    const product = await tx.orm.Products.where({ id: item.product_id }).first();
                     if (product) {
-                        await tx.orm.public.Products.where({ id: item.product_id }).update({
+                        await tx.orm.Products.where({ id: item.product_id }).update({
                             stock: product.stock + item.qty,
                         });
                     }
@@ -565,7 +565,7 @@ export class pgOrderRepository implements orderRepository {
     }
 
     async addTracking(orderId: string, status: orderStatus, notes: string): Promise<void> {
-        await prisma.orm.public.Order_trackings.create({
+        await prisma.orm.Order_trackings.create({
             order_id: orderId,
             status: varchar<20>(status),
             notes,
@@ -575,35 +575,37 @@ export class pgOrderRepository implements orderRepository {
     async delete(orderId: string): Promise<void> {
         await prisma.transaction(async (tx) => {
             // Riwayat kas tetap disimpan, hanya tautan ke order yang dilepas.
-            await tx.orm.public.Cash_flow.where({ order_id: orderId }).updateAll({ order_id: null });
-            await tx.orm.public.Refund_requests.where({ order_id: orderId }).deleteAll();
-            await tx.orm.public.Order_trackings.where({ order_id: orderId }).deleteAll();
-            await tx.orm.public.Payments.where({ order_id: orderId }).deleteAll();
-            await tx.orm.public.Product_order_item.where({ order_id: orderId }).deleteAll();
-            const serviceItems = await tx.orm.public.Service_order_item.where({ order_id: orderId }).all();
+            await tx.orm.Cash_flow.where({ order_id: orderId }).updateAll({ order_id: null });
+            await tx.orm.Refund_requests.where({ order_id: orderId }).deleteAll();
+            await tx.orm.Order_trackings.where({ order_id: orderId }).deleteAll();
+            await tx.orm.Payments.where({ order_id: orderId }).deleteAll();
+            await tx.orm.Product_order_item.where({ order_id: orderId }).deleteAll();
+            const serviceItems = await tx.orm.Service_order_item.where({ order_id: orderId }).all();
             for (const item of serviceItems) {
-                await tx.orm.public.Service_order_item_addons.where({ service_order_item_id: item.id }).deleteAll();
+                await tx.orm.Service_order_item_addons.where({ service_order_item_id: item.id }).deleteAll();
             }
-            await tx.orm.public.Service_order_item.where({ order_id: orderId }).deleteAll();
-            await tx.orm.public.Orders.where({ order_id: orderId }).deleteAll();
+            await tx.orm.Service_order_item.where({ order_id: orderId }).deleteAll();
+            await tx.orm.Orders.where({ order_id: orderId }).deleteAll();
         });
     }
 
     async countByDatePrefix(prefix: string): Promise<number> {
-        const agg = await prisma.orm.public.Orders
-            .where((o) => o.order_id.like(`${prefix}%`))
-            .aggregate((a) => ({ count: a.count() }));
-        return agg.count;
+        const [row] = await prisma.query(
+            prisma.raw.sql`SELECT COUNT(*) AS n FROM \`Orders\` WHERE \`order_id\` LIKE ${`${prefix}%`}`
+                .returnsRow({ n: "mysql/bigint@1" })
+                .build(),
+        );
+        return Number(row?.n ?? 0n);
     }
 
     async countByStatusUser(userId: string, status?: string): Promise<number> {
-        const agg = await prisma.orm.public.Orders
-            .where((o, { fns }) => {
-                const conditions = [o.user_id.eq(userId)];
-                if (status) conditions.push(o.status.eq(varchar<20>(status)));
-                return fns.and(...conditions);
-            })
-            .aggregate((a) => ({ count: a.count() }));
-        return agg.count;
+        const [row] = await prisma.query(
+            prisma.raw.sql`SELECT COUNT(*) AS n FROM \`Orders\`
+                WHERE \`user_id\` = ${userId}
+                  AND (${status ? 0 : 1} = 1 OR \`status\` = ${status ?? ""})`
+                .returnsRow({ n: "mysql/bigint@1" })
+                .build(),
+        );
+        return Number(row?.n ?? 0n);
     }
 }
