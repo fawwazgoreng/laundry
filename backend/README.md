@@ -1,6 +1,6 @@
 # Fadarosi Backend
 
-Hono HTTP API for the Fadarosi laundry business system. It uses Bun, TypeScript, MySQL 8.4, and Prisma 8 RC in contract-first mode. The architecture is clean/hexagonal in style with a deliberate CQRS split for orders.
+Hono HTTP API for the Fadarosi laundry business system. It uses Bun, TypeScript, Postgresql, and Prisma 8 RC in contract-first mode. The architecture is clean/hexagonal in style with a deliberate CQRS split for orders.
 
 The full HTTP contract is in [`../docs/api.yml`](../docs/api.yml).
 
@@ -10,7 +10,7 @@ The full HTTP contract is in [`../docs/api.yml`](../docs/api.yml).
 | ---       | ---         |
 | Runtime   | Bun / nodeJS|
 | HTTP      | Hono 4      |
-| Database  | MySQL       |
+| Database  | Postgresql  |
 | ORM       | Prisma      |
 | Validation| Zod 4       |
 | Payments  | Midtrans    |
@@ -90,7 +90,7 @@ Domain code contains no SQL. Indonesian user-facing error messages are normal, a
 | `src/helper/http/` | Query/param parsing | `parseIdParam`, `parsePage`, and `parsePerPage` throw validation errors for bad input; `perPage` is capped at 100. |
 | `src/helper/logging/` | Structured logs | JSON lines to stdout/stderr and a daily file with retention pruning. |
 | `src/lib/money.ts` | Money representation | Branded 2-decimal strings with `Decimal` and `ROUND_HALF_UP`; API entry fields use `moneyInputSchema`. |
-| `src/lib/distanceCalc.ts` | Haversine distance | Rounds to 2 decimals for MySQL `NUMERIC(6,2)` and enforces outlet coverage. |
+| `src/lib/distanceCalc.ts` | Haversine distance | Rounds to 2 decimals for Postgresql `NUMERIC(6,2)` and enforces outlet coverage. |
 | `src/types/temporal.d.ts` | Ambient Temporal types | Required by `temporal.UpdatedAt` in the Prisma contract. |
 
 ### Infrastructure layer
