@@ -1,0 +1,2976 @@
+openapi: 3.1.0
+info:
+  title: Fadarosi API
+  version: 1.0.0
+  description: |
+    HTTP API for the Fadarosi laundry business system.
+
+    Most endpoints return `{ success, message, data, meta? }` on success and
+    `{ success, status, message, code, path, requestId, details? }` on error.
+    The Midtrans webhook and a few upload errors intentionally differ.
+
+    All `/api/*` requests are rate limited to 300 requests per 15 minutes.
+    Register, login, and refresh are additionally limited to 10 requests per 15 minutes.
+    `/health` and `/uploads/*` are outside the `/api/*` rate limit.
+  contact:
+    name: Fadarosi
+servers:
+  - url: http://localhost:3000
+    description: Local backend
+security: []
+tags:
+  - name: System
+  - name: Users
+  - name: Addresses
+  - name: Outlets
+  - name: Services
+  - name: Addons
+  - name: Products
+  - name: Orders
+  - name: Payments
+  - name: Refunds
+  - name: Admin
+  - name: Midtrans
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Database-backed health check
+      operationId: getHealth
+      responses:
+        '200':
+          description: Service and database are healthy.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, status, database]
+                properties:
+                  success:
+                    type: boolean
+                    const: true
+                  status:
+                    type: string
+                    const: ok
+                  database:
+                    type: string
+                    const: up
+        '503':
+          description: Database query failed or timed out after 3 seconds.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [success, status, database]
+                properties:
+                  success:
+                    type: boolean
+                    const: false
+                  status:
+                    type: string
+                    const: degraded
+                  database:
+                    type: string
+                    const: down
+
+  /uploads/{path}:
+    get:
+      tags: [System]
+      summary: Serve uploaded static files
+      description: Files are served from the backend `public/` directory. No API envelope is used.
+      operationId: getUpload
+      parameters:
+        - $ref: '#/components/parameters/UploadPathParam'
+      responses:
+        '200':
+          description: File content.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '206':
+          description: Partial content for a range request.
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/users/register:
+    post:
+      tags: [Users]
+      summary: Register a new user
+      description: Public endpoint with the stricter 10/15m auth rate limit.
+      operationId: registerUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/UserCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/users/login:
+    post:
+      tags: [Users]
+      summary: Log in and issue tokens
+      description: Public endpoint with the stricter 10/15m auth rate limit.
+      operationId: loginUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Login successful.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserAuth'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/users/refresh:
+    post:
+      tags: [Users]
+      summary: Rotate access and refresh tokens
+      description: Public endpoint with the stricter 10/15m auth rate limit.
+      operationId: refreshTokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: Tokens refreshed.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/UserAuth'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/users/logout:
+    post:
+      tags: [Users]
+      summary: Log out and revoke current tokens
+      operationId: logoutUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/NullSuccess'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/users/me:
+    get:
+      tags: [Users]
+      summary: Get authenticated profile
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/UserSuccess'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/users/profile:
+    put:
+      tags: [Users]
+      summary: Update own username and phone
+      operationId: updateProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/UserSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/addresses:
+    get:
+      tags: [Addresses]
+      summary: List authenticated user's addresses
+      operationId: listAddresses
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Daftar alamat.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Address'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Addresses]
+      summary: Create an address
+      description: The first address for a user becomes primary.
+      operationId: createAddress
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressCreateRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/AddressCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/addresses/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    get:
+      tags: [Addresses]
+      summary: Get one owned address
+      operationId: getAddress
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/AddressSuccess'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      tags: [Addresses]
+      summary: Update an owned address
+      operationId: updateAddress
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddressUpdateRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/AddressSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Addresses]
+      summary: Delete an owned address
+      operationId: deleteAddress
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/addresses/{id}/primary:
+    patch:
+      tags: [Addresses]
+      summary: Set an owned address as primary
+      operationId: setPrimaryAddress
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/AddressSuccess'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/outlets:
+    get:
+      tags: [Outlets]
+      summary: List outlets
+      operationId: listOutlets
+      responses:
+        '200':
+          description: Daftar outlet.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Outlet'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/outlets/default:
+    get:
+      tags: [Outlets]
+      summary: Get the default/first outlet
+      operationId: getDefaultOutlet
+      responses:
+        '200':
+          $ref: '#/components/responses/OutletSuccess'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/outlets/delivery-quote:
+    get:
+      tags: [Outlets]
+      summary: Calculate a delivery quote
+      description: Distance and fee are computed from the farthest outlet.
+      operationId: getDeliveryQuote
+      parameters:
+        - $ref: '#/components/parameters/LatitudeQuery'
+        - $ref: '#/components/parameters/LongitudeQuery'
+      responses:
+        '200':
+          description: Estimasi ongkir.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/DeliveryQuote'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/outlets/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    get:
+      tags: [Outlets]
+      summary: Get outlet detail
+      operationId: getOutlet
+      responses:
+        '200':
+          $ref: '#/components/responses/OutletSuccess'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      tags: [Outlets]
+      summary: Update an outlet
+      description: Admin only. The current schema requires latitude and longitude even when updating other fields.
+      operationId: updateOutlet
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OutletUpdateRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OutletSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/services:
+    get:
+      tags: [Services]
+      summary: List laundry services
+      operationId: listServices
+      parameters:
+        - $ref: '#/components/parameters/AllParam'
+      responses:
+        '200':
+          description: Daftar layanan.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Service'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Services]
+      summary: Create a service
+      operationId: createService
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceCreateRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/ServiceCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/services/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    get:
+      tags: [Services]
+      summary: Get service detail
+      operationId: getService
+      responses:
+        '200':
+          $ref: '#/components/responses/ServiceSuccess'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      tags: [Services]
+      summary: Update a service
+      operationId: updateService
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceUpdateRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/ServiceSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Services]
+      summary: Delete/deactivate a service
+      operationId: deleteService
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/addons/groups:
+    get:
+      tags: [Addons]
+      summary: List addon groups
+      operationId: listAddonGroups
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/AllParam'
+      responses:
+        '200':
+          description: Daftar grup add-on.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AddonGroup'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Addons]
+      summary: Create an addon group
+      operationId: createAddonGroup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddonGroupCreateRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/AddonGroupCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/addons/groups/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    put:
+      tags: [Addons]
+      summary: Update an addon group
+      operationId: updateAddonGroup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddonGroupUpdateRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/AddonGroupSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Addons]
+      summary: Delete/deactivate an addon group
+      operationId: deleteAddonGroup
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/addons/groups/{groupId}/options:
+    post:
+      tags: [Addons]
+      summary: Create an addon option in a group
+      operationId: createAddonOption
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/GroupIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddonOptionCreateRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/AddonGroupCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/addons/options/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    put:
+      tags: [Addons]
+      summary: Update an addon option
+      operationId: updateAddonOption
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddonOptionUpdateRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/AddonGroupSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Addons]
+      summary: Delete/deactivate an addon option
+      operationId: deleteAddonOption
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/addons/targets/{targetType}/{targetId}:
+    parameters:
+      - $ref: '#/components/parameters/TargetTypeParam'
+      - $ref: '#/components/parameters/TargetIdParam'
+    get:
+      tags: [Addons]
+      summary: Get addon group IDs attached to a target
+      operationId: getAddonTargets
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Daftar ID grup add-on.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      tags: [Addons]
+      summary: Replace addon groups attached to a target
+      operationId: setAddonTargets
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddonTargetsRequest'
+      responses:
+        '200':
+          description: Daftar ID grup add-on setelah diperbarui.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/products:
+    get:
+      tags: [Products]
+      summary: List products with filters and pagination
+      operationId: listProducts
+      parameters:
+        - $ref: '#/components/parameters/CategoryParam'
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/SortParam'
+        - $ref: '#/components/parameters/PageParam'
+        - $ref: '#/components/parameters/PerPageParam'
+        - $ref: '#/components/parameters/InStockOnlyParam'
+      responses:
+        '200':
+          description: Daftar produk.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Product'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Products]
+      summary: Create a product
+      operationId: createProduct
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreateRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/ProductCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/products/{id}:
+    parameters:
+      - $ref: '#/components/parameters/IdParam'
+    get:
+      tags: [Products]
+      summary: Get product detail
+      operationId: getProduct
+      responses:
+        '200':
+          $ref: '#/components/responses/ProductSuccess'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      tags: [Products]
+      summary: Update a product
+      operationId: updateProduct
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdateRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProductSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Products]
+      summary: Delete/deactivate a product
+      operationId: deleteProduct
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          $ref: '#/components/responses/NoContent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/products/{id}/image:
+    post:
+      tags: [Products]
+      summary: Upload/replace a product image
+      description: Admin only. Route body limit is 3 MB; the image check allows JPG/JPEG/PNG/WEBP up to 2 MB.
+      operationId: uploadProductImage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdParam'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductImageUploadRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/ProductSuccess'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '413':
+          $ref: '#/components/responses/PayloadTooLarge'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/orders:
+    post:
+      tags: [Orders]
+      summary: Create an order
+      description: |
+        Requires at least one service or product. `outlet_id`, `distance_km`, and
+        `delivery_fee` are accepted for compatibility but recomputed by the server.
+        `bank` is required when `payment_method` is `transfer_bank`.
+      operationId: createOrder
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreateRequest'
+      responses:
+        '201':
+          description: Pesanan berhasil dibuat.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/PaymentGate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    get:
+      tags: [Orders]
+      summary: List orders
+      description: Admins see all orders; users see only their own.
+      operationId: listOrders
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SearchParam'
+        - $ref: '#/components/parameters/CustomerParam'
+        - $ref: '#/components/parameters/OrderStatusFilterParam'
+        - $ref: '#/components/parameters/ServiceParam'
+        - $ref: '#/components/parameters/PageParam'
+        - name: perPage
+          in: query
+          description: Items per page, capped at 100.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+      responses:
+        '200':
+          description: Daftar pesanan.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/OrderListItem'
+                      meta:
+                        $ref: '#/components/schemas/Meta'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/orders/{orderId}/status:
+    patch:
+      tags: [Orders]
+      summary: Update order status
+      description: Admin only. Allowed transitions are enforced by the order entity.
+      operationId: updateOrderStatus
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdParam'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderStatusUpdateRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/OrderDetailSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/orders/{orderId}/cancel:
+    patch:
+      tags: [Orders]
+      summary: Cancel an own order
+      operationId: cancelOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/OrderDetailSuccess'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/orders/{orderId}:
+    parameters:
+      - $ref: '#/components/parameters/OrderIdParam'
+    get:
+      tags: [Orders]
+      summary: Get order detail
+      operationId: getOrder
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OrderDetailSuccess'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Orders]
+      summary: Delete a completed or cancelled order
+      description: Admin or owner only. Unlike other delete endpoints this returns 200 with the deleted snapshot.
+      operationId: deleteOrder
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          $ref: '#/components/responses/OrderDetailSuccess'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/orders/{orderId}/tracking:
+    get:
+      tags: [Orders]
+      summary: Get order tracking history
+      operationId: getOrderTracking
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdParam'
+      responses:
+        '200':
+          description: Riwayat status pesanan.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/OrderTracking'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/payments:
+    get:
+      tags: [Payments]
+      summary: List authenticated user's payments
+      operationId: listPayments
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Daftar pembayaran.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/payments/confirm:
+    post:
+      tags: [Payments]
+      summary: Manually confirm a payment
+      description: Admin only. Confirming PAID creates income/sales cashflow.
+      operationId: confirmPayment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentConfirmRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/PaymentSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/payments/order/{orderId}:
+    get:
+      tags: [Payments]
+      summary: Get payment by order ID
+      operationId: getPaymentByOrder
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderIdParam'
+      responses:
+        '200':
+          $ref: '#/components/responses/PaymentSuccess'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/refunds:
+    post:
+      tags: [Refunds]
+      summary: Create a refund request
+      operationId: createRefund
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundCreateRequest'
+      responses:
+        '201':
+          $ref: '#/components/responses/RefundCreated'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/refunds/{id}:
+    patch:
+      tags: [Refunds]
+      summary: Approve or reject a refund request
+      description: Admin only. Approval marks the payment REFUNDED and creates an expense cashflow.
+      operationId: decideRefund
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Refund ID.
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefundDecisionRequest'
+      responses:
+        '200':
+          $ref: '#/components/responses/RefundSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/admin/stats:
+    get:
+      tags: [Admin]
+      summary: Get admin dashboard statistics
+      operationId: getAdminStats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Ringkasan bisnis.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/AdminStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/admin/cash-flow:
+    get:
+      tags: [Admin]
+      summary: Get cashflow summary report
+      operationId: getCashflowSummary
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Laporan arus kas.
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/SuccessEnvelope'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/CashflowSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/midtrans/notification:
+    post:
+      tags: [Midtrans]
+      summary: Midtrans payment webhook
+      description: |
+        Public endpoint. Signature is verified inside the use case. Success is plain text `OK`,
+        not the standard success envelope. This endpoint is still subject to the `/api/*` rate limit.
+      operationId: handleMidtransNotification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MidtransNotificationRequest'
+      responses:
+        '200':
+          description: Notification accepted.
+          content:
+            text/plain:
+              schema:
+                type: string
+                enum: [OK]
+        '400':
+          description: Invalid notification payload.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimpleErrorResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access token issued by `/api/users/login` or `/api/users/refresh`.
+
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      description: Numeric resource ID.
+      schema:
+        type: integer
+        minimum: 1
+    OrderIdParam:
+      name: orderId
+      in: path
+      required: true
+      description: Public order ID string.
+      schema:
+        type: string
+        minLength: 1
+    GroupIdParam:
+      name: groupId
+      in: path
+      required: true
+      description: Addon group ID.
+      schema:
+        type: integer
+        minimum: 1
+    TargetTypeParam:
+      name: targetType
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/AddonTargetType'
+    TargetIdParam:
+      name: targetId
+      in: path
+      required: true
+      schema:
+        type: integer
+        minimum: 1
+    UploadPathParam:
+      name: path
+      in: path
+      required: true
+      description: Path under `backend/public`, for example `products/abc123.png`.
+      schema:
+        type: string
+      style: simple
+      explode: false
+    AllParam:
+      name: all
+      in: query
+      description: When `true`, include inactive records.
+      schema:
+        type: string
+        enum: ['true', 'false']
+        default: 'false'
+    PageParam:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    PerPageParam:
+      name: perPage
+      in: query
+      description: Items per page, capped at 100.
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 12
+    SearchParam:
+      name: search
+      in: query
+      schema:
+        type: string
+    CustomerParam:
+      name: customer
+      in: query
+      schema:
+        type: string
+    ServiceParam:
+      name: service
+      in: query
+      schema:
+        type: string
+    SortParam:
+      name: sort
+      in: query
+      schema:
+        type: string
+        enum: [terbaru, terlama, termahal, termurah]
+        default: terbaru
+    CategoryParam:
+      name: category
+      in: query
+      schema:
+        oneOf:
+          - $ref: '#/components/schemas/ProductCategory'
+          - type: string
+            const: all
+        default: all
+    InStockOnlyParam:
+      name: inStockOnly
+      in: query
+      description: When `true`, return only products with stock.
+      schema:
+        type: string
+        enum: ['true', 'false']
+        default: 'false'
+    OrderStatusFilterParam:
+      name: status
+      in: query
+      schema:
+        oneOf:
+          - $ref: '#/components/schemas/OrderStatus'
+          - type: string
+            const: all
+        default: all
+    LatitudeQuery:
+      name: latitude
+      in: query
+      required: true
+      schema:
+        type: number
+        minimum: -90
+        maximum: 90
+    LongitudeQuery:
+      name: longitude
+      in: query
+      required: true
+      schema:
+        type: number
+        minimum: -180
+        maximum: 180
+
+  responses:
+    NoContent:
+      description: Successfully deleted; no response body.
+    BadRequest:
+      description: Malformed JSON or invalid request.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Missing, invalid, or revoked bearer token.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Authenticated but not allowed to perform the action.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    NotFound:
+      description: Resource not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Conflict:
+      description: Business rule or database conflict.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: Input failed Zod validation.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    PayloadTooLarge:
+      description: Uploaded payload is too large.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    TooManyRequests:
+      description: Rate limit exceeded.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalError:
+      description: Unexpected server error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UserSuccess:
+      description: Profile response.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+    UserCreated:
+      description: Account created.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/User'
+    NullSuccess:
+      description: "Success with `data: null`."
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    type: 'null'
+    AddressSuccess:
+      description: Address response.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Address'
+    AddressCreated:
+      description: Alamat berhasil ditambahkan.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Address'
+    OutletSuccess:
+      description: Outlet response.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Outlet'
+    ServiceSuccess:
+      description: Service response.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Service'
+    ServiceCreated:
+      description: Layanan berhasil dibuat.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Service'
+    AddonGroupSuccess:
+      description: Addon group response.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AddonGroup'
+    AddonGroupCreated:
+      description: Addon group created.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AddonGroup'
+    ProductSuccess:
+      description: Product response.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Product'
+    ProductCreated:
+      description: Produk berhasil dibuat.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Product'
+    OrderDetailSuccess:
+      description: Order response.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/OrderDetail'
+    PaymentSuccess:
+      description: Payment response.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Payment'
+    RefundSuccess:
+      description: Refund response.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Refund'
+    RefundCreated:
+      description: Pengajuan refund berhasil dibuat.
+      content:
+        application/json:
+          schema:
+            allOf:
+              - $ref: '#/components/schemas/SuccessEnvelope'
+              - type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Refund'
+
+  schemas:
+    Money:
+      type: string
+      pattern: '^\d{1,10}(\.\d{1,2})?$'
+      description: Two-decimal money string. The server normalizes it before storage.
+      examples: ['15000.00']
+    Meta:
+      type: object
+      required: [firstPage, currentPage, lastPage, count]
+      properties:
+        firstPage:
+          type: integer
+        currentPage:
+          type: integer
+        lastPage:
+          type: integer
+        count:
+          type: integer
+    SuccessEnvelope:
+      type: object
+      required: [success, message, data]
+      properties:
+        success:
+          type: boolean
+          const: true
+        message:
+          type: string
+        data: {}
+        meta:
+          $ref: '#/components/schemas/Meta'
+    ErrorResponse:
+      type: object
+      required: [success, status, message, code, path, requestId]
+      properties:
+        success:
+          type: boolean
+          const: false
+        status:
+          type: integer
+        message:
+          type: string
+        code:
+          type: string
+        path:
+          type: string
+        requestId:
+          type: string
+        details: {}
+    SimpleErrorResponse:
+      type: object
+      required: [success, message]
+      properties:
+        success:
+          type: boolean
+          const: false
+        message:
+          type: string
+
+    UserRole:
+      type: string
+      enum: [admin, user]
+    PaymentStatus:
+      type: string
+      enum: [PENDING, PAID, FAILED, EXPIRED, REFUNDED]
+      description: Standard values. Cancelled transfer orders may carry `DIBATALKAN`.
+    PaymentMethod:
+      type: string
+      enum: [fadarosipay, transfer_bank, cod]
+    Bank:
+      type: string
+      enum: [bca, bni, bri, permata, mandiri]
+    OrderStatus:
+      type: string
+      enum: [BARU, DITERIMA, DIPROSES, SIAP_ANTAR, SELESAI, DIBATALKAN]
+    OrderKind:
+      type: string
+      enum: [PRODUCT, SERVICE]
+    RefundStatus:
+      type: string
+      enum: [REQUESTED, APPROVED, REJECTED, REFUNDED]
+    AddonSelectionType:
+      type: string
+      enum: [single, multiple]
+    AddonPriceMode:
+      type: string
+      enum: [per_unit, per_order]
+    AddonTargetType:
+      type: string
+      enum: [service, product]
+    ProductCategory:
+      type: string
+      enum: [Detergen, Softener, Pewangi, Pemutih, Paket Hemat, Aksesoris, Pembersih Noda]
+
+    User:
+      type: object
+      required: [id, username, email, role, phone, is_verified]
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/UserRole'
+        phone:
+          type: string
+        is_verified:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+    UserAuth:
+      type: object
+      required: [user, accessToken, refreshToken]
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+    Address:
+      type: object
+      required: [id, label, address_text, latitude, longitude, is_primary, user_id]
+      properties:
+        id:
+          type: integer
+        label:
+          type: string
+        address_text:
+          type: string
+        latitude:
+          type: number
+        longitude:
+          type: number
+        is_primary:
+          type: boolean
+        user_id:
+          type: string
+    Outlet:
+      type: object
+      required: [id, name, latitude, longitude, max_coverage_km, min_order_amount]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        phone:
+          type: [string, 'null']
+        address_text:
+          type: [string, 'null']
+        latitude:
+          type: number
+        longitude:
+          type: number
+        max_coverage_km:
+          type: number
+        min_order_amount:
+          $ref: '#/components/schemas/Money'
+        weekly_hours:
+          type: [string, 'null']
+    DeliveryQuote:
+      type: object
+      required: [outlet, distance_km, delivery_fee, max_coverage_km, in_range]
+      properties:
+        outlet:
+          $ref: '#/components/schemas/Outlet'
+        distance_km:
+          type: number
+        delivery_fee:
+          $ref: '#/components/schemas/Money'
+        max_coverage_km:
+          type: number
+        in_range:
+          type: boolean
+    AddonOption:
+      type: object
+      required: [id, name, price, price_mode, is_default, is_active]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        price:
+          $ref: '#/components/schemas/Money'
+        price_mode:
+          $ref: '#/components/schemas/AddonPriceMode'
+        is_default:
+          type: boolean
+        is_active:
+          type: boolean
+    AddonGroup:
+      type: object
+      required: [id, code, name, selection_type, is_required, is_active, options]
+      properties:
+        id:
+          type: integer
+        code:
+          type: string
+        name:
+          type: string
+        selection_type:
+          $ref: '#/components/schemas/AddonSelectionType'
+        is_required:
+          type: boolean
+        is_active:
+          type: boolean
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddonOption'
+    Service:
+      type: object
+      required: [id, name, unit, price_per_unit, description, estimated_duration_hours, is_active, addon_groups]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        unit:
+          type: string
+        price_per_unit:
+          $ref: '#/components/schemas/Money'
+        description:
+          type: string
+        estimated_duration_hours:
+          type: integer
+        is_active:
+          type: boolean
+        addon_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddonGroup'
+    Product:
+      type: object
+      required: [id, name, category, price, size, stock, is_active, image, addon_groups]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        price:
+          $ref: '#/components/schemas/Money'
+        size:
+          type: string
+        stock:
+          type: integer
+        is_active:
+          type: boolean
+        image:
+          type: string
+        addon_groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/AddonGroup'
+    ServiceAddonInput:
+      type: object
+      required: [group_code, option_id]
+      properties:
+        group_code:
+          type: string
+        option_id:
+          type: integer
+          minimum: 1
+    OrderServiceInput:
+      type: object
+      required: [laundry_service_id, qty]
+      properties:
+        laundry_service_id:
+          type: integer
+          minimum: 1
+        qty:
+          type: number
+          exclusiveMinimum: true
+          minimum: 0
+        notes:
+          type: string
+          default: ''
+        addons:
+          type: array
+          default: []
+          items:
+            $ref: '#/components/schemas/ServiceAddonInput'
+    OrderProductInput:
+      type: object
+      required: [product_id, qty]
+      properties:
+        product_id:
+          type: integer
+          minimum: 1
+        qty:
+          type: integer
+          minimum: 1
+        addons:
+          type: array
+          default: []
+          items:
+            $ref: '#/components/schemas/ServiceAddonInput'
+    PaymentGate:
+      type: object
+      required: [order_id]
+      properties:
+        redirect_url:
+          type: string
+        token:
+          type: string
+        order_id:
+          type: string
+        va_number:
+          type: string
+    OrderTracking:
+      type: object
+      required: [id, status, notes, created_at]
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        notes:
+          type: string
+        estimated_completion_time:
+          type: [string, 'null']
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+    Payment:
+      type: object
+      required: [id, order_id, transaction_id, payment_type, gross_amount, status, paid_at]
+      properties:
+        id:
+          type: string
+        order_id:
+          type: string
+        transaction_id:
+          type: string
+        payment_type:
+          type: string
+        gross_amount:
+          $ref: '#/components/schemas/Money'
+        status:
+          type: string
+          description: Common values are PENDING, PAID, FAILED, EXPIRED, REFUNDED; cancelled transfer orders may use DIBATALKAN.
+        va_number:
+          type: [string, 'null']
+        paid_at:
+          type: [string, 'null']
+          format: date-time
+        raw_response:
+          type: [object, 'null']
+          additionalProperties: true
+        created_at:
+          type: string
+          format: date-time
+    Refund:
+      type: object
+      required: [id, status, amount, reason, gateway_ref, requested_at, processed_at, order_id, user_id, payment_id]
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/RefundStatus'
+        amount:
+          $ref: '#/components/schemas/Money'
+        reason:
+          type: string
+        gateway_ref:
+          type: [string, 'null']
+        requested_at:
+          type: string
+          format: date-time
+        processed_at:
+          type: [string, 'null']
+          format: date-time
+        order_id:
+          type: string
+        user_id:
+          type: string
+        payment_id:
+          type: [string, 'null']
+    OrderListItem:
+      type: object
+      required: [id, order_id, status, order_type, refund_eligible, total_amount, payment_method, created_at, customer_id, customer_name, customer_phone, items_summary, items_unit]
+      properties:
+        id:
+          type: string
+        order_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        order_type:
+          $ref: '#/components/schemas/OrderKind'
+        refund_eligible:
+          type: boolean
+        refund_status:
+          type: [string, 'null']
+        total_amount:
+          $ref: '#/components/schemas/Money'
+        payment_method:
+          $ref: '#/components/schemas/PaymentMethod'
+        payment_status:
+          type: [string, 'null']
+        created_at:
+          type: string
+          format: date-time
+        customer_id:
+          type: string
+        customer_name:
+          type: string
+        customer_phone:
+          type: string
+        items_summary:
+          type: string
+        items_unit:
+          type: string
+    OrderDetail:
+      type: object
+      required: [id, order_id, status, order_type, refund_eligible, payment_method, total_laundry, total_product, total_addon, delivery_fee, total_amount, distance_km, created_at, updated_at, customer, services, products, trackings]
+      properties:
+        id:
+          type: string
+        order_id:
+          type: string
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+        order_type:
+          $ref: '#/components/schemas/OrderKind'
+        refund_eligible:
+          type: boolean
+        payment_method:
+          $ref: '#/components/schemas/PaymentMethod'
+        total_laundry:
+          $ref: '#/components/schemas/Money'
+        total_product:
+          $ref: '#/components/schemas/Money'
+        total_addon:
+          $ref: '#/components/schemas/Money'
+        delivery_fee:
+          $ref: '#/components/schemas/Money'
+        total_amount:
+          $ref: '#/components/schemas/Money'
+        distance_km:
+          type: number
+        latitude:
+          type: [number, 'null']
+        longitude:
+          type: [number, 'null']
+        notes:
+          type: [string, 'null']
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        customer:
+          type: object
+          required: [id, username, phone]
+          properties:
+            id:
+              type: string
+            username:
+              type: string
+            phone:
+              type: string
+            email:
+              type: string
+        address:
+          type: [object, 'null']
+          properties:
+            id:
+              type: integer
+            label:
+              type: string
+            address_text:
+              type: string
+            latitude:
+              type: number
+            longitude:
+              type: number
+        outlet:
+          type: [object, 'null']
+          properties:
+            id:
+              type: integer
+            name:
+              type: string
+            latitude:
+              type: number
+            longitude:
+              type: number
+        services:
+          type: array
+          items:
+            type: object
+        products:
+          type: array
+          items:
+            type: object
+        payment:
+          oneOf:
+            - $ref: '#/components/schemas/Payment'
+            - type: 'null'
+        refund:
+          oneOf:
+            - $ref: '#/components/schemas/Refund'
+            - type: 'null'
+        trackings:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderTracking'
+    AdminStats:
+      type: object
+      required: [orders_today, revenue_today, laundry_in_progress, products_sold, recent_orders, service_revenue, weekly_revenue, low_stock_products]
+      properties:
+        orders_today:
+          type: integer
+        revenue_today:
+          $ref: '#/components/schemas/Money'
+        laundry_in_progress:
+          type: integer
+        products_sold:
+          type: integer
+        recent_orders:
+          type: array
+          items:
+            type: object
+        service_revenue:
+          type: array
+          items:
+            type: object
+        weekly_revenue:
+          type: array
+          items:
+            type: object
+        low_stock_products:
+          type: array
+          items:
+            type: object
+    CashflowItem:
+      type: object
+      required: [id, type, category, amount, description, created_at]
+      properties:
+        id:
+          type: integer
+        order_id:
+          type: [string, 'null']
+        type:
+          type: string
+          enum: [income, expense]
+        category:
+          type: string
+        amount:
+          $ref: '#/components/schemas/Money'
+        description:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    CashflowSection:
+      type: object
+      required: [total, categories, items]
+      properties:
+        total:
+          $ref: '#/components/schemas/Money'
+        categories:
+          type: array
+          items:
+            type: object
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CashflowItem'
+    CashflowSummary:
+      type: object
+      required: [total_income, total_expense, net_profit, balance, income, expense, items]
+      properties:
+        total_income:
+          $ref: '#/components/schemas/Money'
+        total_expense:
+          $ref: '#/components/schemas/Money'
+        net_profit:
+          $ref: '#/components/schemas/Money'
+        balance:
+          $ref: '#/components/schemas/Money'
+        income:
+          $ref: '#/components/schemas/CashflowSection'
+        expense:
+          $ref: '#/components/schemas/CashflowSection'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CashflowItem'
+
+    RegisterRequest:
+      type: object
+      required: [username, email, password, phone]
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9_]+$'
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        password:
+          type: string
+          minLength: 8
+          maxLength: 72
+          pattern: '^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$'
+        phone:
+          type: string
+          pattern: '^\+?[0-9]{8,15}$'
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 150
+        password:
+          type: string
+          minLength: 1
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken:
+          type: string
+          minLength: 1
+    UpdateProfileRequest:
+      type: object
+      minProperties: 1
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          pattern: '^[a-zA-Z0-9_]+$'
+        phone:
+          type: string
+          pattern: '^\+?[0-9]{8,15}$'
+    AddressCreateRequest:
+      type: object
+      required: [label, address_text, latitude, longitude]
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 30
+        address_text:
+          type: string
+          minLength: 5
+          maxLength: 500
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+    AddressUpdateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        label:
+          type: string
+          minLength: 1
+          maxLength: 30
+        address_text:
+          type: string
+          minLength: 5
+          maxLength: 500
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+    OutletUpdateRequest:
+      type: object
+      required: [latitude, longitude]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        phone:
+          type: string
+          pattern: '^\+?[0-9\-]{8,15}$'
+        address_text:
+          type: string
+          minLength: 5
+          maxLength: 500
+        max_coverage_km:
+          type: number
+          minimum: 0
+        min_order_amount:
+          $ref: '#/components/schemas/Money'
+        weekly_hours:
+          type: string
+          maxLength: 500
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+    ServiceCreateRequest:
+      type: object
+      required: [name, unit, price_per_unit, estimated_duration_hours]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 30
+        unit:
+          type: string
+          minLength: 1
+          maxLength: 10
+        price_per_unit:
+          $ref: '#/components/schemas/Money'
+        description:
+          type: string
+          maxLength: 500
+          default: ''
+        estimated_duration_hours:
+          type: integer
+          exclusiveMinimum: true
+          minimum: 0
+        is_active:
+          type: boolean
+          default: true
+    ServiceUpdateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 30
+        unit:
+          type: string
+          minLength: 1
+          maxLength: 10
+        price_per_unit:
+          $ref: '#/components/schemas/Money'
+        description:
+          type: string
+          maxLength: 500
+        estimated_duration_hours:
+          type: integer
+          exclusiveMinimum: true
+          minimum: 0
+        is_active:
+          type: boolean
+    AddonGroupCreateRequest:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 30
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        selection_type:
+          $ref: '#/components/schemas/AddonSelectionType'
+          default: single
+        is_required:
+          type: boolean
+          default: false
+        is_active:
+          type: boolean
+          default: true
+    AddonGroupUpdateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        code:
+          type: string
+          minLength: 1
+          maxLength: 30
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        selection_type:
+          $ref: '#/components/schemas/AddonSelectionType'
+        is_required:
+          type: boolean
+        is_active:
+          type: boolean
+    AddonOptionCreateRequest:
+      type: object
+      required: [name, price]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        price:
+          $ref: '#/components/schemas/Money'
+        price_mode:
+          $ref: '#/components/schemas/AddonPriceMode'
+          default: per_unit
+        is_default:
+          type: boolean
+          default: false
+        is_active:
+          type: boolean
+          default: true
+    AddonOptionUpdateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        price:
+          $ref: '#/components/schemas/Money'
+        price_mode:
+          $ref: '#/components/schemas/AddonPriceMode'
+        is_default:
+          type: boolean
+        is_active:
+          type: boolean
+    AddonTargetsRequest:
+      type: object
+      properties:
+        group_ids:
+          type: array
+          default: []
+          items:
+            type: integer
+            minimum: 1
+    ProductCreateRequest:
+      type: object
+      required: [name, category, price]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 30
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        price:
+          $ref: '#/components/schemas/Money'
+        size:
+          type: string
+          maxLength: 10
+          default: pcs
+        stock:
+          type: integer
+          minimum: 0
+          default: 0
+        is_active:
+          type: boolean
+          default: true
+    ProductUpdateRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 30
+        category:
+          $ref: '#/components/schemas/ProductCategory'
+        price:
+          $ref: '#/components/schemas/Money'
+        size:
+          type: string
+          maxLength: 10
+        stock:
+          type: integer
+          minimum: 0
+        is_active:
+          type: boolean
+    ProductImageUploadRequest:
+      type: object
+      required: [image]
+      properties:
+        image:
+          type: string
+          format: binary
+          description: JPG/JPEG/PNG/WEBP image up to 2 MB.
+    OrderCreateRequest:
+      type: object
+      required: [user_address_id, payment_method]
+      minProperties: 2
+      properties:
+        services:
+          type: array
+          default: []
+          items:
+            $ref: '#/components/schemas/OrderServiceInput'
+        products:
+          type: array
+          default: []
+          items:
+            $ref: '#/components/schemas/OrderProductInput'
+        user_address_id:
+          type: integer
+          minimum: 1
+        outlet_id:
+          type: integer
+          minimum: 1
+          description: Accepted but ignored; outlet is recomputed from the address.
+        distance_km:
+          type: number
+          minimum: 0
+          description: Accepted but ignored; distance is recomputed.
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+        delivery_fee:
+          allOf:
+            - $ref: '#/components/schemas/Money'
+          description: Accepted but ignored; fee is recomputed.
+        payment_method:
+          $ref: '#/components/schemas/PaymentMethod'
+        bank:
+          allOf:
+            - $ref: '#/components/schemas/Bank'
+          description: Required when payment_method is transfer_bank.
+        notes:
+          type: string
+    OrderStatusUpdateRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          $ref: '#/components/schemas/OrderStatus'
+    PaymentConfirmRequest:
+      type: object
+      required: [transaction_id]
+      properties:
+        transaction_id:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          enum: [PAID, FAILED, EXPIRED]
+          default: PAID
+        raw_response:
+          type: object
+          additionalProperties: true
+    RefundCreateRequest:
+      type: object
+      required: [order_id, reason]
+      properties:
+        order_id:
+          type: string
+          minLength: 1
+          maxLength: 50
+        reason:
+          type: string
+          minLength: 10
+          maxLength: 500
+    RefundDecisionRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [APPROVED, REJECTED]
+        note:
+          type: string
+          maxLength: 500
+    MidtransNotificationRequest:
+      type: object
+      required: [order_id, status_code, gross_amount, signature_key]
+      properties:
+        order_id:
+          type: string
+        status_code:
+          type: string
+          description: Midtrans status code; numeric values are coerced by the server.
+        gross_amount:
+          type: string
+          description: Gross amount; numeric values are coerced by the server.
+        signature_key:
+          type: string
+        transaction_status:
+          type: string
+        payment_type:
+          type: string
+        fraud_status:
+          type: string
+        va_numbers:
+          type: array
+          items:
+            type: object
+            required: [bank, va_number]
+            properties:
+              bank:
+                type: string
+              va_number:
+                type: string
+        permata_va_number:
+          type: string
+        bill_key:
+          type: string
+        biller_code:
+          type: string
+        transaction_time:
+          type: string
